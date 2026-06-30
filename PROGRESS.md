@@ -35,3 +35,9 @@
 - What was built: Removed 8 scaffold/dead-code files; created clean folder skeleton for future modules; `npm run build` passes with zero errors and zero TypeScript errors.
 - Key files/locations: Deleted `components/Header.tsx`, `components/Footer.tsx`, `public/*.svg` (5 files), `README.md`; created `components/ui/`, `lib/types/`, `lib/utils/` (each with `.gitkeep`).
 - Notes for next phase: Login flow and all existing routes are untouched. `proxy.ts` still exists but is not wired as middleware — Phase 2 should rename it to `middleware.ts` to activate session refresh. New folders are empty placeholders ready for module code.
+
+### Phase 2 — Design System & Providers — 2026-06-30
+- What was built: Global CSS design tokens (colors, typography, spacing, radius, shadows); `cn()` utility; 9 UI components (Button, Card, Input, Badge, Dialog, Skeleton, Container, Section, PageHeader); 5 providers (ThemeProvider functional, RoleProvider/PermissionProvider/NotificationProvider/AIProvider placeholders); root layout updated with full provider tree.
+- Key files/locations: `app/globals.css` (tokens), `lib/utils/cn.ts`, `components/ui/` (9 files), `components/providers/` (6 files including index), `app/layout.tsx` (providers wired).
+- Dependencies added: `class-variance-authority`, `clsx`, `tailwind-merge`, `@radix-ui/react-dialog`, `@radix-ui/react-slot`.
+- Notes for next phase: All components are plain Tailwind CSS variables — no `tailwind.config.js` needed (Tailwind v4). ThemeProvider sets `data-theme` / `.dark` on `<html>` — dark mode CSS overrides can hook into that. `proxy.ts` still needs renaming to `middleware.ts`.
