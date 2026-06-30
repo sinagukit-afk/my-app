@@ -88,8 +88,24 @@ const NAV: NavEntry[] = [
       { kind: "item", label: "Financial Report", href: "/dashboard/analytics/financial-report", icon: ChartIcon },
     ],
   },
-  { kind: "item", label: "Administration", href: "/dashboard/administration", icon: SettingsIcon },
-  { kind: "item", label: "Account", href: "/dashboard/account", icon: UserIcon },
+  {
+    kind: "group",
+    label: "Administration",
+    icon: SettingsIcon,
+    children: [
+      { kind: "item", label: "Users", href: "/dashboard/administration/users", icon: SettingsIcon },
+      { kind: "item", label: "Roles", href: "/dashboard/administration/roles", icon: SettingsIcon },
+      { kind: "item", label: "Activity Logs", href: "/dashboard/administration/activity-logs", icon: SettingsIcon },
+    ],
+  },
+  {
+    kind: "group",
+    label: "Account",
+    icon: UserIcon,
+    children: [
+      { kind: "item", label: "Profile", href: "/dashboard/account/profile", icon: UserIcon },
+    ],
+  },
 ];
 
 /* ── Icons ──────────────────────────────────────────────────── */

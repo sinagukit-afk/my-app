@@ -66,3 +66,8 @@
 - What was built: 8 stub pages for Finance (Income, Expenses, Cash Flow, Profit & Loss) and Analytics (Sales Report, Inventory Report, Production Report, Financial Report); both sections converted from flat nav items to expandable `NavGroup` entries in the sidebar.
 - Key files/locations: `app/dashboard/finance/{income,expenses,cash-flow,profit-loss}/page.tsx`; `app/dashboard/analytics/{sales-report,inventory-report,production-report,financial-report}/page.tsx`; `components/layout/app-shell.tsx` (Finance and Analytics nav entries updated).
 - Notes for next phase: Existing `/dashboard/finance` and `/dashboard/analytics` parent pages still exist but are no longer nav items — same decision needed as for Operations parents. `proxy.ts` still needs renaming to `middleware.ts`.
+
+### Phase 6c — Module Stubs: Administration & Account — 2026-06-30
+- What was built: 4 stub pages — Administration (Users, Roles, Activity Logs) and Account (Profile); both sections converted from flat nav items to expandable NavGroup entries; all 22 sidebar links across the full app now resolve to real, rendering pages.
+- Key files/locations: `app/dashboard/administration/{users,roles,activity-logs}/page.tsx`; `app/dashboard/account/profile/page.tsx`; `components/layout/app-shell.tsx` (Administration and Account nav entries updated).
+- Notes for next phase: Orphaned parent pages (`/dashboard/administration`, `/dashboard/account`, and the Operations/Finance/Analytics parents) are still reachable by direct URL but not linked from the nav — Phase 7 should decide whether to repurpose or remove them. `proxy.ts` still needs renaming to `middleware.ts`.
