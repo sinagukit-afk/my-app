@@ -12,6 +12,8 @@ type Props = {
 };
 
 export function ProfileForm({ contactNumber, birthday }: Props) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [current, setCurrent] = useState({ contactNumber, birthday });
   const [result, setResult] = useState<{ success: boolean; error?: string } | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -21,45 +23,91 @@ export function ProfileForm({ contactNumber, birthday }: Props) {
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
       const res = await updateProfile(formData);
-      setResult(res.success ? { success: true } : { success: false, error: (res as { success: false; error: string }).error });
+      if (res.success) {
+        setCurrent({
+          contactNumber: (formData.get("contact_number") as string).trim() || null,
+          birthday: (formData.get("birthday") as string) || null,
+        });
+        setIsEditing(false);
+        setResult({ success: true });
+      } else {
+        setResult({ success: false, error: (res as { success: false; error: string }).error });
+      }
     });
   }
 
+  function handleCancel() {
+    setIsEditing(false);
+    setResult(null);
+  }
+
+  const formattedBirthday = current.birthday
+    ? new Date(current.birthday).toLocaleDateString("en-PH", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        timeZone: "UTC",
+      })
+    : null;
+
   return (
     <Card className="max-w-lg">
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle>Personal Information</CardTitle>
+        {!isEditing && (
+          <Button variant="secondary" size="sm" onClick={() => { setResult(null); setIsEditing(true); }}>
+            Update Profile
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Contact Number"
-            name="contact_number"
-            type="tel"
-            defaultValue={contactNumber ?? ""}
-            placeholder="+63 9XX XXX XXXX"
-          />
-          <Input
-            label="Birthday"
-            name="birthday"
-            type="date"
-            defaultValue={birthday ?? ""}
-          />
-          {result && (
-            <p
-              className={`text-sm ${
-                result.success
-                  ? "text-[--color-success]"
-                  : "text-[--color-danger]"
-              }`}
-            >
-              {result.success ? "Profile updated successfully." : result.error}
-            </p>
-          )}
-          <Button type="submit" disabled={isPending}>
-            {isPending ? "Saving…" : "Save Changes"}
-          </Button>
-        </form>
+        {isEditing ? (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              label="Contact Number"
+              name="contact_number"
+              type="tel"
+              defaultValue={current.contactNumber ?? ""}
+              placeholder="+63 9XX XXX XXXX"
+              autoFocus
+            />
+            <Input
+              label="Birthday"
+              name="birthday"
+              type="date"
+              defaultValue={current.birthday ?? ""}
+            />
+            {result && !result.success && (
+              <p className="text-sm text-[--color-danger]">{result.error}</p>
+            )}
+            <div className="flex gap-2">
+              <Button type="submit" disabled={isPending}>
+                {isPending ? "Saving…" : "Save Changes"}
+              </Button>
+              <Button type="button" variant="secondary" onClick={handleCancel} disabled={isPending}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <dl className="space-y-3 text-sm">
+            <div>
+              <dt className="font-medium text-[--color-text]">Contact Number</dt>
+              <dd className="mt-0.5 text-[--color-text-muted]">
+                {current.contactNumber ?? <span className="italic">Not set</span>}
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium text-[--color-text]">Birthday</dt>
+              <dd className="mt-0.5 text-[--color-text-muted]">
+                {formattedBirthday ?? <span className="italic">Not set</span>}
+              </dd>
+            </div>
+            {result?.success && (
+              <p className="text-sm text-[--color-success]">Profile updated successfully.</p>
+            )}
+          </dl>
+        )}
       </CardContent>
     </Card>
   );
