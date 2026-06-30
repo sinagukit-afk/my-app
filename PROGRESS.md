@@ -76,3 +76,8 @@
 - What was built: 9 reusable business components (StatCard, PlaceholderCard, EmptyState, SearchBar, FilterBar, NotificationBell, UserMenu, Breadcrumb, DataToolbar); all client-side where needed, no real data connections.
 - Key files/locations: `components/business/` — one file per component plus `index.ts` barrel export.
 - Notes for next phase: Components are ready to drop into module pages. `proxy.ts` still needs renaming to `middleware.ts`. Orphaned parent stub pages still unresolved.
+
+### Phase 8 — Reusable Forms & Tables — 2026-06-30
+- What was built: 7 form input components (TextArea, NumberInput, CurrencyInput, DatePicker, Select/Dropdown, Toggle, Checkbox) plus a fully-featured DataTable (search, column sorting, pagination, empty state, loading skeleton rows); existing `Input` from Phase 2 covers TextInput.
+- Key files/locations: `components/ui/textarea.tsx`, `number-input.tsx`, `currency-input.tsx`, `date-picker.tsx`, `select.tsx`, `toggle.tsx`, `checkbox.tsx`, `data-table.tsx` — all use design-system CSS tokens.
+- Notes for next phase: All components are drop-in ready for module pages. DataTable is generic (`DataTable<T>`) — pass typed `columns` + `data` arrays. CurrencyInput defaults to ₱ symbol, configurable via `currency` prop. `proxy.ts` still needs renaming to `middleware.ts`.
