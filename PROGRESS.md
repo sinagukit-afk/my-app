@@ -51,3 +51,8 @@
 - What was built: Rewrote `AppShell` sidebar nav with expandable group (Operations → Inventory, Purchasing, Orders), per-item inline SVG icons, active-route highlighting, and auto-open of the group containing the current route; created 6 stub pages for all new routes.
 - Key files/locations: `components/layout/app-shell.tsx` (rewritten); `app/dashboard/purchasing/page.tsx`, `orders/page.tsx`, `finance/page.tsx`, `analytics/page.tsx`, `administration/page.tsx`, `account/page.tsx` (new stubs).
 - Notes for next phase: All nav routes exist and build. `proxy.ts` still needs renaming to `middleware.ts`. Existing `/dashboard/incoming` page is still reachable but not in the new nav — decide whether to keep, rename, or fold into Purchasing/Orders.
+
+### Phase 5 — Dashboard — 2026-06-30
+- What was built: Full dashboard page with 7 widgets — 4 KPI stat cards (Today's Sales, Monthly Revenue, Pending Orders, Inventory Value), Recent Activity feed, Low Stock Items list, and Quick Actions bar; all mock data, no real DB queries.
+- Key files/locations: `app/dashboard/page.tsx` (rewritten, client component).
+- Notes for next phase: All widgets use design-system components (Card, Badge, Button, PageHeader). Quick Actions link to existing stub routes. `proxy.ts` still needs renaming to `middleware.ts`.
