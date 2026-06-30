@@ -56,3 +56,8 @@
 - What was built: Full dashboard page with 7 widgets — 4 KPI stat cards (Today's Sales, Monthly Revenue, Pending Orders, Inventory Value), Recent Activity feed, Low Stock Items list, and Quick Actions bar; all mock data, no real DB queries.
 - Key files/locations: `app/dashboard/page.tsx` (rewritten, client component).
 - Notes for next phase: All widgets use design-system components (Card, Badge, Button, PageHeader). Quick Actions link to existing stub routes. `proxy.ts` still needs renaming to `middleware.ts`.
+
+### Phase 6a — Module Stubs: Operations — 2026-06-30
+- What was built: 10 stub pages for Operations sub-modules (Inventory ×4, Purchasing ×2, Orders ×4); sidebar nav expanded with a `NavSubGroup` type that renders labelled sections inside the Operations group.
+- Key files/locations: `app/dashboard/inventory/{incoming,adjustment,stock-movement,suppliers}/page.tsx`; `app/dashboard/purchasing/{purchase-orders,receiving}/page.tsx`; `app/dashboard/orders/{quotes,order-list,production-queue,completed}/page.tsx`; `components/layout/app-shell.tsx` (nav types + render updated).
+- Notes for next phase: Existing `/dashboard/inventory`, `/dashboard/purchasing`, `/dashboard/orders` parent pages still exist but are no longer in the sidebar nav — decide whether to repurpose them as section overviews or remove. `proxy.ts` still needs renaming to `middleware.ts`.

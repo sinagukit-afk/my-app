@@ -14,11 +14,17 @@ type NavLeaf = {
   icon: React.FC<{ className?: string }>;
 };
 
+type NavSubGroup = {
+  kind: "subgroup";
+  label: string;
+  children: NavLeaf[];
+};
+
 type NavGroup = {
   kind: "group";
   label: string;
   icon: React.FC<{ className?: string }>;
-  children: NavLeaf[];
+  children: (NavLeaf | NavSubGroup)[];
 };
 
 type NavEntry = NavLeaf | NavGroup;
@@ -30,9 +36,34 @@ const NAV: NavEntry[] = [
     label: "Operations",
     icon: BoxIcon,
     children: [
-      { kind: "item", label: "Inventory", href: "/dashboard/inventory", icon: LayersIcon },
-      { kind: "item", label: "Purchasing", href: "/dashboard/purchasing", icon: ShoppingCartIcon },
-      { kind: "item", label: "Orders", href: "/dashboard/orders", icon: ClipboardIcon },
+      {
+        kind: "subgroup",
+        label: "Inventory",
+        children: [
+          { kind: "item", label: "Incoming Inventory", href: "/dashboard/inventory/incoming", icon: LayersIcon },
+          { kind: "item", label: "Item Adjustment", href: "/dashboard/inventory/adjustment", icon: LayersIcon },
+          { kind: "item", label: "Stock Movement", href: "/dashboard/inventory/stock-movement", icon: LayersIcon },
+          { kind: "item", label: "Suppliers", href: "/dashboard/inventory/suppliers", icon: LayersIcon },
+        ],
+      },
+      {
+        kind: "subgroup",
+        label: "Purchasing",
+        children: [
+          { kind: "item", label: "Purchase Orders", href: "/dashboard/purchasing/purchase-orders", icon: ShoppingCartIcon },
+          { kind: "item", label: "Receiving", href: "/dashboard/purchasing/receiving", icon: ShoppingCartIcon },
+        ],
+      },
+      {
+        kind: "subgroup",
+        label: "Orders",
+        children: [
+          { kind: "item", label: "Quotes", href: "/dashboard/orders/quotes", icon: ClipboardIcon },
+          { kind: "item", label: "Order List", href: "/dashboard/orders/order-list", icon: ClipboardIcon },
+          { kind: "item", label: "Production Queue", href: "/dashboard/orders/production-queue", icon: ClipboardIcon },
+          { kind: "item", label: "Completed Orders", href: "/dashboard/orders/completed", icon: ClipboardIcon },
+        ],
+      },
     ],
   },
   { kind: "item", label: "Finance", href: "/dashboard/finance", icon: CurrencyIcon },
@@ -150,7 +181,12 @@ function ChevronDownIcon({ className }: { className?: string }) {
 
 /* ── Helpers ────────────────────────────────────────────────── */
 function groupContainsActive(group: NavGroup, pathname: string): boolean {
-  return group.children.some((child) => pathname === child.href || pathname.startsWith(child.href + "/"));
+  return group.children.some((child) => {
+    if (child.kind === "subgroup") {
+      return child.children.some((leaf) => pathname === leaf.href || pathname.startsWith(leaf.href + "/"));
+    }
+    return pathname === child.href || pathname.startsWith(child.href + "/");
+  });
 }
 
 function isLeafActive(leaf: NavLeaf, pathname: string): boolean {
@@ -331,16 +367,41 @@ export function AppShell({ children, userEmail, userRole, signOutAction }: AppSh
                   {/* Children — always rendered in collapsed mode (tooltips via title); hidden when group closed */}
                   {(isOpen || collapsed) && (
                     <ul className={cn("flex flex-col gap-0.5", !collapsed && "mt-0.5")}>
-                      {entry.children.map((child) => (
-                        <li key={child.href}>
-                          <NavItemRow
-                            leaf={child}
-                            active={isLeafActive(child, pathname)}
-                            collapsed={collapsed}
-                            indent
-                          />
-                        </li>
-                      ))}
+                      {entry.children.map((child) => {
+                        if (child.kind === "subgroup") {
+                          return (
+                            <li key={child.label}>
+                              {!collapsed && (
+                                <p className="px-2 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-widest text-[--color-text-subtle]">
+                                  {child.label}
+                                </p>
+                              )}
+                              <ul className="flex flex-col gap-0.5">
+                                {child.children.map((leaf) => (
+                                  <li key={leaf.href}>
+                                    <NavItemRow
+                                      leaf={leaf}
+                                      active={isLeafActive(leaf, pathname)}
+                                      collapsed={collapsed}
+                                      indent
+                                    />
+                                  </li>
+                                ))}
+                              </ul>
+                            </li>
+                          );
+                        }
+                        return (
+                          <li key={child.href}>
+                            <NavItemRow
+                              leaf={child}
+                              active={isLeafActive(child, pathname)}
+                              collapsed={collapsed}
+                              indent
+                            />
+                          </li>
+                        );
+                      })}
                     </ul>
                   )}
                 </li>
