@@ -41,3 +41,8 @@
 - Key files/locations: `app/globals.css` (tokens), `lib/utils/cn.ts`, `components/ui/` (9 files), `components/providers/` (6 files including index), `app/layout.tsx` (providers wired).
 - Dependencies added: `class-variance-authority`, `clsx`, `tailwind-merge`, `@radix-ui/react-dialog`, `@radix-ui/react-slot`.
 - Notes for next phase: All components are plain Tailwind CSS variables — no `tailwind.config.js` needed (Tailwind v4). ThemeProvider sets `data-theme` / `.dark` on `<html>` — dark mode CSS overrides can hook into that. `proxy.ts` still needs renaming to `middleware.ts`.
+
+### Phase 3 — Application Shell — 2026-06-30
+- What was built: `AppShell` client component with collapsible left sidebar, top header (app title + user info + sign out), breadcrumb bar, and scrollable main content area; dashboard layout updated to use AppShell (server auth guard passes user/role as props + `logout` server action); dashboard page replaced with welcome message.
+- Key files/locations: `components/layout/app-shell.tsx` (new), `app/dashboard/layout.tsx` (rewritten), `app/dashboard/page.tsx` (replaced with welcome).
+- Notes for next phase: Sidebar nav items include placeholder routes (`/dashboard/sales`) that don't exist yet — Phase 4 should add real module pages. Breadcrumb derives labels from URL segments; pages can override with their own `<PageHeader>`. `proxy.ts` still needs renaming to `middleware.ts`.
