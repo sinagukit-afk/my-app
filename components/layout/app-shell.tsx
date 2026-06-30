@@ -345,13 +345,14 @@ export function AppShell({ children, userEmail, userRole, signOutAction }: AppSh
           "flex items-center border-b border-[--color-border]",
           collapsed ? "h-14 justify-center px-3" : "h-14 gap-3 px-4"
         )}>
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[--radius-md] bg-[--color-primary] text-white font-bold text-sm select-none">
-            SU
-          </div>
+          <img
+            src="/sinag-ukit-logo.jpg"
+            alt="Sinag Ukit"
+            className="h-8 w-8 shrink-0 rounded-[--radius-md] object-contain"
+          />
           {!collapsed && (
             <div className="min-w-0 overflow-hidden">
-              <p className="truncate text-sm font-semibold text-[--color-text] leading-tight">Sinag Ukit BMS</p>
-              <p className="truncate text-xs text-[--color-text-muted] leading-tight">Business Management</p>
+              <p className="truncate text-base font-bold text-[--color-text] leading-tight">Sinag Ukit</p>
             </div>
           )}
         </div>

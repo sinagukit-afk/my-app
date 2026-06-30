@@ -1,29 +1,198 @@
 @import "tailwindcss";
 
+/* ─── Tailwind v4 color utilities (replaces tailwind.config.ts theme.extend.colors) ── */
+@theme inline {
+  /* shadcn semantic tokens */
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  /* Status colors (new) */
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+  --color-info: hsl(var(--info));
+  --color-info-foreground: hsl(var(--info-foreground));
+
+  /* Raw brand palette — for direct use outside the token system (new) */
+  --color-brand-gold: #B68E44;
+  --color-brand-charcoal: #1F1F1F;
+  --color-brand-ivory: #F6EFE4;
+  --color-brand-red: #D84A3A;
+  --color-brand-bronze: #8A673E;
+
+  /* Sidebar (new) */
+  --color-sidebar: hsl(var(--sidebar-background));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+}
+
+/* ─── Sinag Ukit Brand Theme Tokens ─────────────────────────── */
+@layer base {
+  :root {
+    /* ---- Raw brand colors (for logo lockups, print, marketing) ---- */
+    --brand-heritage-gold: 39 46% 49%;   /* #B68E44 */
+    --brand-deep-charcoal: 0 0% 12%;     /* #1F1F1F */
+    --brand-warm-ivory: 37 50% 93%;      /* #F6EFE4 */
+    --brand-ember-red: 6 67% 54%;        /* #D84A3A */
+    --brand-antique-bronze: 32 38% 39%;  /* #8A673E */
+
+    /* ---- shadcn/ui semantic tokens (light mode) ---- */
+    --background: 37 50% 93%;            /* Warm Ivory */
+    --foreground: 0 0% 12%;              /* Deep Charcoal */
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 12%;
+
+    --primary: 39 46% 49%;               /* Heritage Gold */
+    --primary-foreground: 0 0% 12%;      /* Charcoal text (5.45:1 contrast, passes AA) */
+
+    --secondary: 32 38% 39%;             /* Antique Bronze */
+    --secondary-foreground: 37 50% 93%;
+
+    --muted: 37 25% 90%;
+    --muted-foreground: 0 0% 35%;
+
+    --accent: 39 46% 92%;                /* Pale gold tint, for hover/selected rows */
+    --accent-foreground: 0 0% 12%;
+
+    --destructive: 6 67% 54%;            /* Ember Red */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 37 15% 83%;
+    --input: 37 15% 83%;
+    --ring: 39 46% 49%;
+
+    --radius: 0.5rem;
+
+    /* ---- Status colors (not in original brand palette — see THEME.md) ---- */
+    --success: 142 35% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 39 70% 50%;
+    --warning-foreground: 0 0% 12%;
+    --info: 210 30% 45%;
+    --info-foreground: 0 0% 100%;
+
+    /* ---- Chart colors ---- */
+    --chart-1: 39 46% 49%;
+    --chart-2: 32 38% 39%;
+    --chart-3: 6 67% 54%;
+    --chart-4: 0 0% 30%;
+    --chart-5: 142 35% 36%;
+
+    /* ---- Sidebar (Charcoal base + Gold accent per "Premium & Bold" combo) ---- */
+    --sidebar-background: 0 0% 12%;
+    --sidebar-foreground: 37 50% 93%;
+    --sidebar-primary: 39 46% 49%;
+    --sidebar-primary-foreground: 0 0% 12%;
+    --sidebar-accent: 0 0% 18%;
+    --sidebar-accent-foreground: 37 50% 93%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 39 46% 49%;
+  }
+
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 37 40% 92%;
+
+    --card: 0 0% 14%;
+    --card-foreground: 37 40% 92%;
+
+    --popover: 0 0% 14%;
+    --popover-foreground: 37 40% 92%;
+
+    --primary: 39 50% 58%;               /* slightly lighter gold for dark bg contrast */
+    --primary-foreground: 0 0% 10%;
+
+    --secondary: 32 35% 48%;
+    --secondary-foreground: 0 0% 10%;
+
+    --muted: 0 0% 18%;
+    --muted-foreground: 37 15% 65%;
+
+    --accent: 0 0% 20%;
+    --accent-foreground: 37 40% 92%;
+
+    --destructive: 6 70% 58%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 22%;
+    --input: 0 0% 22%;
+    --ring: 39 50% 58%;
+
+    --success: 142 30% 45%;
+    --success-foreground: 0 0% 10%;
+    --warning: 39 65% 55%;
+    --warning-foreground: 0 0% 10%;
+    --info: 210 25% 55%;
+    --info-foreground: 0 0% 10%;
+
+    --chart-1: 39 50% 58%;
+    --chart-2: 32 35% 48%;
+    --chart-3: 6 70% 58%;
+    --chart-4: 0 0% 60%;
+    --chart-5: 142 30% 45%;
+
+    --sidebar-background: 0 0% 8%;
+    --sidebar-foreground: 37 40% 92%;
+    --sidebar-primary: 39 50% 58%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 0 0% 16%;
+    --sidebar-accent-foreground: 37 40% 92%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 39 50% 58%;
+  }
+}
+
 /* ─── Design Tokens ─────────────────────────────────────────── */
 :root {
-  /* Brand */
-  --color-primary:         #4f46e5; /* indigo-600 */
-  --color-primary-hover:   #4338ca; /* indigo-700 */
-  --color-primary-light:   #eef2ff; /* indigo-50  */
-  --color-primary-fg:      #ffffff;
+  /* Brand — Sinag Ukit palette */
+  --color-primary:         #B68E44; /* Heritage Gold */
+  --color-primary-hover:   #9A7830; /* Heritage Gold, darkened */
+  --color-primary-light:   #F5EDD8; /* pale gold tint */
+  --color-primary-fg:      #1F1F1F; /* Charcoal on gold (5.45:1, passes AA) */
 
   /* Semantic */
-  --color-success:         #16a34a;
-  --color-success-light:   #f0fdf4;
-  --color-warning:         #d97706;
-  --color-warning-light:   #fffbeb;
-  --color-danger:          #dc2626;
-  --color-danger-light:    #fef2f2;
+  --color-success:         #3a7d44;
+  --color-success-light:   #eef7f0;
+  --color-warning:         #b87c1a;
+  --color-warning-light:   #fdf5e6;
+  --color-danger:          #D84A3A; /* Ember Red */
+  --color-danger-light:    #fdf0ee;
 
   /* Neutrals */
-  --color-bg:              #f9fafb;
+  --color-bg:              #F6EFE4; /* Warm Ivory */
   --color-surface:         #ffffff;
-  --color-border:          #e5e7eb;
-  --color-border-strong:   #d1d5db;
-  --color-text:            #111827;
-  --color-text-muted:      #6b7280;
-  --color-text-subtle:     #9ca3af;
+  --color-border:          #e2d8c8;
+  --color-border-strong:   #cdc0ad;
+  --color-text:            #1F1F1F; /* Deep Charcoal */
+  --color-text-muted:      #6b5f50;
+  --color-text-subtle:     #9c8e7e;
 
   /* Typography */
   --font-sans:             ui-sans-serif, system-ui, sans-serif;
@@ -62,21 +231,21 @@
 /* Dark mode overrides */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg:            #111827;
-    --color-surface:       #1f2937;
-    --color-border:        #374151;
-    --color-border-strong: #4b5563;
-    --color-text:          #f9fafb;
-    --color-text-muted:    #9ca3af;
-    --color-text-subtle:   #6b7280;
-    --color-primary-light: #1e1b4b;
+    --color-bg:            #1a1a1a;
+    --color-surface:       #242424;
+    --color-border:        #383838;
+    --color-border-strong: #4a4a4a;
+    --color-text:          #f0e8d8;
+    --color-text-muted:    #a89880;
+    --color-text-subtle:   #7a6a58;
+    --color-primary-light: #2d2418;
   }
 }
 
 /* ─── Base ──────────────────────────────────────────────────── */
 body {
-  background-color: var(--color-bg);
-  color: var(--color-text);
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
   font-family: var(--font-sans);
   font-size: var(--text-base);
   line-height: 1.5;

@@ -85,4 +85,12 @@
 ### Phase 9 — Future Readiness — 2026-06-30
 - What was built: 11 extension-point placeholder files (no implementation, no credentials) across 7 new folders; each file contains a step-by-step wiring plan for its feature.
 - Key files/locations: `lib/supabase/types.ts`; `lib/ai/index.ts`; `lib/integrations/n8n/index.ts`; `lib/uploads/index.ts`; `lib/scanner/barcode.ts`, `qr.ts`; `lib/print/index.ts`; `lib/export/excel.ts`, `pdf.ts`; `lib/audit/index.ts`.
-- Notes for next phase: Project is now ready for real feature development. Start with `proxy.ts → middleware.ts` rename to activate session refresh, then wire Supabase types (`lib/supabase/types.ts`) and audit logs (`lib/audit/index.ts`) as the first real integrations.
+- Notes for next phase: Project is now ready for real feature development. Wire Supabase types (`lib/supabase/types.ts`) and audit logs (`lib/audit/index.ts`) as the first real integrations.
+
+### Fix — Middleware activation — 2026-06-30
+- What was fixed: `proxy.ts` renamed to `middleware.ts`; exported function renamed from `proxy` to `middleware`. Next.js now loads it as edge middleware on every request, enabling session token refresh via `@supabase/ssr`.
+- Key files/locations: `middleware.ts` (was `proxy.ts`).
+- Notes: `npm run build` confirms middleware is active (shown as `ƒ Proxy (Middleware)` in build output).
+
+### Theme — Sinag Ukit brand tokens — 2026-06-30
+- Applied Sinag Ukit brand theme tokens (globals.css + tailwind.config.ts) per design/theme/THEME.md.
