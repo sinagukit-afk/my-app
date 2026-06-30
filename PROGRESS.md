@@ -81,3 +81,8 @@
 - What was built: 7 form input components (TextArea, NumberInput, CurrencyInput, DatePicker, Select/Dropdown, Toggle, Checkbox) plus a fully-featured DataTable (search, column sorting, pagination, empty state, loading skeleton rows); existing `Input` from Phase 2 covers TextInput.
 - Key files/locations: `components/ui/textarea.tsx`, `number-input.tsx`, `currency-input.tsx`, `date-picker.tsx`, `select.tsx`, `toggle.tsx`, `checkbox.tsx`, `data-table.tsx` — all use design-system CSS tokens.
 - Notes for next phase: All components are drop-in ready for module pages. DataTable is generic (`DataTable<T>`) — pass typed `columns` + `data` arrays. CurrencyInput defaults to ₱ symbol, configurable via `currency` prop. `proxy.ts` still needs renaming to `middleware.ts`.
+
+### Phase 9 — Future Readiness — 2026-06-30
+- What was built: 11 extension-point placeholder files (no implementation, no credentials) across 7 new folders; each file contains a step-by-step wiring plan for its feature.
+- Key files/locations: `lib/supabase/types.ts`; `lib/ai/index.ts`; `lib/integrations/n8n/index.ts`; `lib/uploads/index.ts`; `lib/scanner/barcode.ts`, `qr.ts`; `lib/print/index.ts`; `lib/export/excel.ts`, `pdf.ts`; `lib/audit/index.ts`.
+- Notes for next phase: Project is now ready for real feature development. Start with `proxy.ts → middleware.ts` rename to activate session refresh, then wire Supabase types (`lib/supabase/types.ts`) and audit logs (`lib/audit/index.ts`) as the first real integrations.
