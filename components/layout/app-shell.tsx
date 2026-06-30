@@ -6,15 +6,124 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 
-/* ── Nav items ──────────────────────────────────────────────── */
-const NAV_ITEMS = [
-  { label: "Dashboard", href: "/dashboard" },
-  { label: "Sales", href: "/dashboard/sales" },
-  { label: "Inventory", href: "/dashboard/inventory" },
-  { label: "Incoming", href: "/dashboard/incoming" },
-] as const;
+/* ── Nav config ─────────────────────────────────────────────── */
+type NavLeaf = {
+  kind: "item";
+  label: string;
+  href: string;
+  icon: React.FC<{ className?: string }>;
+};
 
-/* ── Icons (inline SVG — no extra dependency) ───────────────── */
+type NavGroup = {
+  kind: "group";
+  label: string;
+  icon: React.FC<{ className?: string }>;
+  children: NavLeaf[];
+};
+
+type NavEntry = NavLeaf | NavGroup;
+
+const NAV: NavEntry[] = [
+  { kind: "item", label: "Dashboard", href: "/dashboard", icon: HomeIcon },
+  {
+    kind: "group",
+    label: "Operations",
+    icon: BoxIcon,
+    children: [
+      { kind: "item", label: "Inventory", href: "/dashboard/inventory", icon: LayersIcon },
+      { kind: "item", label: "Purchasing", href: "/dashboard/purchasing", icon: ShoppingCartIcon },
+      { kind: "item", label: "Orders", href: "/dashboard/orders", icon: ClipboardIcon },
+    ],
+  },
+  { kind: "item", label: "Finance", href: "/dashboard/finance", icon: CurrencyIcon },
+  { kind: "item", label: "Analytics", href: "/dashboard/analytics", icon: ChartIcon },
+  { kind: "item", label: "Administration", href: "/dashboard/administration", icon: SettingsIcon },
+  { kind: "item", label: "Account", href: "/dashboard/account", icon: UserIcon },
+];
+
+/* ── Icons ──────────────────────────────────────────────────── */
+function HomeIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 6.5L8 2l6 4.5V14a1 1 0 01-1 1H3a1 1 0 01-1-1V6.5z" />
+    </svg>
+  );
+}
+
+function BoxIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M13 4.5L8 2 3 4.5v5L8 12l5-2.5v-5z" />
+      <path d="M3 4.5l5 2.5 5-2.5M8 7v5" />
+    </svg>
+  );
+}
+
+function LayersIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 1.5L14 5 8 8.5 2 5 8 1.5z" />
+      <path d="M2 8l6 3.5L14 8" />
+      <path d="M2 11l6 3.5L14 11" />
+    </svg>
+  );
+}
+
+function ShoppingCartIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 1h2.5l1.5 8h7l1.5-5.5H4" />
+      <circle cx="6.5" cy="12.5" r="1" />
+      <circle cx="11.5" cy="12.5" r="1" />
+    </svg>
+  );
+}
+
+function ClipboardIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="2" width="10" height="13" rx="1" />
+      <path d="M6 2a2 2 0 004 0" />
+      <path d="M5.5 7h5M5.5 10h3" />
+    </svg>
+  );
+}
+
+function CurrencyIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="8" r="6.5" />
+      <path d="M8 4.5v7M6 6h3a1.5 1.5 0 010 3H6.5A1.5 1.5 0 005 10.5" />
+    </svg>
+  );
+}
+
+function ChartIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 13L6 8l3 3 5-6" />
+    </svg>
+  );
+}
+
+function SettingsIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="8" r="2" />
+      <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.22 3.22l1.42 1.42M11.36 11.36l1.42 1.42M3.22 12.78l1.42-1.42M11.36 4.64l1.42-1.42" />
+    </svg>
+  );
+}
+
+function UserIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="5" r="3" />
+      <path d="M2 14c0-3.314 2.686-5 6-5s6 1.686 6 5" />
+    </svg>
+  );
+}
+
 function MenuIcon({ className }: { className?: string }) {
   return (
     <svg className={className} width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
@@ -31,15 +140,33 @@ function ChevronLeftIcon({ className }: { className?: string }) {
   );
 }
 
-function HomeIcon({ className }: { className?: string }) {
+function ChevronDownIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg className={className} width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 4l4 4 4-4" />
+    </svg>
+  );
+}
+
+/* ── Helpers ────────────────────────────────────────────────── */
+function groupContainsActive(group: NavGroup, pathname: string): boolean {
+  return group.children.some((child) => pathname === child.href || pathname.startsWith(child.href + "/"));
+}
+
+function isLeafActive(leaf: NavLeaf, pathname: string): boolean {
+  if (leaf.href === "/dashboard") return pathname === "/dashboard";
+  return pathname === leaf.href || pathname.startsWith(leaf.href + "/");
+}
+
+/* ── Breadcrumb ─────────────────────────────────────────────── */
+function BreadcrumbHomeIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M2 6.5L8 2l6 4.5V14a1 1 0 01-1 1H3a1 1 0 01-1-1V6.5z" />
     </svg>
   );
 }
 
-/* ── Breadcrumb ─────────────────────────────────────────────── */
 function Breadcrumb({ pathname }: { pathname: string }) {
   const segments = pathname.split("/").filter(Boolean);
   const crumbs = segments.map((seg, i) => ({
@@ -50,7 +177,7 @@ function Breadcrumb({ pathname }: { pathname: string }) {
   return (
     <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-[--color-text-muted]">
       <Link href="/dashboard" className="flex items-center text-[--color-text-muted] hover:text-[--color-text] transition-colors">
-        <HomeIcon />
+        <BreadcrumbHomeIcon />
       </Link>
       {crumbs.map((crumb, i) => (
         <React.Fragment key={crumb.href}>
@@ -68,18 +195,69 @@ function Breadcrumb({ pathname }: { pathname: string }) {
   );
 }
 
+/* ── NavItem component ──────────────────────────────────────── */
+function NavItemRow({
+  leaf,
+  active,
+  collapsed,
+  indent,
+}: {
+  leaf: NavLeaf;
+  active: boolean;
+  collapsed: boolean;
+  indent?: boolean;
+}) {
+  const Icon = leaf.icon;
+  return (
+    <Link
+      href={leaf.href}
+      title={collapsed ? leaf.label : undefined}
+      className={cn(
+        "flex items-center gap-2.5 rounded-[--radius-md] py-2 text-sm font-medium transition-colors",
+        indent && !collapsed ? "pl-7 pr-2" : "px-2",
+        active
+          ? "bg-[--color-primary-light] text-[--color-primary]"
+          : "text-[--color-text-muted] hover:bg-[--color-bg] hover:text-[--color-text]",
+        collapsed && "justify-center px-0"
+      )}
+    >
+      <Icon className={cn("h-4 w-4 shrink-0", active ? "text-[--color-primary]" : "text-[--color-text-subtle]")} />
+      {!collapsed && <span>{leaf.label}</span>}
+    </Link>
+  );
+}
+
 /* ── AppShell ───────────────────────────────────────────────── */
 interface AppShellProps {
   children: React.ReactNode;
   userEmail: string;
   userRole?: string;
-  /** Server action for signing out — passed as form action */
   signOutAction: () => Promise<void>;
 }
 
 export function AppShell({ children, userEmail, userRole, signOutAction }: AppShellProps) {
   const [collapsed, setCollapsed] = React.useState(false);
   const pathname = usePathname();
+
+  // Track which groups are open; auto-open the group that contains the active route
+  const [openGroups, setOpenGroups] = React.useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    for (const entry of NAV) {
+      if (entry.kind === "group" && groupContainsActive(entry, pathname)) {
+        initial.add(entry.label);
+      }
+    }
+    return initial;
+  });
+
+  function toggleGroup(label: string) {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-[--color-bg]">
@@ -90,7 +268,7 @@ export function AppShell({ children, userEmail, userRole, signOutAction }: AppSh
           collapsed ? "w-14" : "w-56"
         )}
       >
-        {/* Logo / App title */}
+        {/* Logo */}
         <div className={cn(
           "flex items-center border-b border-[--color-border]",
           collapsed ? "h-14 justify-center px-3" : "h-14 gap-3 px-4"
@@ -106,38 +284,65 @@ export function AppShell({ children, userEmail, userRole, signOutAction }: AppSh
           )}
         </div>
 
-        {/* Nav links */}
+        {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-3 px-2">
           <ul className="flex flex-col gap-0.5">
-            {NAV_ITEMS.map((item) => {
-              const active =
-                pathname === item.href ||
-                (item.href !== "/dashboard" && pathname.startsWith(item.href));
+            {NAV.map((entry) => {
+              if (entry.kind === "item") {
+                return (
+                  <li key={entry.href}>
+                    <NavItemRow leaf={entry} active={isLeafActive(entry, pathname)} collapsed={collapsed} />
+                  </li>
+                );
+              }
+
+              // Group
+              const isOpen = openGroups.has(entry.label);
+              const hasActive = groupContainsActive(entry, pathname);
+              const Icon = entry.icon;
+
               return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
+                <li key={entry.label}>
+                  <button
+                    onClick={() => !collapsed && toggleGroup(entry.label)}
+                    title={collapsed ? entry.label : undefined}
                     className={cn(
-                      "flex items-center gap-2.5 rounded-[--radius-md] px-2 py-2 text-sm font-medium transition-colors",
-                      active
-                        ? "bg-[--color-primary-light] text-[--color-primary]"
+                      "flex w-full items-center gap-2.5 rounded-[--radius-md] px-2 py-2 text-sm font-medium transition-colors",
+                      hasActive
+                        ? "text-[--color-primary]"
                         : "text-[--color-text-muted] hover:bg-[--color-bg] hover:text-[--color-text]",
                       collapsed && "justify-center px-0"
                     )}
-                    title={collapsed ? item.label : undefined}
                   >
-                    <span
-                      className={cn(
-                        "flex h-5 w-5 shrink-0 items-center justify-center rounded-sm text-[11px] font-bold border",
-                        active
-                          ? "border-[--color-primary] text-[--color-primary]"
-                          : "border-[--color-border] text-[--color-text-subtle]"
-                      )}
-                    >
-                      {item.label[0]}
-                    </span>
-                    {!collapsed && <span>{item.label}</span>}
-                  </Link>
+                    <Icon className={cn("h-4 w-4 shrink-0", hasActive ? "text-[--color-primary]" : "text-[--color-text-subtle]")} />
+                    {!collapsed && (
+                      <>
+                        <span className="flex-1 text-left">{entry.label}</span>
+                        <ChevronDownIcon
+                          className={cn(
+                            "transition-transform duration-150",
+                            isOpen && "rotate-180"
+                          )}
+                        />
+                      </>
+                    )}
+                  </button>
+
+                  {/* Children — always rendered in collapsed mode (tooltips via title); hidden when group closed */}
+                  {(isOpen || collapsed) && (
+                    <ul className={cn("flex flex-col gap-0.5", !collapsed && "mt-0.5")}>
+                      {entry.children.map((child) => (
+                        <li key={child.href}>
+                          <NavItemRow
+                            leaf={child}
+                            active={isLeafActive(child, pathname)}
+                            collapsed={collapsed}
+                            indent
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </li>
               );
             })}
@@ -164,7 +369,6 @@ export function AppShell({ children, userEmail, userRole, signOutAction }: AppSh
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
         {/* Top header */}
         <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-[--color-border] bg-[--color-surface] px-4 shadow-[--shadow-sm]">
-          {/* Mobile sidebar toggle */}
           <button
             onClick={() => setCollapsed((c) => !c)}
             className="flex md:hidden items-center justify-center h-8 w-8 rounded-[--radius-md] text-[--color-text-muted] hover:bg-[--color-bg] transition-colors"
@@ -178,7 +382,6 @@ export function AppShell({ children, userEmail, userRole, signOutAction }: AppSh
             <p className="text-xs text-[--color-text-muted]">Business Management System</p>
           </div>
 
-          {/* User info + sign out */}
           <div className="flex items-center gap-3 ml-auto">
             <div className="text-right hidden sm:block">
               <p className="text-xs font-medium text-[--color-text] leading-tight">{userEmail}</p>
@@ -199,7 +402,7 @@ export function AppShell({ children, userEmail, userRole, signOutAction }: AppSh
           <Breadcrumb pathname={pathname} />
         </div>
 
-        {/* Content area */}
+        {/* Content */}
         <main className="flex-1 overflow-y-auto p-6">
           {children}
         </main>

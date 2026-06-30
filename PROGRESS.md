@@ -46,3 +46,8 @@
 - What was built: `AppShell` client component with collapsible left sidebar, top header (app title + user info + sign out), breadcrumb bar, and scrollable main content area; dashboard layout updated to use AppShell (server auth guard passes user/role as props + `logout` server action); dashboard page replaced with welcome message.
 - Key files/locations: `components/layout/app-shell.tsx` (new), `app/dashboard/layout.tsx` (rewritten), `app/dashboard/page.tsx` (replaced with welcome).
 - Notes for next phase: Sidebar nav items include placeholder routes (`/dashboard/sales`) that don't exist yet — Phase 4 should add real module pages. Breadcrumb derives labels from URL segments; pages can override with their own `<PageHeader>`. `proxy.ts` still needs renaming to `middleware.ts`.
+
+### Phase 4 — Navigation Framework — 2026-06-30
+- What was built: Rewrote `AppShell` sidebar nav with expandable group (Operations → Inventory, Purchasing, Orders), per-item inline SVG icons, active-route highlighting, and auto-open of the group containing the current route; created 6 stub pages for all new routes.
+- Key files/locations: `components/layout/app-shell.tsx` (rewritten); `app/dashboard/purchasing/page.tsx`, `orders/page.tsx`, `finance/page.tsx`, `analytics/page.tsx`, `administration/page.tsx`, `account/page.tsx` (new stubs).
+- Notes for next phase: All nav routes exist and build. `proxy.ts` still needs renaming to `middleware.ts`. Existing `/dashboard/incoming` page is still reachable but not in the new nav — decide whether to keep, rename, or fold into Purchasing/Orders.
