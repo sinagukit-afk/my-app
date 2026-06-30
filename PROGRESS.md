@@ -61,3 +61,8 @@
 - What was built: 10 stub pages for Operations sub-modules (Inventory ×4, Purchasing ×2, Orders ×4); sidebar nav expanded with a `NavSubGroup` type that renders labelled sections inside the Operations group.
 - Key files/locations: `app/dashboard/inventory/{incoming,adjustment,stock-movement,suppliers}/page.tsx`; `app/dashboard/purchasing/{purchase-orders,receiving}/page.tsx`; `app/dashboard/orders/{quotes,order-list,production-queue,completed}/page.tsx`; `components/layout/app-shell.tsx` (nav types + render updated).
 - Notes for next phase: Existing `/dashboard/inventory`, `/dashboard/purchasing`, `/dashboard/orders` parent pages still exist but are no longer in the sidebar nav — decide whether to repurpose them as section overviews or remove. `proxy.ts` still needs renaming to `middleware.ts`.
+
+### Phase 6b — Module Stubs: Finance & Analytics — 2026-06-30
+- What was built: 8 stub pages for Finance (Income, Expenses, Cash Flow, Profit & Loss) and Analytics (Sales Report, Inventory Report, Production Report, Financial Report); both sections converted from flat nav items to expandable `NavGroup` entries in the sidebar.
+- Key files/locations: `app/dashboard/finance/{income,expenses,cash-flow,profit-loss}/page.tsx`; `app/dashboard/analytics/{sales-report,inventory-report,production-report,financial-report}/page.tsx`; `components/layout/app-shell.tsx` (Finance and Analytics nav entries updated).
+- Notes for next phase: Existing `/dashboard/finance` and `/dashboard/analytics` parent pages still exist but are no longer nav items — same decision needed as for Operations parents. `proxy.ts` still needs renaming to `middleware.ts`.

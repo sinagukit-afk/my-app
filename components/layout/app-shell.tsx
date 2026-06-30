@@ -66,8 +66,28 @@ const NAV: NavEntry[] = [
       },
     ],
   },
-  { kind: "item", label: "Finance", href: "/dashboard/finance", icon: CurrencyIcon },
-  { kind: "item", label: "Analytics", href: "/dashboard/analytics", icon: ChartIcon },
+  {
+    kind: "group",
+    label: "Finance",
+    icon: CurrencyIcon,
+    children: [
+      { kind: "item", label: "Income", href: "/dashboard/finance/income", icon: CurrencyIcon },
+      { kind: "item", label: "Expenses", href: "/dashboard/finance/expenses", icon: CurrencyIcon },
+      { kind: "item", label: "Cash Flow", href: "/dashboard/finance/cash-flow", icon: CurrencyIcon },
+      { kind: "item", label: "Profit & Loss", href: "/dashboard/finance/profit-loss", icon: CurrencyIcon },
+    ],
+  },
+  {
+    kind: "group",
+    label: "Analytics",
+    icon: ChartIcon,
+    children: [
+      { kind: "item", label: "Sales Report", href: "/dashboard/analytics/sales-report", icon: ChartIcon },
+      { kind: "item", label: "Inventory Report", href: "/dashboard/analytics/inventory-report", icon: ChartIcon },
+      { kind: "item", label: "Production Report", href: "/dashboard/analytics/production-report", icon: ChartIcon },
+      { kind: "item", label: "Financial Report", href: "/dashboard/analytics/financial-report", icon: ChartIcon },
+    ],
+  },
   { kind: "item", label: "Administration", href: "/dashboard/administration", icon: SettingsIcon },
   { kind: "item", label: "Account", href: "/dashboard/account", icon: UserIcon },
 ];
