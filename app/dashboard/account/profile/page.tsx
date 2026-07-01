@@ -59,14 +59,14 @@ export default async function ProfilePage() {
       <Card className="max-w-lg">
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[--color-primary] text-xl font-bold text-[--color-primary-foreground]">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-(--color-primary) text-xl font-bold text-(--color-primary-foreground)">
               {initial}
             </div>
             <div className="min-w-0 space-y-1">
-              <p className="truncate text-base font-semibold text-[--color-text]">
+              <p className="truncate text-base font-semibold text-(--color-text)">
                 {profile?.full_name ?? "—"}
               </p>
-              <p className="truncate text-sm text-[--color-text-muted]">
+              <p className="truncate text-sm text-(--color-text-muted)">
                 {profile?.email ?? user.email}
               </p>
               <div className="flex flex-wrap items-center gap-2">
@@ -74,18 +74,18 @@ export default async function ProfilePage() {
                   {profile?.role ?? "unknown"}
                 </Badge>
                 {profile?.contact_number && (
-                  <span className="text-xs text-[--color-text-muted]">
+                  <span className="text-xs text-(--color-text-muted)">
                     {profile.contact_number}
                   </span>
                 )}
                 {formattedBirthday && (
-                  <span className="text-xs text-[--color-text-muted]">
+                  <span className="text-xs text-(--color-text-muted)">
                     {formattedBirthday}
                   </span>
                 )}
               </div>
               {memberSince && (
-                <p className="text-xs text-[--color-text-muted]">
+                <p className="text-xs text-(--color-text-muted)">
                   Member since {memberSince}
                 </p>
               )}

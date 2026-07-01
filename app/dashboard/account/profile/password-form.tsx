@@ -70,7 +70,7 @@ export function PasswordForm() {
               autoComplete="new-password"
             />
             {result && !result.success && (
-              <p className="text-sm text-[--color-danger]">{result.error}</p>
+              <p className="text-sm text-(--color-danger)">{result.error}</p>
             )}
             <div className="flex gap-2">
               <Button type="submit" disabled={isPending}>
@@ -82,9 +82,9 @@ export function PasswordForm() {
             </div>
           </form>
         ) : (
-          <div className="text-sm text-[--color-text-muted]">
+          <div className="text-sm text-(--color-text-muted)">
             {result?.success
-              ? <p className="text-[--color-success]">Password changed successfully.</p>
+              ? <p className="text-(--color-success)">Password changed successfully.</p>
               : <p>Your password is managed by Sinag Ukit. Click Change Password to update it.</p>
             }
           </div>

@@ -21,7 +21,7 @@ export function Breadcrumb({ items, className }: BreadcrumbProps) {
           return (
             <li key={i} className="flex items-center gap-1">
               {i > 0 && (
-                <span aria-hidden className="text-[--color-text-subtle]">
+                <span aria-hidden className="text-(--color-text-subtle)">
                   /
                 </span>
               )}
@@ -30,8 +30,8 @@ export function Breadcrumb({ items, className }: BreadcrumbProps) {
                   aria-current={isLast ? "page" : undefined}
                   className={cn(
                     isLast
-                      ? "font-medium text-[--color-text]"
-                      : "text-[--color-text-muted]"
+                      ? "font-medium text-(--color-text)"
+                      : "text-(--color-text-muted)"
                   )}
                 >
                   {item.label}
@@ -39,7 +39,7 @@ export function Breadcrumb({ items, className }: BreadcrumbProps) {
               ) : (
                 <Link
                   href={item.href}
-                  className="text-[--color-text-muted] hover:text-[--color-text] transition-colors"
+                  className="text-(--color-text-muted) hover:text-(--color-text) transition-colors"
                 >
                   {item.label}
                 </Link>

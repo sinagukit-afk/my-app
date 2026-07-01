@@ -11,15 +11,15 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "bg-[--color-primary] text-[--color-primary-fg] hover:bg-[--color-primary-hover] focus-visible:ring-[--color-primary]",
+          "bg-(--color-primary) text-(--color-primary-fg) hover:bg-(--color-primary-hover) focus-visible:ring-(--color-primary)",
         secondary:
-          "border border-[--color-border] bg-[--color-surface] text-[--color-text] hover:bg-[--color-bg]",
+          "border border-(--color-border) bg-(--color-surface) text-(--color-text) hover:bg-(--color-bg)",
         ghost:
-          "text-[--color-text] hover:bg-[--color-bg]",
+          "text-(--color-text) hover:bg-(--color-bg)",
         danger:
-          "bg-[--color-danger] text-white hover:opacity-90 focus-visible:ring-[--color-danger]",
+          "bg-(--color-danger) text-white hover:opacity-90 focus-visible:ring-(--color-danger)",
         link:
-          "text-[--color-primary] underline-offset-4 hover:underline",
+          "text-(--color-primary) underline-offset-4 hover:underline",
       },
       size: {
         sm: "h-8 px-3 text-xs",

@@ -60,7 +60,7 @@
 ### Phase 6a — Module Stubs: Operations — 2026-06-30
 - What was built: 10 stub pages for Operations sub-modules (Inventory ×4, Purchasing ×2, Orders ×4); sidebar nav expanded with a `NavSubGroup` type that renders labelled sections inside the Operations group.
 - Key files/locations: `app/dashboard/inventory/{incoming,adjustment,stock-movement,suppliers}/page.tsx`; `app/dashboard/purchasing/{purchase-orders,receiving}/page.tsx`; `app/dashboard/orders/{quotes,order-list,production-queue,completed}/page.tsx`; `components/layout/app-shell.tsx` (nav types + render updated).
-- Notes for next phase: Existing `/dashboard/inventory`, `/dashboard/purchasing`, `/dashboard/orders` parent pages still exist but are no longer in the sidebar nav — decide whether to repurpose them as section overviews or remove. `proxy.ts` still needs renaming to `middleware.ts`.
+- Notes for next phase: Existing `/dashboard/inventory`, `/dashboard/purchasing`, `/dashboard/orders` parent pages still exist but are no longer in the sidebar nav — decide whether to repurpose as section overviews or remove. `proxy.ts` still needs renaming to `middleware.ts`.
 
 ### Phase 6b — Module Stubs: Finance & Analytics — 2026-06-30
 - What was built: 8 stub pages for Finance (Income, Expenses, Cash Flow, Profit & Loss) and Analytics (Sales Report, Inventory Report, Production Report, Financial Report); both sections converted from flat nav items to expandable `NavGroup` entries in the sidebar.
@@ -94,3 +94,65 @@
 
 ### Theme — Sinag Ukit brand tokens — 2026-06-30
 - Applied Sinag Ukit brand theme tokens (globals.css + tailwind.config.ts) per design/theme/THEME.md.
+
+### Phase 10 — Operations Backend Schema — 2026-07-01
+- What was built: Applied migration `0004_operations_schema` directly to Supabase (SinagUkitData, project `glwskmtworldifydsihc`) via the Supabase MCP connector. Added the tables and functions the Operations UI (Phase 6a stubs) will need. Inventory model decided: **stock is controlled locally**; Loyverse is receipt-only; the n8n sync is disabled.
+- Key files/locations (database, not app repo):
+  - `public.suppliers` — new master table. Backfilled 2 rows from existing free-text `incoming_items.supplier` values.
+  - `public.purchase_orders` + `public.purchase_order_items` — new; status enum draft/sent/partial/received/closed/cancelled.
+  - `public.incoming_items` — added `supplier_id`, `purchase_order_id` FK columns (existing auto-movement trigger `apply_incoming_item_inventory_movement` untouched — it already upserts `inventory_levels` and posts a movement on insert; this is the pattern to follow for all future stock writes).
+  - `public.orders.status` — remodelled to a pure business lifecycle: `quote` → `confirmed` → `in_production` → `completed` (+ `cancelled`). Loyverse sync state stays in the separate `orders.sync_status` column.
+  - `public.inventory_movements.movement_type` — added `'order'` value, for stock consumed when a quote is confirmed.
+  - RPC `public.adjust_stock(p_variant_id, p_qty_delta, p_reason, p_store_id, p_note)` — for the Item Adjustment screen; upserts `inventory_levels` then posts a `manual_adjustment` movement in one transaction; blocks negative stock; role-gated to admin/manager/encoder.
+  - RPC `public.confirm_order(p_order_id)` — for the Quotes → Order List transition; expands composite lines one level via `item_components` (BOM), sums required qty per component, checks availability, deducts `inventory_levels`, posts `'order'` movements, flips `orders.status` to `confirmed`, all atomically (raises and rolls back the whole transaction on any shortfall). Single-level BOM only; skips variants where `items.track_stock = false`.
+  - Local copies of the migration SQL and this log: `/mnt/user-data/outputs/0004_operations_schema.sql`.
+- Notes for next phase: This was a **database-only** change — no app code was touched yet, so the Phase 6a stub pages (`app/dashboard/inventory/*`, `purchasing/*`, `orders/*`) still render placeholders. Phase 11 should wire the Suppliers stub to real Supabase queries — simplest CRUD, good pattern-proving phase before the RPC-dependent screens. `proxy.ts`/`middleware.ts` item is resolved (see Fix entry above); no longer needs repeating.
+- Open decisions to resolve before wiring Quotes/Order List (Phase 14 below):
+  1. Verify no existing app code reads/writes the old `orders.status` values (`draft`, `synced`, `failed`) before deploying — Phase 10 assumed the table was empty (0 rows) and changed the constraint.
+  2. Decide whether `adjust_stock` should stay open to the `encoder` role or be tightened to admin/manager only.
+
+## Operations Backend — Reference (for Phases 11–15)
+
+Screen → data source mapping, now that Phase 10's schema is live:
+
+| Screen | Table / RPC |
+|---|---|
+| Stock Movement | read `inventory_movements` (join variant/item names) |
+| Item Adjustment | call `adjust_stock(variant_id, qty_delta, reason[, store_id, note])` |
+| Incoming Inventory | insert `incoming_items` (movement auto-posts); set `supplier_id` / `purchase_order_id` |
+| Suppliers | CRUD `suppliers` |
+| Purchase Orders | CRUD `purchase_orders` + `purchase_order_items` |
+| Receiving | insert `incoming_items` against a PO; bump `quantity_received` + PO `status` |
+| Quotes | `orders` where `status = 'quote'` |
+| Order List | `orders` where `status in ('confirmed','in_production')` |
+| Production Queue | `orders` where `status = 'in_production'` |
+| Completed Orders | `orders` where `status = 'completed'` |
+| Confirm a quote | call `confirm_order(order_id)` → deducts BOM, sets `status = 'confirmed'` |
+
+Stock-change pattern to follow everywhere: upsert `inventory_levels` (on conflict `variant_id, store_id`), **then** insert an `inventory_movements` row with `quantity_after` set to the resulting level. Never edit a level directly outside an RPC or the existing incoming trigger — there is deliberately no generic movements→levels trigger, to avoid double-counting against the incoming-item trigger.
+
+RLS convention used on all new tables: SELECT = any authenticated user; INSERT/UPDATE = admin/manager/encoder; DELETE = admin/manager only. Both RPCs are `SECURITY DEFINER` and check `current_user_role()` internally.
+
+### Phase 11 — Suppliers Screen — 2026-07-01
+- What was built: `app/dashboard/inventory/suppliers/page.tsx` wired to real CRUD against `public.suppliers`, replacing the "Coming Soon" stub. Server component reads suppliers + the current user's `profiles.role`; a client table renders them via the Phase 8 `DataTable`, with an Add/Edit dialog (Dialog + Input/TextArea) and inline Deactivate/Activate + Delete row actions. Role gating in the UI mirrors the live RLS policies: Add/Edit/Deactivate show only for admin/manager/encoder, Delete only for admin/manager. `deleteSupplier` catches Postgres FK-violation errors (suppliers referenced by `incoming_items`/`purchase_orders` have `ON DELETE NO ACTION`) and surfaces a friendly "Deactivate it instead" message rather than a raw DB error.
+- Key files/locations:
+  - `app/dashboard/inventory/suppliers/page.tsx` — server component; fetches suppliers + role, renders `SuppliersTable`.
+  - `app/dashboard/inventory/suppliers/suppliers-table.tsx` — client `DataTable` wrapper; columns, row actions, add/edit dialog trigger.
+  - `app/dashboard/inventory/suppliers/supplier-form.tsx` — client Add/Edit dialog form (Input/TextArea, Dialog from Phase 2/8).
+  - `app/dashboard/inventory/suppliers/actions.ts` — server actions `createSupplier`, `updateSupplier`, `setSupplierActive`, `deleteSupplier`; same `'use server'` + `revalidatePath` pattern as `app/dashboard/account/profile/actions.ts` (the `app/dashboard/incoming/actions.ts` referenced in the task no longer exists — that route was replaced by `inventory/incoming` in Phase 6a — so this phase's server-action shape was pattern-matched from the profile actions instead).
+  - `.claude/launch.json` — added (didn't exist yet) so the dev server can be previewed via the preview tool.
+- Verification: `npm run build` passes with zero TypeScript errors. Confirmed via curl that `/dashboard/inventory/suppliers` compiles and redirects unauthenticated requests to `/login` (no server crash). Follow-up: verified the authenticated UI in the browser (see Fix entry below) — the Suppliers table, Add/Edit dialog, and row actions all render and open correctly once the app-wide transparent-surface bug was fixed.
+- Notes for next phase: This is the reference pattern for Phase 12–13's simpler CRUD needs — role-gated actions, FK-aware delete with a soft-deactivate fallback, dialog-based add/edit form. No destructive SQL was run this phase (schema was already live from Phase 10).
+
+### Fix — Tailwind v4 arbitrary CSS-variable syntax (transparent surfaces app-wide) — 2026-07-01
+- What was fixed: Every themed color/shadow utility across the app used Tailwind v3's CSS-variable arbitrary-value shorthand, e.g. `bg-[--color-surface]`, `border-[--color-border]`, `shadow-[--shadow-lg]`. The project is on **Tailwind v4.3.1**, where that bracket shorthand no longer auto-wraps in `var(...)` — v4 requires parentheses (`bg-(--color-surface)`) to reference a CSS custom property as an arbitrary value. Brackets around a bare `--variable` produced no CSS rule at all, so every surface/border/text/shadow utility silently resolved to nothing (confirmed via `getComputedStyle` returning `rgba(0, 0, 0, 0)`). This was invisible on most pages because everything was uniformly transparent against the same page background, but became obvious as a see-through modal when the Suppliers Add/Edit dialog (Phase 11) was opened over the table. Ran a scripted regex pass converting `-[--foo]` → `-(--foo)` across all 58 affected files (`components/ui/*`, `components/business/*`, `components/layout/app-shell.tsx`, nearly every `app/dashboard/**/page.tsx`) — pure syntax substitution, no visual/behavioral intent changes, no changes to `app/globals.css` token definitions.
+- Key files/locations: 58 `.tsx` files under `app/` and `components/`; see `git diff --stat` for the full list. `app/globals.css` untouched (it only defines variables, doesn't consume them via this shorthand).
+- Verification: `npm run build` passes with zero TypeScript errors, same route list as before. Re-grepped for `\[--` across `app`/`components` — zero remaining matches. Verified live in the browser (already-authenticated session via the connected Chrome tab): Suppliers Edit dialog now renders as an opaque white card over a dimmed backdrop; spot-checked the Administration → Users page (stat cards, role badges, table) and the sidebar/header chrome — all now show correct surface colors, borders, and shadows instead of blending into the page background. Confirmed via `getComputedStyle` that background-color now resolves to real values (e.g. `rgb(255, 255, 255)`) instead of `rgba(0, 0, 0, 0)`.
+- Notes for next phase: This was a global, pre-existing bug fixed opportunistically while validating Phase 11's dialog, not itself a Phase 11 scope item. All future components should use the parenthesis form (`bg-(--color-x)`) for CSS-variable arbitrary values — the bracket form silently no-ops on this Tailwind version.
+
+## Upcoming Phases (planned, continuing from Phase 10)
+
+- [ ] **Phase 12 — Stock Movement + Item Adjustment.** Wire `stock-movement/page.tsx` as a read-only ledger view; wire `adjustment/page.tsx` to call `adjust_stock()`.
+- [ ] **Phase 13 — Purchase Orders + Receiving.** Wire `purchasing/purchase-orders/page.tsx` (CRUD) and `purchasing/receiving/page.tsx` (insert `incoming_items` against a PO; update `quantity_received` + PO status).
+- [ ] **Phase 14 — Quotes + Order List.** Wire `orders/quotes/page.tsx` and `orders/order-list/page.tsx`; wire the confirm action to `confirm_order()`. Resolve the two open decisions from Phase 10 first. Highest-complexity phase.
+- [ ] **Phase 15 — Production Queue + Completed Orders.** Status-board views over `orders`; decide the Loyverse receipt-on-completion flow now that n8n sync is disabled (manual entry, a re-enabled targeted workflow, or a different integration point).

@@ -78,7 +78,7 @@ export function ProfileForm({ contactNumber, birthday }: Props) {
               defaultValue={current.birthday ?? ""}
             />
             {result && !result.success && (
-              <p className="text-sm text-[--color-danger]">{result.error}</p>
+              <p className="text-sm text-(--color-danger)">{result.error}</p>
             )}
             <div className="flex gap-2">
               <Button type="submit" disabled={isPending}>
@@ -92,19 +92,19 @@ export function ProfileForm({ contactNumber, birthday }: Props) {
         ) : (
           <dl className="space-y-3 text-sm">
             <div>
-              <dt className="font-medium text-[--color-text]">Contact Number</dt>
-              <dd className="mt-0.5 text-[--color-text-muted]">
+              <dt className="font-medium text-(--color-text)">Contact Number</dt>
+              <dd className="mt-0.5 text-(--color-text-muted)">
                 {current.contactNumber ?? <span className="italic">Not set</span>}
               </dd>
             </div>
             <div>
-              <dt className="font-medium text-[--color-text]">Birthday</dt>
-              <dd className="mt-0.5 text-[--color-text-muted]">
+              <dt className="font-medium text-(--color-text)">Birthday</dt>
+              <dd className="mt-0.5 text-(--color-text-muted)">
                 {formattedBirthday ?? <span className="italic">Not set</span>}
               </dd>
             </div>
             {result?.success && (
-              <p className="text-sm text-[--color-success]">Profile updated successfully.</p>
+              <p className="text-sm text-(--color-success)">Profile updated successfully.</p>
             )}
           </dl>
         )}

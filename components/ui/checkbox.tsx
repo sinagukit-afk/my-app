@@ -46,26 +46,26 @@ const Checkbox: React.FC<CheckboxProps> = ({
           onChange={handleChange}
           disabled={disabled}
           className={cn(
-            "mt-0.5 h-4 w-4 shrink-0 rounded border border-[--color-border-strong] bg-[--color-surface] accent-[--color-primary] transition-colors",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--color-primary] focus-visible:ring-offset-1",
+            "mt-0.5 h-4 w-4 shrink-0 rounded border border-(--color-border-strong) bg-(--color-surface) accent-(--color-primary) transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) focus-visible:ring-offset-1",
             "disabled:cursor-not-allowed disabled:opacity-50",
-            error && "border-[--color-danger]"
+            error && "border-(--color-danger)"
           )}
         />
         {(label || description) && (
           <div className="flex flex-col">
             {label && (
-              <label htmlFor={checkboxId} className="text-sm font-medium text-[--color-text] cursor-pointer leading-none">
+              <label htmlFor={checkboxId} className="text-sm font-medium text-(--color-text) cursor-pointer leading-none">
                 {label}
               </label>
             )}
             {description && (
-              <span className="text-xs text-[--color-text-muted] mt-0.5">{description}</span>
+              <span className="text-xs text-(--color-text-muted) mt-0.5">{description}</span>
             )}
           </div>
         )}
       </div>
-      {error && <p className="text-xs text-[--color-danger] ml-6">{error}</p>}
+      {error && <p className="text-xs text-(--color-danger) ml-6">{error}</p>}
     </div>
   );
 };

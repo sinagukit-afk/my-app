@@ -19,8 +19,8 @@ export function NotificationBell({ count = 0, onClick, className }: Notification
       aria-label={capped ? `${count} notifications` : "Notifications"}
       className={cn(
         "relative inline-flex h-9 w-9 items-center justify-center rounded-md",
-        "text-[--color-text-muted] hover:bg-[--color-bg] hover:text-[--color-text]",
-        "focus:outline-none focus-visible:ring-2 focus-visible:ring-[--color-primary]",
+        "text-(--color-text-muted) hover:bg-(--color-bg) hover:text-(--color-text)",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary)",
         "transition-colors",
         className
       )}
@@ -32,7 +32,7 @@ export function NotificationBell({ count = 0, onClick, className }: Notification
       {capped && (
         <span
           aria-hidden
-          className="absolute -right-0.5 -top-0.5 flex min-w-[16px] h-4 items-center justify-center rounded-full bg-[--color-danger] px-1 text-[10px] font-semibold text-white leading-none"
+          className="absolute -right-0.5 -top-0.5 flex min-w-[16px] h-4 items-center justify-center rounded-full bg-(--color-danger) px-1 text-[10px] font-semibold text-white leading-none"
         >
           {capped}
         </span>

@@ -51,9 +51,9 @@ const Toggle: React.FC<ToggleProps> = ({
           htmlFor={toggleId}
           className={cn(
             "flex h-6 w-11 cursor-pointer items-center rounded-full transition-colors duration-200",
-            "bg-[--color-border-strong] peer-checked:bg-[--color-primary]",
+            "bg-(--color-border-strong) peer-checked:bg-(--color-primary)",
             "peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
-            "after:block after:h-5 after:w-5 after:translate-x-0.5 after:rounded-full after:bg-white after:shadow-[--shadow-sm] after:transition-transform after:duration-200",
+            "after:block after:h-5 after:w-5 after:translate-x-0.5 after:rounded-full after:bg-white after:shadow-(--shadow-sm) after:transition-transform after:duration-200",
             "peer-checked:after:translate-x-5"
           )}
         />
@@ -61,12 +61,12 @@ const Toggle: React.FC<ToggleProps> = ({
       {(label || description) && (
         <div className="flex flex-col">
           {label && (
-            <label htmlFor={toggleId} className="text-sm font-medium text-[--color-text] cursor-pointer">
+            <label htmlFor={toggleId} className="text-sm font-medium text-(--color-text) cursor-pointer">
               {label}
             </label>
           )}
           {description && (
-            <span className="text-xs text-[--color-text-muted]">{description}</span>
+            <span className="text-xs text-(--color-text-muted)">{description}</span>
           )}
         </div>
       )}

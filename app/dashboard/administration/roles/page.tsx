@@ -72,7 +72,7 @@ const ROLE_DEFS: {
 ];
 
 const CheckIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" className="shrink-0 text-[--color-success]">
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" className="shrink-0 text-(--color-success)">
     <path d="M2 7l4 4 6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
@@ -134,19 +134,19 @@ export default async function RolesPage() {
                 </div>
                 <div className="shrink-0 flex flex-col items-end gap-1.5">
                   <Badge variant={role.badge}>{role.label}</Badge>
-                  <span className="text-xs text-[--color-text-muted]">
+                  <span className="text-xs text-(--color-text-muted)">
                     {roleCount[role.key] ?? 0} user{(roleCount[role.key] ?? 0) !== 1 ? "s" : ""}
                   </span>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[--color-text-muted]">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-(--color-text-muted)">
                 Permissions
               </p>
               <ul className="space-y-1.5">
                 {role.permissions.map((perm) => (
-                  <li key={perm} className="flex items-center gap-2 text-sm text-[--color-text-muted]">
+                  <li key={perm} className="flex items-center gap-2 text-sm text-(--color-text-muted)">
                     <CheckIcon />
                     {perm}
                   </li>

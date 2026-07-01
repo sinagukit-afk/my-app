@@ -27,10 +27,10 @@ export function FilterBar({ options, value, onChange, className }: FilterBarProp
             onClick={() => onChange(opt.value)}
             aria-pressed={active}
             className={cn(
-              "h-8 rounded-md px-3 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[--color-primary]",
+              "h-8 rounded-md px-3 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary)",
               active
-                ? "bg-[--color-primary] text-[--color-primary-fg]"
-                : "border border-[--color-border] bg-[--color-surface] text-[--color-text-muted] hover:bg-[--color-bg] hover:text-[--color-text]"
+                ? "bg-(--color-primary) text-(--color-primary-fg)"
+                : "border border-(--color-border) bg-(--color-surface) text-(--color-text-muted) hover:bg-(--color-bg) hover:text-(--color-text)"
             )}
           >
             {opt.label}

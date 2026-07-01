@@ -14,7 +14,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="text-sm font-medium text-[--color-text]"
+            className="text-sm font-medium text-(--color-text)"
           >
             {label}
           </label>
@@ -23,17 +23,17 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           id={inputId}
           className={cn(
-            "flex h-9 w-full rounded-md border border-[--color-border] bg-[--color-surface] px-3 py-1 text-sm text-[--color-text] shadow-[--shadow-sm] transition-colors",
-            "placeholder:text-[--color-text-subtle]",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--color-primary] focus-visible:ring-offset-1",
+            "flex h-9 w-full rounded-md border border-(--color-border) bg-(--color-surface) px-3 py-1 text-sm text-(--color-text) shadow-(--shadow-sm) transition-colors",
+            "placeholder:text-(--color-text-subtle)",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) focus-visible:ring-offset-1",
             "disabled:cursor-not-allowed disabled:opacity-50",
-            error && "border-[--color-danger] focus-visible:ring-[--color-danger]",
+            error && "border-(--color-danger) focus-visible:ring-(--color-danger)",
             className
           )}
           {...props}
         />
         {error && (
-          <p className="text-xs text-[--color-danger]">{error}</p>
+          <p className="text-xs text-(--color-danger)">{error}</p>
         )}
       </div>
     );

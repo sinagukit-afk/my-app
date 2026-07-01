@@ -21,16 +21,16 @@ export function PlaceholderCard({
   return (
     <Card
       className={cn(
-        "flex items-center justify-center border-dashed bg-[--color-bg]",
+        "flex items-center justify-center border-dashed bg-(--color-bg)",
         minHeight,
         className
       )}
     >
       <CardContent className="flex flex-col items-center gap-2 py-8 text-center">
-        <div className="text-3xl text-[--color-text-subtle]">⋯</div>
-        <p className="text-sm font-medium text-[--color-text-muted]">{title}</p>
+        <div className="text-3xl text-(--color-text-subtle)">⋯</div>
+        <p className="text-sm font-medium text-(--color-text-muted)">{title}</p>
         {description && (
-          <p className="text-xs text-[--color-text-subtle] max-w-[240px]">{description}</p>
+          <p className="text-xs text-(--color-text-subtle) max-w-[240px]">{description}</p>
         )}
         {children}
       </CardContent>

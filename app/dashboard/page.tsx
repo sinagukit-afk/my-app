@@ -65,14 +65,14 @@ const QUICK_ACTIONS = [
 // ── Trend arrow ──────────────────────────────────────────────────
 function TrendIcon({ trend }: { trend: string }) {
   if (trend === "up") return (
-    <span className="text-[--color-success] text-sm font-medium flex items-center gap-0.5">
+    <span className="text-(--color-success) text-sm font-medium flex items-center gap-0.5">
       <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden>
         <path d="M7 3l5 5H2l5-5z" />
       </svg>
     </span>
   );
   if (trend === "warn") return (
-    <span className="text-[--color-warning] text-sm">!</span>
+    <span className="text-(--color-warning) text-sm">!</span>
   );
   return null;
 }
@@ -99,16 +99,16 @@ export default function DashboardPage() {
         {KPI_CARDS.map((kpi) => (
           <Card key={kpi.id}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-[--color-text-muted]">
+              <CardTitle className="text-sm font-medium text-(--color-text-muted)">
                 {kpi.label}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-end gap-2">
-                <span className="text-2xl font-bold text-[--color-text]">{kpi.value}</span>
+                <span className="text-2xl font-bold text-(--color-text)">{kpi.value}</span>
                 <TrendIcon trend={kpi.trend} />
               </div>
-              <p className="mt-1 text-xs text-[--color-text-subtle]">{kpi.sub}</p>
+              <p className="mt-1 text-xs text-(--color-text-subtle)">{kpi.sub}</p>
             </CardContent>
           </Card>
         ))}
@@ -122,15 +122,15 @@ export default function DashboardPage() {
             <CardTitle>Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="divide-y divide-[--color-border]">
+            <ul className="divide-y divide-(--color-border)">
               {RECENT_ACTIVITY.map((item) => (
                 <li key={item.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
-                  <span className="text-sm text-[--color-text]">{item.text}</span>
+                  <span className="text-sm text-(--color-text)">{item.text}</span>
                   <div className="flex items-center gap-3 ml-4 shrink-0">
                     <Badge variant={activityBadgeVariant(item.badge)}>
                       {item.badge === "success" ? "Done" : item.badge === "warning" ? "Alert" : "Info"}
                     </Badge>
-                    <span className="text-xs text-[--color-text-subtle] w-14 text-right">{item.time}</span>
+                    <span className="text-xs text-(--color-text-subtle) w-14 text-right">{item.time}</span>
                   </div>
                 </li>
               ))}
@@ -147,12 +147,12 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <ul className="divide-y divide-[--color-border]">
+            <ul className="divide-y divide-(--color-border)">
               {LOW_STOCK_ITEMS.map((item) => (
                 <li key={item.id} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
-                  <span className="text-sm text-[--color-text] truncate pr-2">{item.name}</span>
-                  <span className="text-sm font-semibold text-[--color-danger] shrink-0">
-                    {item.stock} <span className="text-xs text-[--color-text-subtle] font-normal">/ {item.min} min</span>
+                  <span className="text-sm text-(--color-text) truncate pr-2">{item.name}</span>
+                  <span className="text-sm font-semibold text-(--color-danger) shrink-0">
+                    {item.stock} <span className="text-xs text-(--color-text-subtle) font-normal">/ {item.min} min</span>
                   </span>
                 </li>
               ))}

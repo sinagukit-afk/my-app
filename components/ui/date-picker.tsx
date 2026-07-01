@@ -14,7 +14,7 @@ const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
     return (
       <div className="flex flex-col gap-1.5">
         {label && (
-          <label htmlFor={inputId} className="text-sm font-medium text-[--color-text]">
+          <label htmlFor={inputId} className="text-sm font-medium text-(--color-text)">
             {label}
           </label>
         )}
@@ -23,15 +23,15 @@ const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
           type="date"
           id={inputId}
           className={cn(
-            "flex h-9 w-full rounded-md border border-[--color-border] bg-[--color-surface] px-3 py-1 text-sm text-[--color-text] shadow-[--shadow-sm] transition-colors",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--color-primary] focus-visible:ring-offset-1",
+            "flex h-9 w-full rounded-md border border-(--color-border) bg-(--color-surface) px-3 py-1 text-sm text-(--color-text) shadow-(--shadow-sm) transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) focus-visible:ring-offset-1",
             "disabled:cursor-not-allowed disabled:opacity-50",
-            error && "border-[--color-danger] focus-visible:ring-[--color-danger]",
+            error && "border-(--color-danger) focus-visible:ring-(--color-danger)",
             className
           )}
           {...props}
         />
-        {error && <p className="text-xs text-[--color-danger]">{error}</p>}
+        {error && <p className="text-xs text-(--color-danger)">{error}</p>}
       </div>
     );
   }

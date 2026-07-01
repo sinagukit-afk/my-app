@@ -33,7 +33,7 @@ export default async function UsersPage() {
 
       {error && (
         <Card>
-          <CardContent className="p-4 text-sm text-[--color-danger]">
+          <CardContent className="p-4 text-sm text-(--color-danger)">
             Failed to load users: {error.message}
           </CardContent>
         </Card>

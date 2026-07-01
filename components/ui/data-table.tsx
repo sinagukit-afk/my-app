@@ -94,7 +94,7 @@ function DataTable<T extends Record<string, unknown>>({
       );
     }
     return (
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" className="text-[--color-primary]">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" className="text-(--color-primary)">
         {sortDir === "asc" ? (
           <path d="M3 7l3-5 3 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
         ) : (
@@ -111,7 +111,7 @@ function DataTable<T extends Record<string, unknown>>({
         <div className="flex items-center gap-2">
           <div className="relative flex-1 max-w-xs">
             <svg
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[--color-text-muted]"
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-(--color-text-muted)"
               width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"
             >
               <path d="M6 11A5 5 0 1 0 6 1a5 5 0 0 0 0 10ZM13 13l-3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
@@ -122,14 +122,14 @@ function DataTable<T extends Record<string, unknown>>({
               onChange={handleSearch}
               placeholder={searchPlaceholder}
               className={cn(
-                "h-9 w-full rounded-md border border-[--color-border] bg-[--color-surface] pl-9 pr-3 text-sm text-[--color-text] shadow-[--shadow-sm]",
-                "placeholder:text-[--color-text-subtle]",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--color-primary] focus-visible:ring-offset-1"
+                "h-9 w-full rounded-md border border-(--color-border) bg-(--color-surface) pl-9 pr-3 text-sm text-(--color-text) shadow-(--shadow-sm)",
+                "placeholder:text-(--color-text-subtle)",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) focus-visible:ring-offset-1"
               )}
             />
           </div>
           {search && (
-            <span className="text-xs text-[--color-text-muted]">
+            <span className="text-xs text-(--color-text-muted)">
               {filtered.length} result{filtered.length !== 1 ? "s" : ""}
             </span>
           )}
@@ -137,18 +137,18 @@ function DataTable<T extends Record<string, unknown>>({
       )}
 
       {/* Table */}
-      <div className="rounded-lg border border-[--color-border] overflow-hidden bg-[--color-surface] shadow-[--shadow-sm]">
+      <div className="rounded-lg border border-(--color-border) overflow-hidden bg-(--color-surface) shadow-(--shadow-sm)">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[--color-border] bg-[--color-bg]">
+              <tr className="border-b border-(--color-border) bg-(--color-bg)">
                 {columns.map((col) => (
                   <th
                     key={col.key}
                     scope="col"
                     className={cn(
-                      "px-4 py-3 text-left text-xs font-semibold text-[--color-text-muted] uppercase tracking-wider whitespace-nowrap",
-                      col.sortable && "cursor-pointer select-none hover:text-[--color-text] transition-colors",
+                      "px-4 py-3 text-left text-xs font-semibold text-(--color-text-muted) uppercase tracking-wider whitespace-nowrap",
+                      col.sortable && "cursor-pointer select-none hover:text-(--color-text) transition-colors",
                       col.className
                     )}
                     onClick={col.sortable ? () => handleSort(col.key) : undefined}
@@ -164,7 +164,7 @@ function DataTable<T extends Record<string, unknown>>({
             <tbody>
               {isLoading ? (
                 Array.from({ length: pageSize }).map((_, i) => (
-                  <tr key={i} className="border-b border-[--color-border] last:border-0">
+                  <tr key={i} className="border-b border-(--color-border) last:border-0">
                     {columns.map((col) => (
                       <td key={col.key} className="px-4 py-3">
                         <Skeleton className="h-4 w-full" />
@@ -176,13 +176,13 @@ function DataTable<T extends Record<string, unknown>>({
                 <tr>
                   <td colSpan={columns.length} className="px-4 py-12 text-center">
                     <div className="flex flex-col items-center gap-2">
-                      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true" className="text-[--color-text-subtle]">
+                      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true" className="text-(--color-text-subtle)">
                         <rect x="6" y="10" width="28" height="22" rx="3" stroke="currentColor" strokeWidth="1.5" />
                         <path d="M6 16h28" stroke="currentColor" strokeWidth="1.5" />
                         <path d="M14 24h12M14 28h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                       </svg>
-                      <p className="font-medium text-[--color-text-muted]">{emptyMessage}</p>
-                      <p className="text-xs text-[--color-text-subtle]">{emptyDescription}</p>
+                      <p className="font-medium text-(--color-text-muted)">{emptyMessage}</p>
+                      <p className="text-xs text-(--color-text-subtle)">{emptyDescription}</p>
                     </div>
                   </td>
                 </tr>
@@ -190,10 +190,10 @@ function DataTable<T extends Record<string, unknown>>({
                 paginated.map((row, ri) => (
                   <tr
                     key={ri}
-                    className="border-b border-[--color-border] last:border-0 hover:bg-[--color-bg] transition-colors"
+                    className="border-b border-(--color-border) last:border-0 hover:bg-(--color-bg) transition-colors"
                   >
                     {columns.map((col) => (
-                      <td key={col.key} className={cn("px-4 py-3 text-[--color-text]", col.className)}>
+                      <td key={col.key} className={cn("px-4 py-3 text-(--color-text)", col.className)}>
                         {col.render
                           ? col.render(row[col.key], row)
                           : String(row[col.key] ?? "")}
@@ -208,8 +208,8 @@ function DataTable<T extends Record<string, unknown>>({
 
         {/* Pagination footer */}
         {!isLoading && sorted.length > 0 && (
-          <div className="flex items-center justify-between border-t border-[--color-border] bg-[--color-bg] px-4 py-2.5">
-            <span className="text-xs text-[--color-text-muted]">
+          <div className="flex items-center justify-between border-t border-(--color-border) bg-(--color-bg) px-4 py-2.5">
+            <span className="text-xs text-(--color-text-muted)">
               Showing {Math.min((currentPage - 1) * pageSize + 1, sorted.length)}–{Math.min(currentPage * pageSize, sorted.length)} of {sorted.length}
             </span>
             <div className="flex items-center gap-1">
@@ -217,8 +217,8 @@ function DataTable<T extends Record<string, unknown>>({
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
                 className={cn(
-                  "inline-flex h-7 w-7 items-center justify-center rounded-md text-xs text-[--color-text-muted] transition-colors",
-                  "hover:bg-[--color-surface] hover:text-[--color-text]",
+                  "inline-flex h-7 w-7 items-center justify-center rounded-md text-xs text-(--color-text-muted) transition-colors",
+                  "hover:bg-(--color-surface) hover:text-(--color-text)",
                   "disabled:cursor-not-allowed disabled:opacity-40"
                 )}
                 aria-label="Previous page"
@@ -234,7 +234,7 @@ function DataTable<T extends Record<string, unknown>>({
                 }, [])
                 .map((p, i) =>
                   p === "…" ? (
-                    <span key={`ellipsis-${i}`} className="px-1 text-xs text-[--color-text-subtle]">…</span>
+                    <span key={`ellipsis-${i}`} className="px-1 text-xs text-(--color-text-subtle)">…</span>
                   ) : (
                     <button
                       key={p}
@@ -242,8 +242,8 @@ function DataTable<T extends Record<string, unknown>>({
                       className={cn(
                         "inline-flex h-7 min-w-[1.75rem] items-center justify-center rounded-md px-1.5 text-xs transition-colors",
                         currentPage === p
-                          ? "bg-[--color-primary] text-[--color-primary-fg] font-medium"
-                          : "text-[--color-text-muted] hover:bg-[--color-surface] hover:text-[--color-text]"
+                          ? "bg-(--color-primary) text-(--color-primary-fg) font-medium"
+                          : "text-(--color-text-muted) hover:bg-(--color-surface) hover:text-(--color-text)"
                       )}
                     >
                       {p}
@@ -254,8 +254,8 @@ function DataTable<T extends Record<string, unknown>>({
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
                 className={cn(
-                  "inline-flex h-7 w-7 items-center justify-center rounded-md text-xs text-[--color-text-muted] transition-colors",
-                  "hover:bg-[--color-surface] hover:text-[--color-text]",
+                  "inline-flex h-7 w-7 items-center justify-center rounded-md text-xs text-(--color-text-muted) transition-colors",
+                  "hover:bg-(--color-surface) hover:text-(--color-text)",
                   "disabled:cursor-not-allowed disabled:opacity-40"
                 )}
                 aria-label="Next page"

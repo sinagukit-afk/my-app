@@ -247,17 +247,17 @@ function Breadcrumb({ pathname }: { pathname: string }) {
   }));
 
   return (
-    <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-[--color-text-muted]">
-      <Link href="/dashboard" className="flex items-center text-[--color-text-muted] hover:text-[--color-text] transition-colors">
+    <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-(--color-text-muted)">
+      <Link href="/dashboard" className="flex items-center text-(--color-text-muted) hover:text-(--color-text) transition-colors">
         <BreadcrumbHomeIcon />
       </Link>
       {crumbs.map((crumb, i) => (
         <React.Fragment key={crumb.href}>
-          <span className="text-[--color-border-strong]">/</span>
+          <span className="text-(--color-border-strong)">/</span>
           {i === crumbs.length - 1 ? (
-            <span className="text-[--color-text] font-medium">{crumb.label}</span>
+            <span className="text-(--color-text) font-medium">{crumb.label}</span>
           ) : (
-            <Link href={crumb.href} className="hover:text-[--color-text] transition-colors">
+            <Link href={crumb.href} className="hover:text-(--color-text) transition-colors">
               {crumb.label}
             </Link>
           )}
@@ -285,15 +285,15 @@ function NavItemRow({
       href={leaf.href}
       title={collapsed ? leaf.label : undefined}
       className={cn(
-        "flex items-center gap-2.5 rounded-[--radius-md] py-2 text-sm font-medium transition-colors",
+        "flex items-center gap-2.5 rounded-(--radius-md) py-2 text-sm font-medium transition-colors",
         indent && !collapsed ? "pl-7 pr-2" : "px-2",
         active
-          ? "bg-[--color-primary-light] text-[--color-primary]"
-          : "text-[--color-text-muted] hover:bg-[--color-bg] hover:text-[--color-text]",
+          ? "bg-(--color-primary-light) text-(--color-primary)"
+          : "text-(--color-text-muted) hover:bg-(--color-bg) hover:text-(--color-text)",
         collapsed && "justify-center px-0"
       )}
     >
-      <Icon className={cn("h-4 w-4 shrink-0", active ? "text-[--color-primary]" : "text-[--color-text-subtle]")} />
+      <Icon className={cn("h-4 w-4 shrink-0", active ? "text-(--color-primary)" : "text-(--color-text-subtle)")} />
       {!collapsed && <span>{leaf.label}</span>}
     </Link>
   );
@@ -332,27 +332,27 @@ export function AppShell({ children, userEmail, userRole, signOutAction }: AppSh
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[--color-bg]">
+    <div className="flex h-screen overflow-hidden bg-(--color-bg)">
       {/* ── Sidebar ─────────────────────────────────────────── */}
       <aside
         className={cn(
-          "flex flex-col shrink-0 border-r border-[--color-border] bg-[--color-surface] transition-all duration-200 ease-in-out",
+          "flex flex-col shrink-0 border-r border-(--color-border) bg-(--color-surface) transition-all duration-200 ease-in-out",
           collapsed ? "w-14" : "w-56"
         )}
       >
         {/* Logo */}
         <div className={cn(
-          "flex items-center border-b border-[--color-border]",
+          "flex items-center border-b border-(--color-border)",
           collapsed ? "h-14 justify-center px-3" : "h-14 gap-3 px-4"
         )}>
           <img
             src="/sinag-ukit-logo.jpg"
             alt="Sinag Ukit"
-            className="h-8 w-8 shrink-0 rounded-[--radius-md] object-contain"
+            className="h-8 w-8 shrink-0 rounded-(--radius-md) object-contain"
           />
           {!collapsed && (
             <div className="min-w-0 overflow-hidden">
-              <p className="truncate text-base font-bold text-[--color-text] leading-tight">Sinag Ukit</p>
+              <p className="truncate text-base font-bold text-(--color-text) leading-tight">Sinag Ukit</p>
             </div>
           )}
         </div>
@@ -380,14 +380,14 @@ export function AppShell({ children, userEmail, userRole, signOutAction }: AppSh
                     onClick={() => !collapsed && toggleGroup(entry.label)}
                     title={collapsed ? entry.label : undefined}
                     className={cn(
-                      "flex w-full items-center gap-2.5 rounded-[--radius-md] px-2 py-2 text-sm font-medium transition-colors",
+                      "flex w-full items-center gap-2.5 rounded-(--radius-md) px-2 py-2 text-sm font-medium transition-colors",
                       hasActive
-                        ? "text-[--color-primary]"
-                        : "text-[--color-text-muted] hover:bg-[--color-bg] hover:text-[--color-text]",
+                        ? "text-(--color-primary)"
+                        : "text-(--color-text-muted) hover:bg-(--color-bg) hover:text-(--color-text)",
                       collapsed && "justify-center px-0"
                     )}
                   >
-                    <Icon className={cn("h-4 w-4 shrink-0", hasActive ? "text-[--color-primary]" : "text-[--color-text-subtle]")} />
+                    <Icon className={cn("h-4 w-4 shrink-0", hasActive ? "text-(--color-primary)" : "text-(--color-text-subtle)")} />
                     {!collapsed && (
                       <>
                         <span className="flex-1 text-left">{entry.label}</span>
@@ -409,7 +409,7 @@ export function AppShell({ children, userEmail, userRole, signOutAction }: AppSh
                           return (
                             <li key={child.label}>
                               {!collapsed && (
-                                <p className="px-2 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-widest text-[--color-text-subtle]">
+                                <p className="px-2 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-widest text-(--color-text-subtle)">
                                   {child.label}
                                 </p>
                               )}
@@ -448,12 +448,12 @@ export function AppShell({ children, userEmail, userRole, signOutAction }: AppSh
         </nav>
 
         {/* Collapse toggle */}
-        <div className={cn("border-t border-[--color-border] p-2", collapsed && "flex justify-center")}>
+        <div className={cn("border-t border-(--color-border) p-2", collapsed && "flex justify-center")}>
           <button
             onClick={() => setCollapsed((c) => !c)}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             className={cn(
-              "flex items-center gap-2 rounded-[--radius-md] px-2 py-2 text-xs text-[--color-text-muted] hover:bg-[--color-bg] hover:text-[--color-text] transition-colors w-full",
+              "flex items-center gap-2 rounded-(--radius-md) px-2 py-2 text-xs text-(--color-text-muted) hover:bg-(--color-bg) hover:text-(--color-text) transition-colors w-full",
               collapsed && "w-auto justify-center"
             )}
           >
@@ -466,25 +466,25 @@ export function AppShell({ children, userEmail, userRole, signOutAction }: AppSh
       {/* ── Main column ─────────────────────────────────────── */}
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
         {/* Top header */}
-        <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-[--color-border] bg-[--color-surface] px-4 shadow-[--shadow-sm]">
+        <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-(--color-border) bg-(--color-surface) px-4 shadow-(--shadow-sm)">
           <button
             onClick={() => setCollapsed((c) => !c)}
-            className="flex md:hidden items-center justify-center h-8 w-8 rounded-[--radius-md] text-[--color-text-muted] hover:bg-[--color-bg] transition-colors"
+            className="flex md:hidden items-center justify-center h-8 w-8 rounded-(--radius-md) text-(--color-text-muted) hover:bg-(--color-bg) transition-colors"
             aria-label="Toggle sidebar"
           >
             <MenuIcon />
           </button>
 
           <div className="hidden md:block">
-            <p className="text-sm font-semibold text-[--color-text]">Sinag Ukit BMS</p>
-            <p className="text-xs text-[--color-text-muted]">Business Management System</p>
+            <p className="text-sm font-semibold text-(--color-text)">Sinag Ukit BMS</p>
+            <p className="text-xs text-(--color-text-muted)">Business Management System</p>
           </div>
 
           <div className="flex items-center gap-3 ml-auto">
             <div className="text-right hidden sm:block">
-              <p className="text-xs font-medium text-[--color-text] leading-tight">{userEmail}</p>
+              <p className="text-xs font-medium text-(--color-text) leading-tight">{userEmail}</p>
               {userRole && (
-                <p className="text-xs text-[--color-text-muted] leading-tight capitalize">{userRole}</p>
+                <p className="text-xs text-(--color-text-muted) leading-tight capitalize">{userRole}</p>
               )}
             </div>
             <form action={signOutAction}>
@@ -496,7 +496,7 @@ export function AppShell({ children, userEmail, userRole, signOutAction }: AppSh
         </header>
 
         {/* Breadcrumb bar */}
-        <div className="flex h-10 shrink-0 items-center border-b border-[--color-border] bg-[--color-bg] px-6">
+        <div className="flex h-10 shrink-0 items-center border-b border-(--color-border) bg-(--color-bg) px-6">
           <Breadcrumb pathname={pathname} />
         </div>
 

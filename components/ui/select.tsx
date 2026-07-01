@@ -21,7 +21,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <div className="flex flex-col gap-1.5">
         {label && (
-          <label htmlFor={inputId} className="text-sm font-medium text-[--color-text]">
+          <label htmlFor={inputId} className="text-sm font-medium text-(--color-text)">
             {label}
           </label>
         )}
@@ -30,10 +30,10 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             id={inputId}
             className={cn(
-              "flex h-9 w-full appearance-none rounded-md border border-[--color-border] bg-[--color-surface] px-3 py-1 pr-8 text-sm text-[--color-text] shadow-[--shadow-sm] transition-colors",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--color-primary] focus-visible:ring-offset-1",
+              "flex h-9 w-full appearance-none rounded-md border border-(--color-border) bg-(--color-surface) px-3 py-1 pr-8 text-sm text-(--color-text) shadow-(--shadow-sm) transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) focus-visible:ring-offset-1",
               "disabled:cursor-not-allowed disabled:opacity-50",
-              error && "border-[--color-danger] focus-visible:ring-[--color-danger]",
+              error && "border-(--color-danger) focus-visible:ring-(--color-danger)",
               className
             )}
             {...props}
@@ -51,7 +51,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           </select>
           {/* chevron */}
           <svg
-            className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[--color-text-muted]"
+            className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-(--color-text-muted)"
             width="14"
             height="14"
             viewBox="0 0 14 14"
@@ -61,7 +61,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
-        {error && <p className="text-xs text-[--color-danger]">{error}</p>}
+        {error && <p className="text-xs text-(--color-danger)">{error}</p>}
       </div>
     );
   }

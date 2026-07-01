@@ -21,7 +21,7 @@ export default function ProfitLossPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-[--color-text-muted]">
+          <p className="text-sm text-(--color-text-muted)">
             No data or forms are connected yet. Check back once this module is built out.
           </p>
         </CardContent>

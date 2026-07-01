@@ -40,20 +40,20 @@ export function UserMenu({ name, email, avatarUrl, menuItems, className }: UserM
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-[--color-bg] focus:outline-none focus-visible:ring-2 focus-visible:ring-[--color-primary] transition-colors"
+        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-(--color-bg) focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) transition-colors"
       >
         {avatarUrl ? (
           <img src={avatarUrl} alt={name} className="h-7 w-7 rounded-full object-cover" />
         ) : (
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[--color-primary] text-xs font-semibold text-white">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-(--color-primary) text-xs font-semibold text-white">
             {getInitials(name)}
           </span>
         )}
         <span className="hidden sm:block">
-          <span className="block text-xs font-medium text-[--color-text] leading-tight">{name}</span>
-          {email && <span className="block text-[10px] text-[--color-text-muted] leading-tight">{email}</span>}
+          <span className="block text-xs font-medium text-(--color-text) leading-tight">{name}</span>
+          {email && <span className="block text-[10px] text-(--color-text-muted) leading-tight">{email}</span>}
         </span>
-        <svg className="text-[--color-text-muted]" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+        <svg className="text-(--color-text-muted)" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
           <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
@@ -61,7 +61,7 @@ export function UserMenu({ name, email, avatarUrl, menuItems, className }: UserM
       {open && menuItems && menuItems.length > 0 && (
         <div
           role="menu"
-          className="absolute right-0 z-50 mt-1.5 w-44 rounded-md border border-[--color-border] bg-[--color-surface] py-1 shadow-[--shadow-md]"
+          className="absolute right-0 z-50 mt-1.5 w-44 rounded-md border border-(--color-border) bg-(--color-surface) py-1 shadow-(--shadow-md)"
         >
           {menuItems.map((item) => (
             <button
@@ -72,8 +72,8 @@ export function UserMenu({ name, email, avatarUrl, menuItems, className }: UserM
               className={cn(
                 "block w-full px-3 py-2 text-left text-sm transition-colors",
                 item.danger
-                  ? "text-[--color-danger] hover:bg-[--color-danger-light]"
-                  : "text-[--color-text] hover:bg-[--color-bg]"
+                  ? "text-(--color-danger) hover:bg-(--color-danger-light)"
+                  : "text-(--color-text) hover:bg-(--color-bg)"
               )}
             >
               {item.label}

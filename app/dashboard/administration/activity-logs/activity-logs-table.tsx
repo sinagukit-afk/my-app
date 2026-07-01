@@ -44,7 +44,7 @@ const COLUMNS: Column<LogRow>[] = [
     header: "User",
     sortable: true,
     render: (value) => (
-      <span className="font-medium text-[--color-text]">{(value as string) || "System"}</span>
+      <span className="font-medium text-(--color-text)">{(value as string) || "System"}</span>
     ),
   },
   {
@@ -61,7 +61,7 @@ const COLUMNS: Column<LogRow>[] = [
     key: "description",
     header: "Description",
     render: (value) => (
-      <span className="text-sm text-[--color-text-muted]">{(value as string) || "—"}</span>
+      <span className="text-sm text-(--color-text-muted)">{(value as string) || "—"}</span>
     ),
   },
   {
@@ -70,11 +70,11 @@ const COLUMNS: Column<LogRow>[] = [
     sortable: true,
     render: (value) =>
       value ? (
-        <span className="rounded bg-[--color-border] px-2 py-0.5 text-xs font-mono text-[--color-text-muted]">
+        <span className="rounded bg-(--color-border) px-2 py-0.5 text-xs font-mono text-(--color-text-muted)">
           {String(value)}
         </span>
       ) : (
-        <span className="text-[--color-text-subtle]">—</span>
+        <span className="text-(--color-text-subtle)">—</span>
       ),
   },
   {
@@ -82,7 +82,7 @@ const COLUMNS: Column<LogRow>[] = [
     header: "Time",
     sortable: true,
     render: (value) => (
-      <span className="whitespace-nowrap text-xs text-[--color-text-muted]">
+      <span className="whitespace-nowrap text-xs text-(--color-text-muted)">
         {formatTimestamp(value as string)}
       </span>
     ),

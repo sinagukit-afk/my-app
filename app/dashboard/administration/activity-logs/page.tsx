@@ -57,7 +57,7 @@ export default async function ActivityLogsPage() {
 
       {error && (
         <Card>
-          <CardContent className="p-4 text-sm text-[--color-danger]">
+          <CardContent className="p-4 text-sm text-(--color-danger)">
             Failed to load activity logs: {error.message}
           </CardContent>
         </Card>

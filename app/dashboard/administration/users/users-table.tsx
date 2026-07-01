@@ -26,8 +26,8 @@ const COLUMNS: Column<UserRow>[] = [
     sortable: true,
     render: (value, row) => (
       <div>
-        <p className="font-medium text-[--color-text]">{(value as string) || "—"}</p>
-        <p className="text-xs text-[--color-text-muted]">{row.email}</p>
+        <p className="font-medium text-(--color-text)">{(value as string) || "—"}</p>
+        <p className="text-xs text-(--color-text-muted)">{row.email}</p>
       </div>
     ),
   },
