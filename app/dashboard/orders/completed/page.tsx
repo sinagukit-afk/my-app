@@ -1,31 +1,48 @@
-import { PageHeader } from "@/components/ui/page-header";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { createClient } from "@/lib/supabase/server";
+import { CompletedOrdersTable, type OrderRow } from "./completed-table";
 
-export default function CompletedOrdersPage() {
+function firstOf<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+
+export default async function CompletedOrdersPage() {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("orders")
+    .select(
+      "id, note, total_money, created_at, updated_at, loyverse_receipt_number, customers(name), order_items(id, item_name_snapshot, quantity, unit_price, line_discount)"
+    )
+    .eq("status", "completed")
+    .order("updated_at", { ascending: false });
+
+  const rows: OrderRow[] = (data ?? []).map((o) => {
+    const customer = firstOf(o.customers);
+    return {
+      id: o.id,
+      customerName: customer?.name ?? null,
+      note: o.note,
+      totalMoney: Number(o.total_money),
+      createdAt: o.created_at,
+      completedAt: o.updated_at,
+      loyverseReceiptNumber: o.loyverse_receipt_number,
+      items: (o.order_items ?? []).map((it) => ({
+        id: it.id,
+        name: it.item_name_snapshot ?? "",
+        quantity: Number(it.quantity),
+        unitPrice: Number(it.unit_price),
+        discount: Number(it.line_discount),
+      })),
+    };
+  });
+
   return (
-    <div>
-      <PageHeader
-        title="Completed Orders"
-        description="Review the archive of fulfilled and closed orders."
-      />
-      <Card className="max-w-lg">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <CardTitle>Module under construction</CardTitle>
-            <Badge variant="neutral">Coming Soon</Badge>
-          </div>
-          <CardDescription>
-            This page will list all completed orders with delivery confirmations, final totals,
-            and links to related invoices.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-(--color-text-muted)">
-            No data or forms are connected yet. Check back once this module is built out.
-          </p>
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      {error && (
+        <p className="text-sm text-(--color-danger)">Failed to load orders: {error.message}</p>
+      )}
+      <CompletedOrdersTable data={rows} />
     </div>
   );
 }
