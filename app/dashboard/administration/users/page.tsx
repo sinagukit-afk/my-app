@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { StatCard } from "@/components/business/stat-card";
@@ -6,10 +7,29 @@ import { UsersTable, type UserRow } from "./users-table";
 
 export default async function UsersPage() {
   const supabase = await createClient();
+
+  const {
+    data: { user: currentUser },
+  } = await supabase.auth.getUser();
+  const { data: currentProfile } = currentUser
+    ? await supabase.from("profiles").select("role").eq("id", currentUser.id).single()
+    : { data: null };
+  const isAdmin = currentProfile?.role === "admin";
+
   const { data, error } = await supabase
     .from("profiles")
     .select("id, email, full_name, role, created_at")
     .order("created_at");
+
+  let bannedIds = new Set<string>();
+  if (isAdmin) {
+    const { data: authUsers } = await createAdminClient().auth.admin.listUsers({ perPage: 1000 });
+    bannedIds = new Set(
+      (authUsers?.users ?? [])
+        .filter((u) => u.banned_until && new Date(u.banned_until) > new Date())
+        .map((u) => u.id)
+    );
+  }
 
   const rows: UserRow[] = (data ?? []).map((p) => ({
     id: p.id,
@@ -17,6 +37,7 @@ export default async function UsersPage() {
     email: p.email ?? "",
     role: p.role ?? "",
     joined: p.created_at,
+    active: !bannedIds.has(p.id),
   }));
 
   const roleCount = rows.reduce<Record<string, number>>((acc, u) => {
@@ -60,7 +81,7 @@ export default async function UsersPage() {
           <CardTitle>All Users</CardTitle>
         </CardHeader>
         <CardContent>
-          <UsersTable data={rows} />
+          <UsersTable data={rows} canManage={isAdmin} currentUserId={currentUser?.id ?? null} />
         </CardContent>
       </Card>
     </div>

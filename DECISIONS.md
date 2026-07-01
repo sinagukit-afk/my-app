@@ -74,3 +74,31 @@ chain: `draft→sent/cancelled`, `sent→cancelled`, `received→closed`;
 `partial` only advances via Receiving and has no manual transition.
 Reason: conservative status model until a business need for manual
 overrides (e.g. force-closing a partial PO) is identified.
+
+## D013
+
+User deactivation uses Supabase Auth's `banned_until` (via the admin
+API), not a new `profiles` column. Reason: avoids a schema change for
+something Auth already models natively; keeps the Do-Not-add-a-role
+constraint intact since it only touches the Auth user, not the
+`user_role` enum.
+
+## D014
+
+The Roles screen's Permission Matrix is the same artifact as the
+"Permission UI" deliverable, not a second screen. Reason:
+`NEXT_PHASE.md` explicitly asked for the same read-only capability
+matrix in both places; two separate but nearly-identical read-only
+views would be pure duplication.
+
+## D015
+
+Three seeded demo accounts (`manager@sinagukit.demo`,
+`cashier@sinagukit.demo`, `viewer@sinagukit.demo`) had `NULL` in
+several Auth-internal columns (`confirmation_token`, `recovery_token`,
+`email_change_token_new`, `email_change`), which broke GoTrue's admin
+API (`listUsers`/`updateUserById`) for those 3 users specifically.
+Fixed via two scoped `UPDATE ... SET <col> = ''` statements (asked and
+approved before each), not a migration — this corrects existing row
+values it does not change schema. Reason: empty string is GoTrue's own
+default for "no pending token"; these columns are never displayed.

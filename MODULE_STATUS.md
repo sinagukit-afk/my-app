@@ -45,9 +45,9 @@ screen is for manual/non-PO incoming entry — still open.
 
 ## Administration
 
-⬜ Users
-⬜ Roles
-⬜ Activity Logs
+🟩 Users — invite, edit (name/role), deactivate/reactivate
+🟩 Roles — read-only reference + permission matrix
+🟩 Activity Logs — filters (action/actor/date) + quote-edit diff viewer
 
 ## Account
 

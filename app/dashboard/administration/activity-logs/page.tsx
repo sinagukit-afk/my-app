@@ -8,7 +8,9 @@ type RawLog = {
   id: string;
   action: string;
   entity_type: string | null;
+  entity_id: string | null;
   description: string | null;
+  metadata: Record<string, unknown> | null;
   created_at: string;
   profiles: { full_name: string | null; email: string | null } | null;
 };
@@ -17,7 +19,9 @@ export default async function ActivityLogsPage() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("activity_logs")
-    .select("id, action, entity_type, description, created_at, profiles(full_name, email)")
+    .select(
+      "id, action, entity_type, entity_id, description, metadata, created_at, profiles(full_name, email)"
+    )
     .order("created_at", { ascending: false })
     .limit(500)
     .returns<RawLog[]>();
@@ -29,7 +33,9 @@ export default async function ActivityLogsPage() {
     user_name: l.profiles?.full_name ?? l.profiles?.email ?? "Unknown",
     action: l.action,
     entity_type: l.entity_type ?? "",
+    entity_id: l.entity_id ?? "",
     description: l.description ?? "",
+    metadata: l.metadata ?? {},
     created_at: l.created_at,
   }));
 

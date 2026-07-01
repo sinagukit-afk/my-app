@@ -24,6 +24,7 @@ export interface DataTableProps<T extends Record<string, unknown>> {
   searchable?: boolean;
   searchPlaceholder?: string;
   className?: string;
+  onRowClick?: (row: T) => void;
 }
 
 function DataTable<T extends Record<string, unknown>>({
@@ -36,6 +37,7 @@ function DataTable<T extends Record<string, unknown>>({
   searchable = true,
   searchPlaceholder = "Search…",
   className,
+  onRowClick,
 }: DataTableProps<T>) {
   const [search, setSearch] = React.useState("");
   const [sortKey, setSortKey] = React.useState<string | null>(null);
@@ -190,7 +192,11 @@ function DataTable<T extends Record<string, unknown>>({
                 paginated.map((row, ri) => (
                   <tr
                     key={ri}
-                    className="border-b border-(--color-border) last:border-0 hover:bg-(--color-bg) transition-colors"
+                    onClick={onRowClick ? () => onRowClick(row) : undefined}
+                    className={cn(
+                      "border-b border-(--color-border) last:border-0 hover:bg-(--color-bg) transition-colors",
+                      onRowClick && "cursor-pointer"
+                    )}
                   >
                     {columns.map((col) => (
                       <td key={col.key} className={cn("px-4 py-3 text-(--color-text)", col.className)}>

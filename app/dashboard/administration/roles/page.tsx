@@ -16,22 +16,22 @@ const ROLE_DEFS: {
     label: "Admin",
     description: "Full system access. Can manage users, roles, and all data across every module.",
     permissions: [
-      "Manage users & roles",
-      "View all reports & analytics",
-      "Create, edit, delete any record",
-      "System configuration",
+      "Manage users & roles (invite, edit, deactivate)",
+      "Full create, edit, and delete on business records",
+      "View all activity logs (every user)",
+      "Only role that can advance orders past Confirmed (Start/Complete Production)",
     ],
     badge: "danger",
   },
   {
     key: "manager",
     label: "Manager",
-    description: "Operational oversight. Can view reports and update product and pricing data.",
+    description: "Operational oversight. Can create, edit, and delete most business records.",
     permissions: [
-      "View all reports",
-      "Update items & pricing",
-      "View activity logs",
-      "Create & manage receipts",
+      "Create & edit suppliers, purchase orders, quotes, orders",
+      "Delete suppliers and purchase orders",
+      "View all activity logs (every user)",
+      "Cannot manage users/roles or advance production past Confirmed",
     ],
     badge: "warning",
   },
@@ -40,21 +40,20 @@ const ROLE_DEFS: {
     label: "Encoder",
     description: "Data entry role. Focused on creating transactions and logging incoming stock.",
     permissions: [
-      "Create receipts",
-      "Add incoming items",
-      "View inventory levels",
-      "Basic sales reports",
+      "Create & edit suppliers, purchase orders, quotes, orders",
+      "Edit own quotes only while still in Quote status",
+      "No delete access on business records",
+      "Views only their own activity log",
     ],
     badge: "success",
   },
   {
     key: "cashier",
     label: "Cashier",
-    description: "Point-of-sale role. Focused on processing customer transactions.",
+    description: "Point-of-sale role. Read-only access to business records in this system.",
     permissions: [
-      "Create receipts",
-      "View own activity",
-      "Basic sales view",
+      "View business records (no create, edit, or delete)",
+      "Views only their own activity log",
     ],
     badge: "default",
   },
@@ -63,17 +62,51 @@ const ROLE_DEFS: {
     label: "Viewer",
     description: "Read-only access. Can view reports and dashboards but cannot make any changes.",
     permissions: [
-      "View reports & analytics",
-      "View inventory levels",
-      "No create, edit, or delete access",
+      "View business records (no create, edit, or delete)",
+      "Views only their own activity log",
     ],
     badge: "neutral",
+  },
+];
+
+const MATRIX_ROLES = ["admin", "manager", "encoder", "cashier", "viewer"] as const;
+
+const MATRIX: { capability: string; allowed: Record<(typeof MATRIX_ROLES)[number], boolean> }[] = [
+  {
+    capability: "View business records",
+    allowed: { admin: true, manager: true, encoder: true, cashier: true, viewer: true },
+  },
+  {
+    capability: "Create / edit business records",
+    allowed: { admin: true, manager: true, encoder: true, cashier: false, viewer: false },
+  },
+  {
+    capability: "Delete business records",
+    allowed: { admin: true, manager: true, encoder: false, cashier: false, viewer: false },
+  },
+  {
+    capability: "Start / Complete Production",
+    allowed: { admin: true, manager: false, encoder: false, cashier: false, viewer: false },
+  },
+  {
+    capability: "View all Activity Logs (not just own)",
+    allowed: { admin: true, manager: true, encoder: false, cashier: false, viewer: false },
+  },
+  {
+    capability: "Manage Users & Roles",
+    allowed: { admin: true, manager: false, encoder: false, cashier: false, viewer: false },
   },
 ];
 
 const CheckIcon = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" className="shrink-0 text-(--color-success)">
     <path d="M2 7l4 4 6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const DashIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" className="shrink-0 text-(--color-text-subtle)">
+    <path d="M3 7h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
   </svg>
 );
 
@@ -156,6 +189,50 @@ export default async function RolesPage() {
           </Card>
         ))}
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Permission Matrix</CardTitle>
+          <CardDescription>
+            Capability grid derived from the actual Row-Level Security policies — read-only reference.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-(--color-border)">
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-(--color-text-muted) uppercase tracking-wider">
+                    Capability
+                  </th>
+                  {MATRIX_ROLES.map((r) => (
+                    <th
+                      key={r}
+                      className="px-3 py-2 text-center text-xs font-semibold text-(--color-text-muted) uppercase tracking-wider"
+                    >
+                      {r}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {MATRIX.map((row) => (
+                  <tr key={row.capability} className="border-b border-(--color-border) last:border-0">
+                    <td className="px-3 py-2.5 text-(--color-text)">{row.capability}</td>
+                    {MATRIX_ROLES.map((r) => (
+                      <td key={r} className="px-3 py-2.5 text-center">
+                        <span className="inline-flex justify-center">
+                          {row.allowed[r] ? <CheckIcon /> : <DashIcon />}
+                        </span>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
