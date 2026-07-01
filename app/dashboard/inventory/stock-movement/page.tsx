@@ -1,31 +1,52 @@
-import { PageHeader } from "@/components/ui/page-header";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { createClient } from "@/lib/supabase/server";
+import { Card, CardContent } from "@/components/ui/card";
+import { MovementsTable, type MovementRow } from "./movements-table";
 
-export default function StockMovementPage() {
+function firstOf<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+
+export default async function StockMovementPage() {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("inventory_movements")
+    .select(
+      `id, movement_type, quantity_change, quantity_after, note, occurred_at,
+       item_variants(sku, option1_value, items(name)), stores(name)`
+    )
+    .order("occurred_at", { ascending: false })
+    .limit(500);
+
+  const rows: MovementRow[] = (data ?? []).map((m) => {
+    const variant = firstOf(m.item_variants);
+    const item = variant ? firstOf(variant.items) : null;
+    const store = firstOf(m.stores);
+    return {
+      id: m.id,
+      movement_type: m.movement_type,
+      quantity_change: m.quantity_change,
+      quantity_after: m.quantity_after,
+      note: m.note,
+      occurred_at: m.occurred_at,
+      item_name: item?.name ?? "Unknown item",
+      variant_label: variant?.option1_value ?? variant?.sku ?? null,
+      store_name: store?.name ?? "—",
+    };
+  });
+
   return (
-    <div>
-      <PageHeader
-        title="Stock Movement"
-        description="View a complete history of inventory transfers, receipts, and adjustments."
-      />
-      <Card className="max-w-lg">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <CardTitle>Module under construction</CardTitle>
-            <Badge variant="neutral">Coming Soon</Badge>
-          </div>
-          <CardDescription>
-            This page will display a chronological log of every stock movement across all
-            locations, filterable by item, date, or movement type.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-(--color-text-muted)">
-            No data or forms are connected yet. Check back once this module is built out.
-          </p>
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      {error && (
+        <Card>
+          <CardContent className="p-4 text-sm text-(--color-danger)">
+            Failed to load stock movements: {error.message}
+          </CardContent>
+        </Card>
+      )}
+
+      <MovementsTable data={rows} />
     </div>
   );
 }
