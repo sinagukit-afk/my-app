@@ -1,31 +1,59 @@
-import { PageHeader } from "@/components/ui/page-header";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { createClient } from "@/lib/supabase/server";
+import { OrderListTable, type OrderRow } from "./order-list-table";
 
-export default function OrderListPage() {
+function firstOf<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+
+export default async function OrderListPage() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: profile } = user
+    ? await supabase.from("profiles").select("role").eq("id", user.id).single()
+    : { data: null };
+
+  const role = profile?.role ?? "";
+  const canAdvance = role === "admin";
+  const canEdit = ["admin", "manager", "encoder"].includes(role);
+
+  const { data, error } = await supabase
+    .from("orders")
+    .select(
+      "id, status, note, total_money, created_at, customers(name), order_items(id, item_name_snapshot, quantity, unit_price, line_discount)"
+    )
+    .in("status", ["confirmed", "in_production"])
+    .order("created_at", { ascending: false });
+
+  const rows: OrderRow[] = (data ?? []).map((o) => {
+    const customer = firstOf(o.customers);
+    return {
+      id: o.id,
+      customerName: customer?.name ?? null,
+      status: o.status as OrderRow["status"],
+      note: o.note,
+      totalMoney: Number(o.total_money),
+      createdAt: o.created_at,
+      items: (o.order_items ?? []).map((it) => ({
+        id: it.id,
+        name: it.item_name_snapshot ?? "",
+        quantity: Number(it.quantity),
+        unitPrice: Number(it.unit_price),
+        discount: Number(it.line_discount),
+      })),
+    };
+  });
+
   return (
-    <div>
-      <PageHeader
-        title="Order List"
-        description="Browse and manage all active customer orders."
-      />
-      <Card className="max-w-lg">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <CardTitle>Module under construction</CardTitle>
-            <Badge variant="neutral">Coming Soon</Badge>
-          </div>
-          <CardDescription>
-            This page will show all open orders with their status, assigned staff, and expected
-            completion dates, with filters and search.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-(--color-text-muted)">
-            No data or forms are connected yet. Check back once this module is built out.
-          </p>
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      {error && (
+        <p className="text-sm text-(--color-danger)">Failed to load orders: {error.message}</p>
+      )}
+      <OrderListTable data={rows} canAdvance={canAdvance} canEdit={canEdit} />
     </div>
   );
 }

@@ -488,7 +488,7 @@ export function AppShell({ children, userEmail, userRole, signOutAction }: AppSh
               )}
             </div>
             <form action={signOutAction}>
-              <Button type="submit" variant="secondary" size="sm">
+              <Button type="submit" variant="secondary" size="sm" data-testid="sign-out-button">
                 Sign out
               </Button>
             </form>
