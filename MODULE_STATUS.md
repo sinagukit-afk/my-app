@@ -4,8 +4,8 @@ Legend: - 🟩 Complete - 🟨 In Progress - ⬜ Not Started
 
 ## Dashboard
 
-🟨 Dashboard — UI built (Phase 5) but still on mock data; not wired
-to Supabase. Needs a real-data pass before calling it complete.
+🟩 Dashboard — KPI cards, Low Stock, and Recent Activity wired to
+live Supabase queries (Phase 17). Quick Actions remain static links.
 
 ## Inventory
 
