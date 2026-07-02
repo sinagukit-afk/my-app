@@ -44,7 +44,10 @@ admin/manager only
 🟩 Sales Report — revenue by day/category charts, sortable item
 breakdown table (doubles as top sellers, pre-sorted by revenue),
 date-range filter, open to any authenticated user
-⬜ Inventory Report
+🟩 Inventory Report — current stock by item/variant, low-stock
+badges, stock value (in_stock × cost, same convention as the
+Dashboard KPI), date-ranged movement volume chart, open to any
+authenticated user
 ⬜ Production Report
 ⬜ Financial Report
 
