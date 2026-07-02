@@ -95,6 +95,7 @@ export default async function ProfilePage() {
       </Card>
 
       <ProfileForm
+        fullName={profile?.full_name ?? null}
         contactNumber={profile?.contact_number ?? null}
         birthday={profile?.birthday ?? null}
       />

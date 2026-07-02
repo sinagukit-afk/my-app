@@ -51,7 +51,9 @@ existing `incoming_items_apply_inventory_movement` trigger on INSERT.
 
 ## Account
 
-⬜ Profile
+🟩 Profile — view name/email/role (role read-only), edit full name/contact
+number/birthday, password change via Supabase Auth reset-email link
+(no raw password fields in app code)
 
 ## Integrations
 

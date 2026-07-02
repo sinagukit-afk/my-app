@@ -1,21 +1,24 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { updateProfile } from "./actions";
 
 type Props = {
+  fullName: string | null;
   contactNumber: string | null;
   birthday: string | null;
 };
 
-export function ProfileForm({ contactNumber, birthday }: Props) {
+export function ProfileForm({ fullName, contactNumber, birthday }: Props) {
   const [isEditing, setIsEditing] = useState(false);
-  const [current, setCurrent] = useState({ contactNumber, birthday });
+  const [current, setCurrent] = useState({ fullName, contactNumber, birthday });
   const [result, setResult] = useState<{ success: boolean; error?: string } | null>(null);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -25,11 +28,13 @@ export function ProfileForm({ contactNumber, birthday }: Props) {
       const res = await updateProfile(formData);
       if (res.success) {
         setCurrent({
+          fullName: (formData.get("full_name") as string).trim() || null,
           contactNumber: (formData.get("contact_number") as string).trim() || null,
           birthday: (formData.get("birthday") as string) || null,
         });
         setIsEditing(false);
         setResult({ success: true });
+        router.refresh();
       } else {
         setResult({ success: false, error: (res as { success: false; error: string }).error });
       }
@@ -64,12 +69,20 @@ export function ProfileForm({ contactNumber, birthday }: Props) {
         {isEditing ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
+              label="Full Name"
+              name="full_name"
+              type="text"
+              defaultValue={current.fullName ?? ""}
+              placeholder="Juan Dela Cruz"
+              autoFocus
+              required
+            />
+            <Input
               label="Contact Number"
               name="contact_number"
               type="tel"
               defaultValue={current.contactNumber ?? ""}
               placeholder="+63 9XX XXX XXXX"
-              autoFocus
             />
             <Input
               label="Birthday"
