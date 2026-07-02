@@ -1,31 +1,58 @@
+import { createClient } from "@/lib/supabase/server";
+import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { IncomeTable, type IncomeRow } from "./income-table";
 
-export default function IncomePage() {
+export default async function IncomePage() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: profile } = user
+    ? await supabase.from("profiles").select("role").eq("id", user.id).single()
+    : { data: null };
+
+  const role = profile?.role ?? "";
+  const hasAccess = ["admin", "manager"].includes(role);
+
+  if (!hasAccess) {
+    return (
+      <div>
+        <PageHeader
+          title="Income"
+          description="Track all revenue streams and incoming payments."
+        />
+        <Card className="max-w-lg">
+          <CardContent className="p-4 text-sm text-(--color-text-muted)">
+            Finance records are restricted to Admin and Manager roles. Contact an
+            administrator if you need access.
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const { data, error } = await supabase
+    .from("income")
+    .select("id, date, category, amount, note")
+    .is("deleted_at", null)
+    .order("date", { ascending: false });
+
+  const rows: IncomeRow[] = data ?? [];
+
   return (
-    <div>
-      <PageHeader
-        title="Income"
-        description="Track all revenue streams and incoming payments."
-      />
-      <Card className="max-w-lg">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <CardTitle>Module under construction</CardTitle>
-            <Badge variant="neutral">Coming Soon</Badge>
-          </div>
-          <CardDescription>
-            This page will let you record and categorise income entries, link them to orders
-            or invoices, and view running totals by period.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-(--color-text-muted)">
-            No data or forms are connected yet. Check back once this module is built out.
-          </p>
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      {error && (
+        <Card>
+          <CardContent className="p-4 text-sm text-(--color-danger)">
+            Failed to load income: {error.message}
+          </CardContent>
+        </Card>
+      )}
+
+      <IncomeTable data={rows} />
     </div>
   );
 }

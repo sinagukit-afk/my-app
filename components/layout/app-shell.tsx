@@ -25,6 +25,7 @@ type NavGroup = {
   label: string;
   icon: React.FC<{ className?: string }>;
   children: (NavLeaf | NavSubGroup)[];
+  roles?: string[];
 };
 
 type NavEntry = NavLeaf | NavGroup;
@@ -70,6 +71,7 @@ const NAV: NavEntry[] = [
     kind: "group",
     label: "Finance",
     icon: CurrencyIcon,
+    roles: ["admin", "manager"],
     children: [
       { kind: "item", label: "Income", href: "/dashboard/finance/income", icon: CurrencyIcon },
       { kind: "item", label: "Expenses", href: "/dashboard/finance/expenses", icon: CurrencyIcon },
@@ -311,6 +313,11 @@ export function AppShell({ children, userEmail, userRole, signOutAction }: AppSh
   const [collapsed, setCollapsed] = React.useState(false);
   const pathname = usePathname();
 
+  const nav = React.useMemo(
+    () => NAV.filter((entry) => entry.kind !== "group" || !entry.roles || entry.roles.includes(userRole ?? "")),
+    [userRole]
+  );
+
   // Track which groups are open; auto-open the group that contains the active route
   const [openGroups, setOpenGroups] = React.useState<Set<string>>(() => {
     const initial = new Set<string>();
@@ -360,7 +367,7 @@ export function AppShell({ children, userEmail, userRole, signOutAction }: AppSh
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-3 px-2">
           <ul className="flex flex-col gap-0.5">
-            {NAV.map((entry) => {
+            {nav.map((entry) => {
               if (entry.kind === "item") {
                 return (
                   <li key={entry.href}>

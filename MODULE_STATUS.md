@@ -31,8 +31,8 @@ existing `incoming_items_apply_inventory_movement` trigger on INSERT.
 
 ## Finance
 
-⬜ Income
-⬜ Expenses
+🟩 Income — manual entry CRUD (`income` table), admin/manager only
+🟩 Expenses — manual entry CRUD (`expenses` table), admin/manager only
 ⬜ Cash Flow
 ⬜ Profit & Loss
 

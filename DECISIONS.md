@@ -102,3 +102,35 @@ Fixed via two scoped `UPDATE ... SET <col> = ''` statements (asked and
 approved before each), not a migration — this corrects existing row
 values it does not change schema. Reason: empty string is GoTrue's own
 default for "no pending token"; these columns are never displayed.
+
+## D016
+
+`income`/`expenses` (Phase 20) are scoped to **admin/manager only**
+for SELECT, INSERT, UPDATE, and soft-delete — deviating from the
+general "SELECT = any authenticated" convention. Reason: financial
+records are more sensitive than typical operational data (per
+`NEXT_PHASE.md`'s explicit access note). Gated at both RLS and the
+sidebar nav (`components/layout/app-shell.tsx`'s `NavGroup.roles`
+field, filtered against `userRole` in `AppShell`) and again at the
+page level (`hasAccess` check rendering an access-restricted message
+for other roles).
+
+## D017
+
+Discovered while building Phase 20: a table's SELECT RLS policy must
+**not** filter on the soft-delete column (e.g. `deleted_at IS NULL`)
+for any role that also needs to soft-delete rows via a plain UPDATE.
+PostgreSQL requires the row resulting from an UPDATE to satisfy the
+table's SELECT policy in addition to the UPDATE policy's own `WITH
+CHECK` — so setting `deleted_at` makes the row fail a SELECT policy
+that requires `deleted_at IS NULL`, and the UPDATE itself is rejected
+with "new row violates row-level security policy," even though the
+UPDATE policy's own `WITH CHECK` never references `deleted_at`.
+`income`/`expenses`'s SELECT policies were fixed to check role only
+(no `deleted_at` filter), matching the existing `items`/`categories`
+pattern where the privileged-role SELECT policy also omits the
+`deleted_at` filter; `deleted_at IS NULL` is instead enforced at the
+query level in `page.tsx` (`.is('deleted_at', null)`). Revisit if a
+soft-deletable table's SELECT policy is ever written to filter
+`deleted_at` for a role that also needs UPDATE-based soft delete on
+that same table.

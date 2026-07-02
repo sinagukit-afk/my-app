@@ -1,31 +1,58 @@
+import { createClient } from "@/lib/supabase/server";
+import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { ExpensesTable, type ExpenseRow } from "./expenses-table";
 
-export default function ExpensesPage() {
+export default async function ExpensesPage() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: profile } = user
+    ? await supabase.from("profiles").select("role").eq("id", user.id).single()
+    : { data: null };
+
+  const role = profile?.role ?? "";
+  const hasAccess = ["admin", "manager"].includes(role);
+
+  if (!hasAccess) {
+    return (
+      <div>
+        <PageHeader
+          title="Expenses"
+          description="Log and categorise business expenditures."
+        />
+        <Card className="max-w-lg">
+          <CardContent className="p-4 text-sm text-(--color-text-muted)">
+            Finance records are restricted to Admin and Manager roles. Contact an
+            administrator if you need access.
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const { data, error } = await supabase
+    .from("expenses")
+    .select("id, date, category, amount, note")
+    .is("deleted_at", null)
+    .order("date", { ascending: false });
+
+  const rows: ExpenseRow[] = data ?? [];
+
   return (
-    <div>
-      <PageHeader
-        title="Expenses"
-        description="Log and categorise business expenditures."
-      />
-      <Card className="max-w-lg">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <CardTitle>Module under construction</CardTitle>
-            <Badge variant="neutral">Coming Soon</Badge>
-          </div>
-          <CardDescription>
-            This page will allow you to record expense entries with categories, suppliers,
-            and receipt attachments, and review spending by period.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-(--color-text-muted)">
-            No data or forms are connected yet. Check back once this module is built out.
-          </p>
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      {error && (
+        <Card>
+          <CardContent className="p-4 text-sm text-(--color-danger)">
+            Failed to load expenses: {error.message}
+          </CardContent>
+        </Card>
+      )}
+
+      <ExpensesTable data={rows} />
     </div>
   );
 }
