@@ -1,21 +1,18 @@
-## Phase 17 — Dashboard: Wire to Real Data
+## Phase 19 — Account: Profile Screen
 
 ### Preflight (do first, before any code)
-Follow the Preflight section in the `bms-supabase` skill. Confirm the
-dashboard page is still on mock data (grep for hardcoded arrays in
-`app/dashboard/page.tsx`), and confirm `activity_logs` has real rows
-(it should, since Phase 14 follow-up started writing `quote_edited`
-entries).
+Follow the Preflight section in the `bms-supabase` skill. Confirm
+`app/dashboard/account/profile` is still a stub, and confirm the
+`profiles` table's columns (`full_name`, `role`, etc.) haven't
+changed since Phase 10.
 
 ### Objective
-Replace the Phase 5 mock dashboard with live Supabase queries.
+Self-service profile page for the logged-in user.
 
 ### Scope
-- 4 KPI cards: today's sales, monthly revenue, pending orders count,
-  inventory value
-- Low Stock list
-- Recent Activity feed, sourced from `activity_logs`
-- Quick Actions stays as static links (no change needed)
+- View own name, email, role (read-only for role)
+- Edit own `full_name`
+- Link to Supabase Auth's password-change/reset flow
 
 ### Requirements
 - Follow SKILL.md
@@ -24,18 +21,20 @@ Replace the Phase 5 mock dashboard with live Supabase queries.
 - Follow DECISIONS.md
 
 ### Do Not
-- Add new tables or migrations — this should be pure read queries
-  against existing tables
-- Touch inventory RPC logic
-- Refactor unrelated modules
+- Allow editing your own `role` — that's a privilege-escalation risk;
+  role changes only happen through the Administration Users screen
+  (Phase 16), admin-only
+- Touch the Administration module
+- Add password-entry fields directly — use Supabase Auth's own
+  reset/change mechanism, don't handle raw passwords in app code
 
 ### Deliverables
-- All 4 KPI cards wired to real data
-- Low Stock list wired
-- Recent Activity feed wired to `activity_logs`
+- Profile page showing name/email/role
+- Edit-name action
+- Password change link
 
 ### Verification
 - npm run build
 - Browser tested
 - Update PROGRESS.md
-- Update MODULE_STATUS.md (flip Dashboard to 🟩)
+- Update MODULE_STATUS.md (flip Account > Profile to 🟩)
