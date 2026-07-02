@@ -53,7 +53,13 @@ completed-per-day chart (`updated_at` as a completion-time proxy),
 supporting table with stage badges, open to any authenticated user.
 No time-in-stage/avg-cycle-time metric — flagged in-page as needing
 a dedicated status-change-log table, out of this phase's scope.
-⬜ Financial Report
+🟩 Financial Report — Revenue/Expenses/Net Margin/Margin % KPIs,
+revenue-by-day and expenses-by-day charts, expense breakdown by
+category (reuses Phase 21's table component), date-range filter.
+Restricted to Admin/Manager (matching Finance), unlike the other
+three open Analytics reports — the sidebar item itself is still
+visible to everyone since the Analytics nav group has no per-item
+role filter, only the page content is gated.
 
 ## Administration
 
