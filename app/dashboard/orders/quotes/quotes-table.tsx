@@ -32,6 +32,7 @@ export type QuoteRow = {
   totalMoney: number;
   createdAt: string;
   canEdit: boolean;
+  canCancel: boolean;
   items: QuoteItem[];
 };
 
@@ -130,7 +131,7 @@ export function QuotesTable({ data, canCreate, canConfirm, canDelete }: Props) {
               Confirm
             </Button>
           )}
-          {canConfirm && (
+          {row.canCancel && (
             <Button
               variant="ghost"
               size="sm"

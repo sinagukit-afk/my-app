@@ -41,6 +41,7 @@ export default async function QuotesPage() {
       totalMoney: Number(o.total_money),
       createdAt: o.created_at,
       canEdit: isAdmin || (canEditOwn && o.created_by === user?.id),
+      canCancel: isAdmin || (canEditOwn && o.created_by === user?.id),
       items: (o.order_items ?? []).map((it) => ({
         id: it.id,
         name: it.item_name_snapshot ?? "",

@@ -134,3 +134,20 @@ query level in `page.tsx` (`.is('deleted_at', null)`). Revisit if a
 soft-deletable table's SELECT policy is ever written to filter
 `deleted_at` for a role that also needs UPDATE-based soft delete on
 that same table.
+
+## D018
+
+Phase 26: widened `orders_encoder_update_own_quote`'s `with_check`
+to allow `quote` → `cancelled` (previously only `quote` → `confirmed`),
+so an encoder/manager can cancel their own quote without an admin.
+Confirmed with the user first, per `NEXT_PHASE.md`'s explicit gate on
+this phase (it existed as a flagged possible gap from Phase 14, not
+a confirmed requirement, until this approval). Scoped to exactly this
+one transition: the `using` clause (still requires `status = 'quote'`
+at update time, so confirmed/in_production orders remain admin-only
+to cancel) and the sibling `order_items_encoder_update_own_quote`
+policy were both left untouched, since cancellation only writes
+`orders.status`. A dedicated `encoder`-role test account
+(`claude-code-encoder@sinagukit.internal`) was created to verify this,
+since the existing Claude test account reuses `admin` and can't
+exercise encoder-only RLS restrictions.
