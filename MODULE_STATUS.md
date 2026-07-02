@@ -48,7 +48,11 @@ date-range filter, open to any authenticated user
 badges, stock value (in_stock × cost, same convention as the
 Dashboard KPI), date-ranged movement volume chart, open to any
 authenticated user
-⬜ Production Report
+🟩 Production Report — order counts by stage (created-in-range),
+completed-per-day chart (`updated_at` as a completion-time proxy),
+supporting table with stage badges, open to any authenticated user.
+No time-in-stage/avg-cycle-time metric — flagged in-page as needing
+a dedicated status-change-log table, out of this phase's scope.
 ⬜ Financial Report
 
 ## Administration
