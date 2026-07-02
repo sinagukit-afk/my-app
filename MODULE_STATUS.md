@@ -33,12 +33,17 @@ existing `incoming_items_apply_inventory_movement` trigger on INSERT.
 
 🟩 Income — manual entry CRUD (`income` table), admin/manager only
 🟩 Expenses — manual entry CRUD (`expenses` table), admin/manager only
-⬜ Cash Flow
-⬜ Profit & Loss
+🟩 Cash Flow — read-only income vs. expenses timeline with running
+balance, selectable date range, admin/manager only
+🟩 Profit & Loss — read-only revenue (confirmed+ orders) minus
+expenses statement with margin %, selectable date range,
+admin/manager only
 
 ## Analytics
 
-⬜ Sales Report
+🟩 Sales Report — revenue by day/category charts, sortable item
+breakdown table (doubles as top sellers, pre-sorted by revenue),
+date-range filter, open to any authenticated user
 ⬜ Inventory Report
 ⬜ Production Report
 ⬜ Financial Report
