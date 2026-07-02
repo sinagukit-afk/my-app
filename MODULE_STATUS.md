@@ -9,10 +9,10 @@ live Supabase queries (Phase 17). Quick Actions remain static links.
 
 ## Inventory
 
-🟨 Incoming Inventory — stub page exists (Phase 6a); no later phase
-wired it to real Supabase queries. Note: Receiving (Phase 13) posts
-to `incoming_items` automatically for PO-based receipts, but this
-screen is for manual/non-PO incoming entry — still open.
+🟩 Incoming Inventory — manual (non-PO) entry form + history table wired
+to real `incoming_items` inserts (Phase 18). Supplier picker, item/variant
+picker, qty, unit price, date, notes. Stock updated automatically by the
+existing `incoming_items_apply_inventory_movement` trigger on INSERT.
 🟩 Stock Movement
 🟩 Item Adjustment
 🟩 Suppliers
