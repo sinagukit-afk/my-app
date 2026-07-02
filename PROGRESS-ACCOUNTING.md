@@ -17,7 +17,7 @@ workstream.
 | ACCT-2 | Journal core (`journal_entries`, `post_journal_entry()`) | Done | `0014_accounting_journal_core` | |
 | ACCT-3 | Manual entry UI + retire income/expenses | Done | `0015_accounting_rent_expense_account` | Rent Expense account (6015) added for the expenses mapping; consumed migration label `0015`, shifting ACCT-4..7 up by one (see note below) |
 | ACCT-4 | Financial reports (trial balance, income statement, balance sheet) | Done | `0016_accounting_reports` | Runs before ACCT-5 — hence the lower migration number |
-| ACCT-5 | Fixed assets & depreciation | Not started | `0017_accounting_fixed_assets` | |
+| ACCT-5 | Fixed assets & depreciation | Done | `0017_accounting_fixed_assets` | Rounding caveat found — see session log |
 | ACCT-6 | Historical import / opening balance | Ready | — (no plug account needed) | Both decisions confirmed by Sinag (2026-07-02): (1) ₱50,000 reclassified 3000→3010 Owner's Withdrawals; (2) ₱2,784.03 imbalance traced to GL row 01-Jan-25 acct 3020 "to close RE fy2024" — debit/credit swap closes it to ~₱0.003, rounds to ₱0.00. `0018_accounting_opening_balance_adjustment` migration and 3099 plug account are skipped. See Resolution section in the instructions doc. |
 | ACCT-7 | Auto-posting from `confirm_order()` / PO receiving | Gated | `0019_accounting_order_posting` | Waiting on core BMS order/PO flow to stabilize — do not start until confirmed |
 
@@ -111,5 +111,34 @@ Verified directly against the live DB (role impersonation, rolled back) and in b
 Note: a stray "Test only" journal entry (₱300, dated 2026-07-02) was found already posted in `journal_entries` at the start of this session — not left over from ACCT-3 (that session's test entry was explicitly deleted). The three report figures above were verified against it while it existed, then Sinag asked for it to be removed. Deleted via direct SQL (`delete from journal_entries where id = '8bce9076-...'`, `journal_entry_lines` cascaded) — `journal_entries` and `journal_entry_lines` are both back to 0 rows, ledger clean for ACCT-6's opening balance import.
 
 Committed to git this session (Sinag's explicit request). Next: ACCT-5 (Fixed Assets & Depreciation, migration `0017_accounting_fixed_assets`) — no open decisions, though Sinag should confirm whether Furniture/Tools/Room Improvement have unlisted assets per the doc's note.
+
+---
+
+### 2026-07-02 — ACCT-5
+
+Fixed Assets & Depreciation.
+
+**Open item not resolved this session:** asked Sinag (via question prompt) whether Furniture (1500), Tools and Equipment (1540), or Room Improvement (1550) have real assets to seed beyond the 3 the doc already specifies — no answer came back, so per the doc's own fallback ("this only covers the two Depreciation Table entries with concrete purchase dates/costs visible in the sheet") only the 3 known assets were seeded. Still an open question for Sinag before more assets are added.
+
+**Migration `0017_accounting_fixed_assets`** (via Supabase MCP): tables `fixed_assets` and `depreciation_entries` (money columns `numeric(12,2)`), RLS (select admin+manager on both; insert/update admin-only on `fixed_assets`, no direct writes on `depreciation_entries` — same "RPC is the only write path" pattern as `journal_entry_lines`), applied verbatim from the doc. Seeded 3 assets: Canon Printer (₱3,339.00, Office Equipment 1520/1521/6001), Sculpfan S30 Pro Max (₱22,900.00, Machinery 1530/1531/6002), RK Royal Kludge (₱2,050.00, Machinery 1530/1531/6002) — all 24-month useful life, confirmed against the live DB. `run_monthly_depreciation(p_period)` RPC applied verbatim, admin-only, calls `post_journal_entry()` internally per asset.
+
+Verified directly against the live DB via `request.jwt.claims` role impersonation inside rolled-back transactions (confirmed `journal_entries`/`journal_entry_lines`/`depreciation_entries` all back to 0 rows afterward — ledger untouched):
+- Admin run for `2026-07-01` posts 3 balanced entries, one per asset: ₱139.13 (Canon), ₱85.42 (RK Royal Kludge), ₱954.17 (Sculpfan) — each `round(cost/24, 2)`. Ledger-wide `sum(debit) - sum(credit) = 0` afterward.
+- Running the same month twice: second call returns 0 rows (the `not exists` guard on `depreciation_entries` holds) — no double-post.
+- Manager role blocked: `Not authorized to run depreciation` (the RPC requires `admin` specifically, tighter than `post_journal_entry()`'s admin+manager, as the doc specifies).
+- **Rounding caveat confirmed by direct 25-month simulation** — flagged in the doc as something to double-check: because `round(cost/24, 2)` rounds up for these three assets' costs, running 24 consecutive months causes the 24th run to skip (existing total + monthly would exceed `cost`), so all three assets stop 1 month short (23 posted periods) and never reach exactly ₱0.00 book value — Canon ends ₱139.01 short, RK Royal Kludge ₱85.34 short, Sculpfan ₱954.09 short. The RPC was implemented exactly as specified in the doc (no logic changes made), but this residual-book-value behavior is a real, confirmed limitation worth Sinag's attention before relying on Fixed Assets → Book Value hitting exactly zero at end of useful life. Not fixed in this session since the doc didn't specify a resolution (e.g. a final-period "plug to zero" rule) — flagging for a future decision.
+
+**UI — new `Fixed Assets` page** under `/dashboard/accounting/fixed-assets`, added as a child of the existing `Accounting` `NavGroup` (`components/layout/app-shell.tsx`, same admin/manager filter, no new gating setup needed):
+- Asset list (name, asset account #, purchased date, useful life, cost, accumulated depreciation, book value, status badge) with Total Cost / Accum. Depreciation / Book Value summary cards. Same page-level `hasAccess` check pattern as the other Accounting pages.
+- Admin-only "Run Depreciation" button (`run-depreciation-dialog.tsx`) opens a dialog: month picker, live preview of what will post (queried read-only, mirrors the RPC's selection + rounding logic exactly so the preview matches what actually posts), Confirm & Post calls the RPC via a server action and refreshes the list.
+- `actions.ts`: `previewDepreciation()` (read-only) and `runDepreciation()` (calls `run_monthly_depreciation` RPC, `revalidatePath`).
+
+`npm run build` passes with zero errors; `/dashboard/accounting/fixed-assets` registered.
+
+**Browser preview verification not performed via this session's own tooling** — blocked by another active session's `next dev` server holding this project directory's single-instance dev lock (confirmed via `node_modules/next/dist/build/lockfile.js`, a documented breaking change in this Next.js version per `AGENTS.md`); `preview_start` refused to start a second instance regardless of port. Compensated with build/typecheck passing and the DB-level role-impersonation verification above.
+
+**Bug found by Sinag in that other session's live browser, fixed same session:** the initial `page.tsx` defined the `DataTable` `columns` array (with `render` functions for date/currency/badge formatting) inline inside the server component and passed it as a prop to the client `DataTable` — Next.js threw "Functions cannot be passed directly to Client Components." `npm run build`'s type-check did not catch this; it's a runtime-only RSC boundary violation. The rest of the Accounting module already had the correct pattern (`journal-table.tsx`, `trial-balance-table.tsx` — `"use client"` wrapper components that own `columns` internally and take only a plain `data` prop) but it wasn't followed here. Fixed by extracting `fixed-assets-table.tsx` as a `"use client"` component following that exact pattern; `page.tsx` now only fetches/shapes data and passes `rows` down. Rebuilt clean after the fix. Saved as a standing memory (`feedback_datatable_columns_client_boundary`) so future Accounting/BMS pages don't repeat it. Sinag has not yet re-confirmed the fix in-browser as of this log entry.
+
+No git commit (standing project rule — stopped at DoD for manual review). Next: the doc's "Final check after ACCT-5" balance query was run directly (0 rows, `difference` trivially null/0) — ledger is clean, ready for ACCT-6 (Historical Import) whenever Sinag wants to proceed; ACCT-7 remains gated on core BMS order/PO stabilization.
 
 ---
