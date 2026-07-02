@@ -16,9 +16,9 @@ workstream.
 | ACCT-1 | Chart of Accounts | Done | `0013_accounting_chart_of_accounts` | |
 | ACCT-2 | Journal core (`journal_entries`, `post_journal_entry()`) | Done | `0014_accounting_journal_core` | |
 | ACCT-3 | Manual entry UI + retire income/expenses | Done | `0015_accounting_rent_expense_account` | Rent Expense account (6015) added for the expenses mapping; consumed migration label `0015`, shifting ACCT-4..7 up by one (see note below) |
-| ACCT-4 | Financial reports (trial balance, income statement, balance sheet) | Not started | `0016_accounting_reports` | Runs before ACCT-5 — hence the lower migration number |
+| ACCT-4 | Financial reports (trial balance, income statement, balance sheet) | Done | `0016_accounting_reports` | Runs before ACCT-5 — hence the lower migration number |
 | ACCT-5 | Fixed assets & depreciation | Not started | `0017_accounting_fixed_assets` | |
-| ACCT-6 | Historical import / opening balance | Blocked | `0018_accounting_opening_balance_adjustment` (conditional) | Needs Sinag's decision on: (1) ₱50,000 Owner's Capital vs Owner's Withdrawals reclass, (2) how to absorb ₱2,784.03 ledger imbalance. Migration only needed if a plug account is required. |
+| ACCT-6 | Historical import / opening balance | Ready | — (no plug account needed) | Both decisions confirmed by Sinag (2026-07-02): (1) ₱50,000 reclassified 3000→3010 Owner's Withdrawals; (2) ₱2,784.03 imbalance traced to GL row 01-Jan-25 acct 3020 "to close RE fy2024" — debit/credit swap closes it to ~₱0.003, rounds to ₱0.00. `0018_accounting_opening_balance_adjustment` migration and 3099 plug account are skipped. See Resolution section in the instructions doc. |
 | ACCT-7 | Auto-posting from `confirm_order()` / PO receiving | Gated | `0019_accounting_order_posting` | Waiting on core BMS order/PO flow to stabilize — do not start until confirmed |
 
 > **Migration renumber (2026-07-02, ACCT-3):** ACCT-3 wasn't originally assigned a migration, but the Rent/Transportation decision added account `6015 Rent Expense`, which needed one. Created during ACCT-3 (chronologically before ACCT-4..7, none of which exist yet), it correctly takes the next free label `0015` — so the reserved labels for ACCT-4 (`0015→0016`), ACCT-5 (`0016→0017`), ACCT-6 (`0017→0018`), and ACCT-7 (`0018→0019`) each shift up by one, preserving the "lower label = created earlier" invariant the earlier amendments established.
@@ -84,5 +84,32 @@ Manual journal-entry UI + retirement of the `income`/`expenses` write paths.
 - `npm run build` passes with zero errors (new `/dashboard/accounting/*` routes registered).
 
 No git commit (standing project rule — stopped at DoD for manual review). Next: ACCT-4 (Financial Reports, migration `0016_accounting_reports`) — no open decisions.
+
+---
+
+### 2026-07-02 — ACCT-4
+
+Financial reports: Trial Balance, Income Statement, Balance Sheet.
+
+**Migration `0016_accounting_reports`** (via Supabase MCP): three `SECURITY DEFINER` `language plpgsql` functions — `get_trial_balance(p_as_of)`, `get_income_statement(p_start, p_end)`, `get_balance_sheet(p_as_of)` — applied verbatim from the doc, role check (`admin`/`manager`) as the first statement in each.
+
+**UI — three new pages under `app/dashboard/accounting/`**, added to the existing `Accounting` `NavGroup` (no new gating setup needed, same admin/manager filter):
+- `trial-balance` — `AsOfDateFilter` (new reusable component, `components/business/as-of-date-filter.tsx`, URL-driven single-date picker paired with `DateRangeFilter`'s existing pattern) + `StatCard`s for Total Debits/Credits/Ledger Check + a `DataTable` listing.
+- `income-statement` — reuses the existing `DateRangeFilter`; `StatCard`s for Total Revenue/Expenses/Net Income. `get_income_statement()` has no default bounds, so an empty "All Time" range from the filter is substituted with `2000-01-01`..today before calling the RPC.
+- `balance-sheet` — `AsOfDateFilter` + `StatCard`s for Total Assets/Liabilities/Equity/Balance Check.
+
+All three page-level `hasAccess` checks mirror the Journal pages exactly (admin/manager, restricted-access fallback card for other roles).
+
+Verified directly against the live DB (role impersonation, rolled back) and in browser preview (admin `claude-code@sinagukit.internal`):
+- Encoder role blocked on all three RPCs: `Not authorized to view financial reports` (role check fires before any query).
+- Trial Balance on real data (a "Test only" entry already in the ledger: Dr 1000 Cash 300 / Cr 1501 Accum. Dep. 200 / Cr 1300 Prepaid 100): Total Debits = Total Credits = ₱300.00, Ledger Check "Balanced".
+- Income Statement: ₱0.00 revenue/expense/net (correct — the test entry only touches asset accounts, no revenue/expense lines exist yet).
+- Balance Sheet: Total Assets ₱0.00 (300 − 200 − 100), Liabilities ₱0.00, Equity ₱0.00, Balance Check "Balanced" — assets = liabilities + equity holds.
+- No console errors on any of the three pages.
+- `npm run build` passes with zero errors; all three new routes registered (`/dashboard/accounting/trial-balance`, `/income-statement`, `/balance-sheet`).
+
+Note: a stray "Test only" journal entry (₱300, dated 2026-07-02) was found already posted in `journal_entries` at the start of this session — not left over from ACCT-3 (that session's test entry was explicitly deleted). The three report figures above were verified against it while it existed, then Sinag asked for it to be removed. Deleted via direct SQL (`delete from journal_entries where id = '8bce9076-...'`, `journal_entry_lines` cascaded) — `journal_entries` and `journal_entry_lines` are both back to 0 rows, ledger clean for ACCT-6's opening balance import.
+
+Committed to git this session (Sinag's explicit request). Next: ACCT-5 (Fixed Assets & Depreciation, migration `0017_accounting_fixed_assets`) — no open decisions, though Sinag should confirm whether Furniture/Tools/Room Improvement have unlisted assets per the doc's note.
 
 ---

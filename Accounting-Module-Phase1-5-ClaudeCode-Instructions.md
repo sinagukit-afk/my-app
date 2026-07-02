@@ -651,9 +651,15 @@ Summing all 1,711 rows' Debit and Credit columns per account (not trusting the s
 - **Machinery (1530) / Accum. Depreciation (1531)** net to exactly ₱0 in the ledger, because of a "closing of equipment and machine" entry in March 2025 that reversed the original asset cost entirely. But your separate Depreciation Table sheet shows the same two machines (Sculpfan S30 Pro Max + RK Royal Kludge, ₱24,950 combined cost) still being depreciated on schedule through April 2026, where they become **fully depreciated**. The GL and the Depreciation Table disagree with each other — they were never actually linked. Good news: this is already handled correctly, since ACCT-5 seeds these assets from the Depreciation Table (the trustworthy source), not from the GL.
 - Everything else — all the inventory, revenue, and expense accounts — nets to sensible, internally consistent values with no red flags.
 
-**Recommendation:** rather than treat any single tab as authoritative, use the raw per-account Debit − Credit totals below (computed directly from the ledger, cross-checked and shown here) as the starting point, and have Sinag make two calls before Claude Code writes the opening entry:
-1. Confirm whether the ₱50,000 debit that offset Owner's Capital should instead be reclassified to Owner's Withdrawals.
-2. Decide how to absorb the ₱2,784.03 ledger imbalance — the standard approach for digitizing messy legacy books is a single labeled "Opening Balance Adjustment" line so the new system starts clean without pretending the discrepancy doesn't exist.
+### Resolution (confirmed by Sinag, 2026-07-02)
+
+1. **Ledger imbalance — root cause found, not a plug.** The GL row dated 01-Jan-25, account 3020 Retained Earnings, "to close RE fy2024" (spreadsheet cell E316) was entered as a **debit** of 1,392.01666666667 (displays as ₱1,392.02) but belongs in the **credit** column (F316) — confirmed against the source spreadsheet. Moving it: `2,784.03 − (2 × 1,392.01666666667) ≈ −₱0.0033`. The ledger-wide imbalance closes to a third of a centavo, which rounds to exactly ₱0.00 once posted through `post_journal_entry()`'s `numeric(12,2)` columns. **No `3099 Opening Balance Adjustment` plug account is needed** — struck from the build steps and table below.
+   - Knock-on effect: 3020 Retained Earnings' true net is **₱142,532.17 credit** (₱141,140.15 + ₱1,392.02 once both entries are credits), not the ₱139,748.14 originally computed from the ledger with the row still mis-signed.
+2. **Owner's Capital / Withdrawals — confirmed.** The ₱50,000 debit that offset the original Dr Bank / Cr Owner's Capital investment in account 3000 is a misclassified owner's withdrawal. Reclassified to **3010 Owner's Withdrawals**.
+   - 3000 Owner's Capital nets to **₱50,000.00 credit**.
+   - 3010 Owner's Withdrawals nets to **₱50,000.00 debit**.
+
+Both figures are folded into the opening balance table below; no open items remain for this phase.
 
 ### Recommended cutover date
 
@@ -678,22 +684,23 @@ Real, non-zero balances as of June 30, 2026, computed directly from the ledger:
 | 1530 Machinery (gross cost, from Depreciation Table) | 24,950.00 | |
 | 1531 Accum. Depreciation - Machinery (fully depreciated) | | 24,950.00 |
 | 2010 Income taxes payable | | 332.40 |
-| 3000 Owner's Capital | | *pending confirmation #1* |
-| 3010 Owner's Withdrawals | *pending confirmation #1* | |
-| 3020 Retained Earnings | | 139,748.14 (or adjusted per confirmation #2) |
-| 3099 Opening Balance Adjustment *(new account, add if needed)* | *plug to force balance* | |
+| 3000 Owner's Capital | | 50,000.00 |
+| 3010 Owner's Withdrawals | 50,000.00 | |
+| 3020 Retained Earnings | | 142,532.17 |
 
-All accounts with a genuine ₱0.00 net (Cash on hand, Accounts receivable, Inventory - Magnet/Kraft Paper/Plastic, Furniture, Tools and Equipment, Room Improvement, Accounts payable) are omitted — no line needed for a zero balance.
+All accounts with a genuine ₱0.00 net (Cash on hand, Accounts receivable, Inventory - Magnet/Kraft Paper/Plastic, Furniture, Tools and Equipment, Room Improvement, Accounts payable) are omitted — no line needed for a zero balance. No `3099 Opening Balance Adjustment` line either — per the Resolution above, the ledger balances to within ₱0.0033 (rounds to ₱0.00) once the 3020 debit/credit fix is applied, so no plug is required.
+
+**Check before posting:** the table assumes the ₱50,000 debit against 3000 is a single GL entry, not several smaller ones summing to ₱50,000 — spot-check the source sheet for that before running step 3 below.
 
 ### Build steps for Claude Code
 
-1. Confirm the two open items with Sinag; adjust the table above accordingly.
-2. If a plug is needed, add `3099 Opening Balance Adjustment` to `accounts` (category `equity`) via a small follow-up migration — `0018_accounting_opening_balance_adjustment` *(was `0017`; +1 from the ACCT-3 renumber)*, conditional on the plug actually being needed after confirmation #2 above.
+1. ~~Confirm the two open items with Sinag~~ — done 2026-07-02, see Resolution above. Table is finalized.
+2. ~~Add `3099 Opening Balance Adjustment`~~ — not needed. The `0018_accounting_opening_balance_adjustment` migration is **skipped**; no new account required.
 3. Call `post_journal_entry()` once with `entry_date => '2026-06-30'`, `source_type => 'opening_balance'`, and all lines from the finalized table — it will reject the call automatically if it doesn't balance, which is exactly the safety net this data needs.
 4. Do **not** attempt to import all 1,711 individual GL rows — the source data's own internal imbalance makes row-by-row import more risky than valuable. One clean opening entry, going forward everything is captured properly by ACCT-2/ACCT-3/ACCT-7.
 
 **Definition of Done**
-- [ ] Both open items confirmed with Sinag
+- [x] Both open items confirmed with Sinag (2026-07-02) — see Resolution above
 - [ ] Opening balance entry posts as a single balanced journal entry
 - [ ] Post-import Trial Balance (ACCT-4) matches the finalized table above exactly
 - [ ] Global balance check (query above) still returns `difference = 0`
