@@ -27,9 +27,10 @@ const Checkbox: React.FC<CheckboxProps> = ({
   className,
 }) => {
   const [internalChecked, setInternalChecked] = React.useState(defaultChecked ?? false);
+  const generatedId = React.useId();
   const isControlled = checked !== undefined;
   const isOn = isControlled ? checked : internalChecked;
-  const checkboxId = id ?? label?.toLowerCase().replace(/\s+/g, "-") ?? React.useId();
+  const checkboxId = id ?? label?.toLowerCase().replace(/\s+/g, "-") ?? generatedId;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!isControlled) setInternalChecked(e.target.checked);

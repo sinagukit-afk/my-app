@@ -258,7 +258,7 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <DialogHeader>
                 <DialogTitle>Edit Purchase Order</DialogTitle>
-                <DialogDescription>Update this order's header details.</DialogDescription>
+                <DialogDescription>Update this order&apos;s header details.</DialogDescription>
               </DialogHeader>
 
               <Select

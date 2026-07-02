@@ -151,18 +151,18 @@ function ItemsTable({ items }: { items: PreviousItem[] }) {
 
 function QuoteEditDiff({ log }: { log: LogRow }) {
   const [diff, setDiff] = useState<OrderDiffResult | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [diffLogId, setDiffLogId] = useState<string | null>(null);
+  const loading = diffLogId !== log.id;
 
   const previousOrder = log.metadata?.previous_order as PreviousOrder | undefined;
   const previousItems = (log.metadata?.previous_items as PreviousItem[] | undefined) ?? [];
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     getOrderDiffData(log.entity_id, previousOrder?.customer_id ?? null).then((result) => {
       if (!cancelled) {
         setDiff(result);
-        setLoading(false);
+        setDiffLogId(log.id);
       }
     });
     return () => {

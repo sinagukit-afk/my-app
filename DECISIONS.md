@@ -151,3 +151,23 @@ policy were both left untouched, since cancellation only writes
 (`claude-code-encoder@sinagukit.internal`) was created to verify this,
 since the existing Claude test account reuses `admin` and can't
 exercise encoder-only RLS restrictions.
+
+## D019
+
+`activity_logs`' INSERT policy (`service_can_insert_logs`, from the
+original `create_activity_logs` migration) had `WITH CHECK (true)` for
+role `public` — despite its name, it was never restricted to a
+service-role client. Found during a general consistency check
+(2026-07-02): the only app-code writer, `quotes/actions.ts`'s
+quote-edit snapshot, inserts via the calling user's own session (not
+service-role), and `user_id` is client-supplied — so any authenticated
+request could insert an `activity_logs` row with an arbitrary/spoofed
+`user_id`, undermining the audit trail Administration > Activity Logs
+displays as a source of truth. Fixed via migration
+`0018_fix_activity_logs_insert_policy`: dropped
+`service_can_insert_logs`, replaced with `users_insert_own_logs`
+(`WITH CHECK (user_id = auth.uid())`), matching the `created_by =
+auth.uid()` pattern already used elsewhere (e.g.
+`orders_encoder_update_own_quote`). Policy-only change, no schema or
+data affected; the one real write path is unaffected since it already
+used the caller's own id.

@@ -1,5 +1,18 @@
 # PROGRESS-ACCOUNTING.md
 
+> **⏸ PAUSED (2026-07-02).** Sinag asked to pause all Accounting Module
+> development until further notice. ACCT-1 through ACCT-6 are done and
+> live; ACCT-7 (auto-posting) and ACCT-8 (BIR calculator) are on hold —
+> **do not start or continue any ACCT-* work** (code, migrations, or
+> schema/RLS changes) in this session or any future session until Sinag
+> explicitly says to resume. This is a dev-pause only: no database
+> changes were requested, existing tables/RLS/UI are untouched and
+> remain live as-is. Treat any Accounting-adjacent request (bug fix,
+> tweak, "just one small thing") as out of scope for now unless Sinag
+> explicitly lifts the pause first — check with them before touching
+> `accounts`, `journal_entries`, `journal_entry_lines`, `fixed_assets`,
+> or `depreciation_entries`, or any file under `app/dashboard/accounting/`.
+
 Tracking file for the Accounting Module workstream only. Kept separate from the
 core BMS `PROGRESS.md` so phase numbers don't collide between the two build
 threads. Full spec/instructions for each phase: see

@@ -1,3 +1,11 @@
+> **STATUS (2026-07-02): COMPLETE.** All of Phases 21–26 below are done —
+> see `PROGRESS.md` for the build log and verification notes on each, and
+> `MODULE_STATUS.md` for current per-screen badges. This document is kept
+> for historical reference only (exact original specs/scope for each
+> phase); it does not describe pending work. Active development moved to
+> the Accounting Module (`PROGRESS-ACCOUNTING.md`, `ACCT-1`...`ACCT-8`),
+> which is itself currently paused — see `MODULE_STATUS.md`'s Accounting
+> section. Do not treat anything below as a to-do list.
 
 ## Phase 21 — Finance: Cash Flow & Profit/Loss (read-only reports)
 

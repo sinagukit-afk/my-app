@@ -19,12 +19,10 @@ export function useTheme() {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = React.useState<Theme>("system");
-
-  React.useEffect(() => {
-    const stored = localStorage.getItem("bms-theme") as Theme | null;
-    if (stored) setThemeState(stored);
-  }, []);
+  const [theme, setThemeState] = React.useState<Theme>(() => {
+    if (typeof window === "undefined") return "system";
+    return (localStorage.getItem("bms-theme") as Theme | null) ?? "system";
+  });
 
   React.useEffect(() => {
     const root = document.documentElement;

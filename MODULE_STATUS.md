@@ -41,14 +41,17 @@ admin/manager only
 
 ## Accounting
 
-⬜ Chart of Accounts (ACCT-1)
-⬜ Journal Core — `journal_entries`/`journal_entry_lines`, `post_journal_entry()` (ACCT-2)
-⬜ Manual Entry UI + retire income/expenses (ACCT-3)
-⬜ Financial Reports — Trial Balance, Income Statement, Balance Sheet (ACCT-4)
-⬜ Fixed Assets & Depreciation (ACCT-5)
-⬜ Historical Import / Opening Balance (ACCT-6) — blocked on Sinag's decision (see `PROGRESS-ACCOUNTING.md`)
-⬜ Auto-posting from `confirm_order()` / PO receiving (ACCT-7) — gated until core BMS order/PO flow stabilizes
-⬜ BIR tax estimate calculator (ACCT-8) — optional, lowest priority
+> **⏸ PAUSED (2026-07-02) — do not resume ACCT-7/8 or any Accounting work
+> until Sinag explicitly says go.** See `PROGRESS-ACCOUNTING.md` for detail.
+
+🟩 Chart of Accounts (ACCT-1)
+🟩 Journal Core — `journal_entries`/`journal_entry_lines`, `post_journal_entry()` (ACCT-2)
+🟩 Manual Entry UI + retire income/expenses (ACCT-3)
+🟩 Financial Reports — Trial Balance, Income Statement, Balance Sheet (ACCT-4)
+🟩 Fixed Assets & Depreciation (ACCT-5)
+🟩 Historical Import / Opening Balance (ACCT-6)
+⬜ Auto-posting from `confirm_order()` / PO receiving (ACCT-7) — gated until core BMS order/PO flow stabilizes, **and now also on the module-wide pause above**
+⬜ BIR tax estimate calculator (ACCT-8) — optional, lowest priority, **also on the module-wide pause above**
 
 Tracked separately in `PROGRESS-ACCOUNTING.md`, not this file's usual phase log.
 

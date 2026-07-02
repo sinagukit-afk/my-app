@@ -92,7 +92,7 @@ export function ItemForm({ open, onOpenChange, purchaseOrderId, reference, varia
             />
           </div>
           <CurrencyInput label="Discount" name="discount_amount" defaultValue={0} />
-          <p className="text-xs text-(--color-text-muted)">Flat discount applied to this line's total.</p>
+          <p className="text-xs text-(--color-text-muted)">Flat discount applied to this line&apos;s total.</p>
 
           <DialogFooter>
             <DialogClose asChild>
