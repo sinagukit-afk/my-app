@@ -51,6 +51,8 @@ Status Flow: Quote → Confirmed → In Production → Completed (+ Cancelled).
 
 RPCs validate permissions internally (don't rely on RLS alone to gate an RPC's effects).
 
+**Exception — Finance & Accounting tables:** `income`, `expenses`, `accounts`, `journal_entries`, `journal_entry_lines`, `fixed_assets`, and `depreciation_entries` restrict SELECT/INSERT/UPDATE to **admin + manager only** — encoder is excluded from all of them. Financial data is treated as more sensitive than operational data (suppliers, POs, inventory), which is why those allow encoder and this category doesn't. See D016.
+
 ## Soft Delete
 
 Never hard delete business data. Soft-deletable tables use a `deleted_at` timestamp, or an existing `is_active`/`active` flag. If a field must allow reusing a value after "deletion" (e.g. a supplier name), use a partial unique index (`WHERE deleted_at IS NULL`) instead of a plain unique constraint.
