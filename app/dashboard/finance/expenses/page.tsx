@@ -1,3 +1,7 @@
+// DEPRECATED (ACCT-3): `expenses` is retired in favour of double-entry
+// `journal_entries`. This page reads existing rows for historical reference
+// only; all new expenditure is posted via Accounting → Journal. The table is
+// intentionally kept (not dropped) so historical data stays queryable.
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";

@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+// DEPRECATED (ACCT-3): the `expenses` table is retired in favour of double-entry
+// `journal_entries`. This screen is now read-only historical reference — new
+// expenditures are recorded via the Accounting → Journal posting form. Do not
+// reintroduce create/edit/delete here; see PROGRESS-ACCOUNTING.md (ACCT-3).
+
+import Link from "next/link";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { ExpenseForm } from "./expense-form";
-import { deleteExpense } from "./actions";
+import { Card, CardContent } from "@/components/ui/card";
 
 export type ExpenseRow = {
   id: string;
@@ -21,31 +24,6 @@ type Props = {
 };
 
 export function ExpensesTable({ data }: Props) {
-  const router = useRouter();
-  const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<ExpenseRow | null>(null);
-
-  function openAdd() {
-    setEditing(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(row: ExpenseRow) {
-    setEditing(row);
-    setFormOpen(true);
-  }
-
-  function refresh() {
-    router.refresh();
-  }
-
-  async function handleDelete(row: ExpenseRow) {
-    if (!confirm(`Delete this ${row.category} entry of ₱${row.amount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}?`)) return;
-    const res = await deleteExpense(row.id);
-    if (!res.success) alert(res.error);
-    else refresh();
-  }
-
   const totalAmount = data.reduce((sum, row) => sum + Number(row.amount), 0);
 
   const columns: Column<ExpenseRow>[] = [
@@ -76,29 +54,30 @@ export function ExpensesTable({ data }: Props) {
       className: "max-w-xs truncate",
       render: (value) => (value as string) || <span className="text-(--color-text-subtle)">—</span>,
     },
-    {
-      key: "id",
-      header: "Actions",
-      render: (_value, row) => (
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => openEdit(row)}>
-            Edit
-          </Button>
-          <Button variant="ghost" size="sm" className="text-(--color-danger)" onClick={() => handleDelete(row)}>
-            Delete
-          </Button>
-        </div>
-      ),
-    },
   ];
 
   return (
     <div className="space-y-4">
       <PageHeader
         title="Expenses"
-        description="Log and categorise business expenditures."
-        actions={<Button onClick={openAdd}>Add Expense</Button>}
+        description="Historical expenditure records (read-only). Superseded by the accounting journal."
+        actions={
+          <Link href="/dashboard/accounting/journal/new">
+            <Button>Record in Journal</Button>
+          </Link>
+        }
       />
+
+      <Card>
+        <CardContent className="p-4 text-sm text-(--color-text-muted)">
+          This page is now a read-only archive. Expenses are recorded as balanced
+          double-entry transactions in{" "}
+          <Link href="/dashboard/accounting/journal" className="font-medium text-(--color-primary) hover:underline">
+            Accounting → Journal
+          </Link>
+          .
+        </CardContent>
+      </Card>
 
       <p className="text-sm text-(--color-text-muted)">
         Total recorded: <span className="font-medium text-(--color-text)">₱{totalAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
@@ -109,10 +88,8 @@ export function ExpensesTable({ data }: Props) {
         data={data}
         searchPlaceholder="Search expenses…"
         emptyMessage="No expenses recorded"
-        emptyDescription="Add your first expense entry to get started."
+        emptyDescription="Historical expense entries appear here."
       />
-
-      <ExpenseForm open={formOpen} onOpenChange={setFormOpen} expense={editing} onSaved={refresh} />
     </div>
   );
 }

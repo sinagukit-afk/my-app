@@ -81,6 +81,15 @@ const NAV: NavEntry[] = [
   },
   {
     kind: "group",
+    label: "Accounting",
+    icon: LedgerIcon,
+    roles: ["admin", "manager"],
+    children: [
+      { kind: "item", label: "Journal", href: "/dashboard/accounting/journal", icon: LedgerIcon },
+    ],
+  },
+  {
+    kind: "group",
     label: "Analytics",
     icon: ChartIcon,
     children: [
@@ -163,6 +172,15 @@ function CurrencyIcon({ className }: { className?: string }) {
     <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="8" cy="8" r="6.5" />
       <path d="M8 4.5v7M6 6h3a1.5 1.5 0 010 3H6.5A1.5 1.5 0 005 10.5" />
+    </svg>
+  );
+}
+
+function LedgerIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="2" width="10" height="12" rx="1" />
+      <path d="M6 5h4M6 8h4M6 11h2" />
     </svg>
   );
 }

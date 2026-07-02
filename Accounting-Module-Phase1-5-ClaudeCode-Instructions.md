@@ -362,7 +362,7 @@ The existing rows use a free-text `category` field that doesn't map cleanly to a
 
 ## ACCT-4 — Financial Reports
 
-**Migration:** `0015_accounting_reports`
+**Migration:** `0016_accounting_reports` *(was `0015`; renumbered 2026-07-02 when ACCT-3 consumed `0015` for the `6015 Rent Expense` account — see PROGRESS-ACCOUNTING.md)*
 
 These read `journal_entries`/`journal_entry_lines` directly — they work the same whether entries came from manual posting (ACCT-1 through ACCT-3) or later automated posting (ACCT-7, order/PO integration). No dependency on that later phase.
 
@@ -476,7 +476,7 @@ $function$;
 
 ## ACCT-5 — Fixed Assets & Depreciation
 
-**Migration:** `0016_accounting_fixed_assets`
+**Migration:** `0017_accounting_fixed_assets` *(was `0016`; +1 from the ACCT-3 renumber)*
 
 ```sql
 create table public.fixed_assets (
@@ -688,7 +688,7 @@ All accounts with a genuine ₱0.00 net (Cash on hand, Accounts receivable, Inve
 ### Build steps for Claude Code
 
 1. Confirm the two open items with Sinag; adjust the table above accordingly.
-2. If a plug is needed, add `3099 Opening Balance Adjustment` to `accounts` (category `equity`) via a small follow-up migration — `0017_accounting_opening_balance_adjustment`, conditional on the plug actually being needed after confirmation #2 above.
+2. If a plug is needed, add `3099 Opening Balance Adjustment` to `accounts` (category `equity`) via a small follow-up migration — `0018_accounting_opening_balance_adjustment` *(was `0017`; +1 from the ACCT-3 renumber)*, conditional on the plug actually being needed after confirmation #2 above.
 3. Call `post_journal_entry()` once with `entry_date => '2026-06-30'`, `source_type => 'opening_balance'`, and all lines from the finalized table — it will reject the call automatically if it doesn't balance, which is exactly the safety net this data needs.
 4. Do **not** attempt to import all 1,711 individual GL rows — the source data's own internal imbalance makes row-by-row import more risky than valuable. One clean opening entry, going forward everything is captured properly by ACCT-2/ACCT-3/ACCT-7.
 
