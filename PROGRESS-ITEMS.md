@@ -176,7 +176,9 @@ Composite item push (task 5) and modifier no-push (task 6) are handled as design
 
 ---
 
-## ITEM-5 — Add/Edit form
+## ITEM-5 — Add/Edit form ✅ DONE (pending commit gate sign-off)
+
+**Status:** Built and verified 2026-07-03. Awaiting Sinag's manual commit.
 
 **Objective:** the form itself, matching Loyverse field-for-field per the locked decisions.
 
@@ -186,10 +188,38 @@ Composite item push (task 5) and modifier no-push (task 6) are handled as design
 3. Composite component sub-editor: pick component variant + quantity, reusing `item_components`. Enforce max 3-level nesting to match Loyverse.
 4. Modifier assignment picker: multi-select from existing `modifiers` (read-only list, no create) → writes to `item_modifiers`.
 5. `default_purchase_cost` shown read-only (grey/disabled) when present.
-6. Initial stock quantity input — visible only on create, only when `track_stock = true`; hidden entirely on edit (replaced by a link to the future Stock Movement screen — stub/disabled link acceptable until Phase 12 exists).
+6. Initial stock quantity input — visible only on create, only when `track_stock = true`; hidden entirely on edit (replaced by a link to the Stock Movement/adjustment screen).
 7. Cost field visible and editable for all roles per the locked decision (no role-based hiding here, unlike other financial forms).
 
-**Manual commit gate:** full round trip — create item with variants + composite components + modifier assignment, edit it, confirm sync_status updates correctly, confirm role restrictions (viewer/cashier/encoder cannot reach the form at all).
+**Three conflicts found and resolved with Sinag before building (see plan/session):**
+1. `primary_supplier_id` — Locked Decisions said pull-only/no-edit-UI; task list said it's a core editable field. **Resolved: editable** (Sinag's call).
+2. Modifier assignment — `item_modifiers` had zero write RLS and the n8n push never sent `modifier_ids` to Loyverse, so a BMS assignment would never reach the POS. **Resolved: extended the push** (see below) so assignments actually take effect.
+3. Composite nesting — no depth tracking existed in `item_components`, and 0 of the 59 real items nest a composite inside a composite today. **Resolved: built real recursive depth + cycle validation** per spec, not simplified away.
+
+**What was built:**
+- **Migration `item5_modifiers_and_nesting`** (+ a same-session follow-up fix, `item5_fix_upsert_item_overload_and_depth`) extends `upsert_item`:
+  - New `p_modifier_ids uuid[]` param — replace-sets `item_modifiers` for the item in the same transaction as the rest of the save.
+  - Recursive-CTE nesting validation on every composite component: rejects if the component's own subtree is already >2 deep (i.e. this save would exceed 3 total levels), and rejects any cycle back to a variant of the item being saved. Verified directly: a 3-level chain (composite → composite → simple) saves cleanly; a 4th level and a direct cycle (editing a composite to use its own descendant as a component) both raise clear errors.
+  - **Gotcha hit and fixed during this migration:** `CREATE OR REPLACE FUNCTION` with a newly-appended parameter does **not** replace the old function — Postgres treats a different parameter-count signature as a new overload, silently leaving the old (no modifier/nesting logic) 15-arg version callable alongside the new 16-arg one. Had to explicitly `DROP FUNCTION` the stale signature. Also caught and fixed an off-by-one in the nesting-depth CTE on first pass (it under-counted by one level, which would have silently allowed 4-level nesting) — caught by tracing a concrete 4-item chain before trusting it, not just by inspection.
+  - `item_modifiers_insert`/`item_modifiers_delete` RLS policies added (admin/manager), matching the `item_components` convention — the RPC is `SECURITY DEFINER` so this is defense-in-depth, not load-bearing.
+- **n8n workflow (`F6CfXnxji98Y75JJ`):** `Fetch Item for Push` now also selects `modifier_ids` (joined through `item_modifiers`/`modifiers`, filtered to non-deleted); `Build Loyverse Item Payload` now includes `payload.modifier_ids` so BMS-assigned modifiers actually sync to Loyverse/POS, not just local bookkeeping.
+  - **Recurring bug caught mid-session:** the `=` expression-prefix bug documented in ITEM-2/ITEM-3 (params reading literal `"{{ $json.query }}"` instead of `"={{ $json.query }}"`) had reappeared on **9 nodes**, including `Write Back Item Sync Result to Supabase` — which would have silently broken the entire push write-back path, not just something I touched. Fixed all 9. Per ITEM-2's own takeaway, this class of bug needs re-checking after any session with concurrent n8n editor + MCP access — confirmed again here.
+- **`lib/integrations/n8n/index.ts`** — implemented the previously-stubbed `triggerWorkflow()`; added `N8N_WEBHOOK_BASE_URL` to `.env.local` (gitignored). Missing-env-var and fetch failures are soft-skips (logged, not thrown) since `sync_status` staying `pending` is a safe, retryable state.
+- **`app/dashboard/inventory/items/actions.ts`** (new) — `upsertItem()` server action: calls the RPC, triggers the Loyverse push webhook on success, revalidates the list.
+- **`app/dashboard/inventory/items/item-form.tsx`** (new) — shared create/edit client component modeled on the existing PO/adjustment form patterns (`ItemRow[]`-style dynamic rows, `Select`/`Checkbox`/`CurrencyInput`/`NumberInput`/`Input` from `components/ui`). Variant matrix generates cartesian-product rows from up to 3 option value-lists, diffing against existing rows by option-tuple on edit so unchanged combinations keep their `id`/data. Composite component sub-editor renders per variant row (schema keys components by `composite_variant_id`, not per-item). Modifier picker is a `Checkbox` list (no multi-select combobox exists in this codebase, so this matches the established pattern). `default_purchase_cost` shown as a disabled `CurrencyInput` only when present. Initial-stock input only on create when tracked; edit mode shows current stock + a link to the real `/dashboard/inventory/adjustment` screen (Phase 12 already shipped, so the "stub link" language in this doc's task 6 was stale).
+  - **Bug caught before verification:** the shared `Checkbox` component doesn't forward a `name` prop to its underlying `<input>`, so `is_available_for_sale`/`track_stock` would have silently never reached `FormData` if left as originally written (uncontrolled + `name=`). Fixed by controlling both in state and setting them explicitly in the submit handler.
+- **`app/dashboard/inventory/items/new/page.tsx`** — replaced the ITEM-4 stub with the real create form (categories/suppliers/modifiers/component-picker options fetched server-side).
+- **`app/dashboard/inventory/items/[id]/edit/page.tsx`** (new route) — fetches the item, its variants (+ `inventory_levels`, `default_purchase_cost`), its components (disambiguated via the two named FKs on `item_components`, since PostgREST can't infer which one without a hint), and assigned modifiers. `items-table.tsx` gained an admin/manager-only "Edit" link per row.
+
+**Gate verification (2026-07-03, browser preview + direct Postgres):**
+- Created a simple item end-to-end through the browser as the admin test account: landed in Postgres with `sync_status='pending'`, correct category/SKU, showed correctly in the Item List (price "Variable", stock "—", "Pending" sync badge).
+- Edited that same item through the browser: form pre-filled correctly (name, SKU, etc.), checked a modifier, saved — confirmed in Postgres the `item_modifiers` row landed correctly.
+- Role check: signed in as the real `encoder` test account — both `/new` and `/edit` routes render the permission-denied message (no bypass), and calling `upsert_item` directly as encoder via SQL raises `Not authorized to create or edit items`.
+- Nesting/cycle/modifier-replace-set logic verified directly against Postgres (see migration section above) with a real 4-item composite chain, not just unit-level reasoning.
+- No real Loyverse push occurred during testing — confirmed the push workflow is still inactive (test-phase, per ITEM-2), so the webhook call the create/edit action fires is a harmless no-op right now. Full BMS→n8n→Loyverse live round trip (closing out ITEM-2's deferred gate too) still needs Sinag's explicit go-ahead before activating the workflow.
+- All test rows cleaned up afterward; `items`/`item_variants` counts back to exactly 59/59. `npx tsc --noEmit` clean. `get_advisors` (security): no new findings (only the pre-existing SECURITY DEFINER RPC + leaked-password-protection warnings).
+
+**Manual commit gate:** outstanding items before Sinag signs off — (1) decide when to activate the n8n push workflow for a real Loyverse round trip, (2) spot-check the variant-matrix generate/diff UX and composite component sub-editor directly (covered at the RPC level in this session, not yet clicked through in the browser for a multi-variant/composite item specifically).
 
 ---
 
@@ -201,6 +231,23 @@ Composite item push (task 5) and modifier no-push (task 6) are handled as design
 3. Log create/edit/archive actions to `activity_logs` (or whatever the established audit table is — confirm name before wiring).
 
 **Manual commit gate:** attempt writes as each non-privileged role and confirm rejection at the RLS layer; confirm activity log entries appear correctly.
+
+---
+
+## ITEM-6.5 — Live n8n Workflow Test Run
+
+**Objective:** once Sinag activates/publishes the `Loyverse-Supabase` n8n workflow (separate session, addressing whatever needs fixing there first), do a real end-to-end BMS → n8n → Loyverse test — closing out the deferred live-test gates from ITEM-2 ("create a test item in BMS," never done — only the raw webhook was exercised) and ITEM-5 (modifier push and composite push were built but never live-verified against the real Loyverse API).
+
+**Preflight:** confirm the workflow shows `active: true` via `get_workflow_details` before starting — don't assume based on prior sessions.
+
+**Tasks:**
+1. **Create path** — create a new simple item through the actual BMS form (not a direct RPC call), with Sinag's explicit go-ahead since this hits the real Loyverse catalog. Confirm in Supabase: `sync_status='synced'`, `loyverse_item_id`/`loyverse_variant_id` populated, `sync_error` null. Confirm in Loyverse (dashboard or API) the item exists with matching name/SKU/price/category. This is the one path ITEM-2 explicitly flagged as never live-tested (only the update path was, back in ITEM-2's original test).
+2. **Update path** — edit that same item (e.g. change price or SKU) and re-save. Confirm it updates the *same* Loyverse item (upsert-by-body-`id` semantics) rather than creating a duplicate.
+3. **Modifier push** — assign a modifier to the test item in BMS, save, confirm `modifier_ids` actually reaches Loyverse (new in ITEM-5, never live-tested).
+4. **Composite push** — create or edit a composite item with components, confirm the `components` array lands correctly in Loyverse (built in ITEM-2, never live-tested with a real Loyverse response).
+5. **Cleanup** — decide with Sinag whether to archive/delete the test item(s) afterward from both Loyverse and BMS, or keep one as a standing test fixture.
+
+**Manual commit gate:** Sinag confirms the test item(s) appear correctly in the Loyverse dashboard/POS for all four paths above, and Supabase sync fields are correct throughout. Only after this passes do ITEM-2's and ITEM-5's deferred live-push gates get marked closed.
 
 ---
 
