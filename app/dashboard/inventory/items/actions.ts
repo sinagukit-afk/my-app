@@ -21,6 +21,7 @@ export type VariantInput = {
   default_price: number | null
   pricing_type: 'FIXED' | 'VARIABLE'
   initial_stock?: number
+  low_stock_threshold: number | null
 }
 
 export type ComponentInput = {

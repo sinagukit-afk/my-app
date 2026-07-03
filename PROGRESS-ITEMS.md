@@ -259,22 +259,54 @@ Composite item push (task 5) and modifier no-push (task 6) are handled as design
 
 ---
 
-## ITEM-6.5 — Live n8n Workflow Test Run
+## ITEM-6.5 — Live n8n Workflow Test Run ✅ DONE (pending commit gate sign-off)
 
-**Status (2026-07-03):** `Loyverse-Supabase` (`F6CfXnxji98Y75JJ`) published/activated (`activeVersionId` `ad7a1521-2698-4adf-8102-0ec84d561972`) — preflight satisfied, ready to start the tasks below. Ahead of publishing, all 8 schedule triggers were also switched from polling (15-min/6-hr) to once-daily, staggered 5 min apart starting 2:00 AM PH time (Categories 2:00 → Discounts 2:05 → Payment Types 2:10 → Modifiers 2:15 → Items 2:20 → Inventory 2:25 → Customers 2:30 → Receipts 2:35), so the pull-sync branches won't fire mid-test unexpectedly. `N8N_WEBHOOK_BASE_URL` in `.env.local` was already pointing at the production `/webhook` path.
+**Status:** All 4 tasks executed and verified 2026-07-03, including a real bug found and fixed via the live composite test. Awaiting Sinag's dashboard/POS confirmation to close the gate.
 
-**Objective:** once Sinag activates/publishes the `Loyverse-Supabase` n8n workflow (separate session, addressing whatever needs fixing there first), do a real end-to-end BMS → n8n → Loyverse test — closing out the deferred live-test gates from ITEM-2 ("create a test item in BMS," never done — only the raw webhook was exercised) and ITEM-5 (modifier push and composite push were built but never live-verified against the real Loyverse API).
+**Preflight confirmed:** `get_workflow_details` showed `active: true`, `isArchived: false`, `activeVersionId ad7a1521-...` before starting — matched the prior session's status note.
 
-**Preflight:** confirm the workflow shows `active: true` via `get_workflow_details` before starting — don't assume based on prior sessions.
+**Bug found and fixed (task 4, composite push — the one path ITEM-2 flagged as never live-tested with a real Loyverse response):** `Build Loyverse Item Payload` built a `components` array for composite items but never set `is_composite: true` in the payload. First live attempt (execution 105) was rejected outright by Loyverse: `"Bad request - please check your parameters" / "Components must not be set if is_composite is set to false or null"`. Confirmed harmless locally — `items.sync_status` landed as `failed` with that exact error, no `loyverse_item_id`, nothing bad reached Loyverse. **Fixed with Sinag's explicit go-ahead** (this edits the live/active workflow, not just runs it): added `payload.is_composite = true` inside the existing `if (row.item_type === 'composite' ...)` branch, then `publish_workflow`'d the change (edits land in a draft version — the active/production webhook path doesn't pick them up until published). Re-triggered the same composite item's push (execution 107): Loyverse's real response confirmed `is_composite: true` and `components: [{variant_id: "830a888c-...", quantity: 1}]` landed correctly, `sync_status` flipped to `synced` with a real `loyverse_item_id`.
+
+**Results per task, all against the real Loyverse catalog:**
+1. **Create path** — "ITEM-6.5 Live Test Simple" (SKU `ITEM65-SIMPLE-001`, FIXED pricing, ₱150/₱75 cost) created through the actual Add Item form as the admin test account. Landed `sync_status='synced'`, `loyverse_item_id`/`loyverse_variant_id` populated, `sync_error` null (item id `00ba8b25-...`, Loyverse item id `91ee08a0-...`). This closes the create-path gate ITEM-2 left open.
+2. **Update path** — edited the same item through the Edit form (SKU → `ITEM65-SIMPLE-001-EDITED`, price → ₱175). Confirmed the *same* `loyverse_item_id`/`loyverse_variant_id` carried through (upsert-by-body-`id`, not a duplicate) — new SKU/price reflected in Loyverse's response.
+3. **Modifier push** — assigned "Coaster" to the item via the Edit form's modifier checklist, saved. Confirmed `item_modifiers` row landed in Supabase, and via `get_execution` on the resulting n8n run (execution 104), Loyverse's real API response echoed back `modifier_ids: ["684de877-...]"` — the ITEM-5 modifier-push code path is now live-verified, not just built.
+4. **Composite push** — see bug/fix above. "ITEM-6.5 Live Test Composite" (SKU `ITEM65-COMPOSITE-001`, FIXED ₱250) created with one component (the Simple test item's own variant, qty 1). After the fix, verified end-to-end.
+5. **Cleanup** — Sinag's decision (2026-07-03): keep both new test items as standing fixtures in Loyverse and Supabase, same precedent as ITEM-6's leftover test item. No archive/delete performed.
+
+**Side effect (unplanned, harmless):** an attempt to re-trigger the composite push via `execute_workflow` (rather than the real webhook) landed on the workflow's schedule trigger instead of the webhook trigger, firing the daily Items pull-sync early (execution 106). This pulled ITEM-6's standing Loyverse-only fixture ("ITEM-6 Create Log Test (edited)") back into Supabase as a new row — expected behavior given Sinag's ITEM-6 decision to keep that item in Loyverse, just triggered a few hours ahead of its 2:20 AM schedule. The pull-sync race guard (ITEM-2 task 4) meant no local data was overwritten. Item/variant counts after this session: 62/62 (59 baseline + 2 new test items + 1 re-pulled ITEM-6 fixture). Re-triggering a specific webhook-only branch by ID isn't supported by `execute_workflow` for multi-trigger workflows — use the real HTTP webhook (or the BMS form, as tasks 1-4 did) instead.
+
+**Preview-tooling gotcha hit again this session:** `button[type="submit"]` matched the dashboard header's "Sign out" button before the form's own submit button, logging the test session out on every first attempt (confirmed via dev server logs showing `POST .../items/new → 303` routing to `logout()`, not `upsertItem`). Matches the existing `feedback_preview_submit_button_targeting` memory — scoping the selector to `main button[type="submit"]` fixed it. Worth a permanent reminder since this is the second time it's bitten a session.
+
+**Manual commit gate:** outstanding — Sinag to confirm both test items (and the composite's component wiring) render correctly in the Loyverse dashboard/POS. Once confirmed, ITEM-2's and ITEM-5's deferred live-push gates close too.
+
+---
+
+## ITEM-6.6 — Minimum stock threshold + modifier option preview ✅ DONE (pending commit gate sign-off)
+
+**Status:** built, live-tested, and one real bug caught+fixed via the live test, 2026-07-03. Awaiting Sinag's sign-off before ITEM-7.
+
+**Objective:** two UX gaps spotted in review, not part of the original ITEM-0..6.5 task lists.
 
 **Tasks:**
-1. **Create path** — create a new simple item through the actual BMS form (not a direct RPC call), with Sinag's explicit go-ahead since this hits the real Loyverse catalog. Confirm in Supabase: `sync_status='synced'`, `loyverse_item_id`/`loyverse_variant_id` populated, `sync_error` null. Confirm in Loyverse (dashboard or API) the item exists with matching name/SKU/price/category. This is the one path ITEM-2 explicitly flagged as never live-tested (only the update path was, back in ITEM-2's original test).
-2. **Update path** — edit that same item (e.g. change price or SKU) and re-save. Confirm it updates the *same* Loyverse item (upsert-by-body-`id` semantics) rather than creating a duplicate.
-3. **Modifier push** — assign a modifier to the test item in BMS, save, confirm `modifier_ids` actually reaches Loyverse (new in ITEM-5, never live-tested).
-4. **Composite push** — create or edit a composite item with components, confirm the `components` array lands correctly in Loyverse (built in ITEM-2, never live-tested with a real Loyverse response).
-5. **Cleanup** — decide with Sinag whether to archive/delete the test item(s) afterward from both Loyverse and BMS, or keep one as a standing test fixture.
+1. **Minimum stock threshold.** Loyverse tracks a per-store `low_stock` alert level on each variant (confirmed in every ITEM-6.5 live response's `stores[].low_stock` field, always null since nothing has ever set it). Locally this already exists as `inventory_levels.low_stock_threshold` — added in an earlier phase for the dashboard's "Low Stock Items" widget, but nothing writes to it. When "Track Stock" is ticked in the Add/Edit Item form, show a "Minimum Stock" number input (both create and edit — this is an alert threshold, not a quantity change, so it doesn't fall under the locked stock-editing-boundary decision that reserves quantity edits for the Stock Movement screen). When "Track Stock" is unticked, clear the threshold to `null` (Sinag's call, matching "doesn't apply if not tracked" rather than leaving a stale number behind). `upsert_item` RPC extended to accept it per variant and upsert directly into `inventory_levels` (not through `adjust_stock`, since `in_stock` itself is untouched). Pushed to Loyverse via a `stores: [{ store_id, low_stock }]` entry per variant.
+2. **Modifier option preview.** Show each modifier's own options (`modifier_options.name`) inline under its checkbox in the Add/Edit form's Modifiers section (e.g. "Coaster" → "Simple text, Templated Design"), so assigning a modifier list doesn't require checking Loyverse backoffice first to know what it contains. Read-only display, no new write path — consistent with the existing read-only modifier-assignment decision.
 
-**Manual commit gate:** Sinag confirms the test item(s) appear correctly in the Loyverse dashboard/POS for all four paths above, and Supabase sync fields are correct throughout. Only after this passes do ITEM-2's and ITEM-5's deferred live-push gates get marked closed.
+**What was built:**
+- **No schema migration needed** — `inventory_levels.low_stock_threshold` already existed (feeding the dashboard's Low Stock widget) but nothing wrote to it; `modifier_options.name` already existed from ITEM-0's pull.
+- **Migration `item6_6_low_stock_threshold`** — `upsert_item` extended: each variant in `p_variants` now carries `low_stock_threshold`; when `track_stock` is true it's upserted directly into `inventory_levels` (not through `adjust_stock()`, since `in_stock` itself is untouched — this is an alert setting, not a quantity change); when `track_stock` is false, any existing threshold for the item's variants is cleared to `null`.
+- **`item-form.tsx`** — "Minimum Stock" number input shown whenever Track Stock is ticked (both create and edit, unlike Initial Stock which stays create-only). Modifiers checklist now shows each modifier's own options as description text under its checkbox (e.g. "Coaster" → "Simple Text, Templated Design"), sourced from a new `modifier_options` join added to both `new/page.tsx` and `edit/page.tsx`.
+- **n8n (`Loyverse-Supabase`, two node edits, each separately approved by Sinag before publishing):** `Fetch Item for Push`'s SQL now joins `inventory_levels` for the threshold and looks up the active store's `loyverse_store_id`; `Build Loyverse Item Payload` adds a `stores: [{ store_id, low_stock }]` entry per variant when a threshold is set.
+
+**Bug found and fixed via the live retest:** the first version of the `stores[]` push sent only `store_id` + `low_stock`, and Loyverse's real response showed this **reset the variant's per-store price to `null`/`VARIABLE`** instead of inheriting `FIXED`/₱175 from the variant defaults (previously, with no `stores[]` sent at all, Loyverse auto-populated it correctly). Fixed by also mirroring `pricing_type`/`price` into the same `stores` object — re-verified via a second live push showing the correct `pricing_type: "FIXED", price: 175, low_stock: 5` together.
+
+**Live verification (2026-07-03, real Loyverse catalog, ITEM-6.5's standing "ITEM-6.5 Live Test Simple" fixture):**
+- Modifier options render correctly against real data: "Coaster" → "Simple Text, Templated Design", "Keychain" → its 4 real options, "Ref Magnet" → its 3 — confirms the join works against actual modifier_options rows, not just the 1 test modifier used in ITEM-6.5.
+- Ticked Track Stock, set Minimum Stock to 5, saved: `inventory_levels.low_stock_threshold = 5`, `in_stock` stayed untouched at 0, item stayed `sync_status='synced'`. First Loyverse push exposed the price-reset bug (caught before this was considered done); after the fix, re-verified `stores: [{store_id, pricing_type: "FIXED", price: 175, low_stock: 5}]` landed correctly.
+- Unticked Track Stock, saved again: `low_stock_threshold` cleared to `null` locally, confirming the "doesn't apply when untracked" behavior Sinag asked for.
+- `npx tsc --noEmit` clean throughout.
+
+**Manual commit gate:** Sinag confirms the Minimum Stock value and modifier option text render correctly in the Loyverse dashboard/POS, alongside ITEM-6.5's own gate.
 
 ---
 

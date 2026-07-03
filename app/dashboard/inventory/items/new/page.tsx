@@ -36,7 +36,11 @@ export default async function NewItemPage() {
     await Promise.all([
       supabase.from("categories").select("id, name").order("name"),
       supabase.from("suppliers").select("id, name").eq("is_active", true).order("name"),
-      supabase.from("modifiers").select("id, name").is("deleted_at", null).order("name"),
+      supabase
+        .from("modifiers")
+        .select("id, name, modifier_options(name)")
+        .is("deleted_at", null)
+        .order("name"),
       supabase
         .from("item_variants")
         .select("id, sku, items(name)")
@@ -49,12 +53,18 @@ export default async function NewItemPage() {
     return { id: v.id, label: item?.name ?? "Unknown item", sku: v.sku };
   });
 
+  const modifierOptions = (modifiers ?? []).map((m) => ({
+    id: m.id,
+    name: m.name,
+    options: (m.modifier_options ?? []).map((o: { name: string }) => o.name),
+  }));
+
   return (
     <ItemForm
       mode="create"
       categories={categories ?? []}
       suppliers={suppliers ?? []}
-      modifiers={modifiers ?? []}
+      modifiers={modifierOptions}
       componentOptions={componentOptions}
     />
   );

@@ -23,7 +23,7 @@ import { upsertItem } from "./actions";
 
 export type CategoryOption = { id: string; name: string };
 export type SupplierOption = { id: string; name: string };
-export type ModifierOption = { id: string; name: string };
+export type ModifierOption = { id: string; name: string; options: string[] };
 export type ComponentPickerOption = { id: string; label: string; sku: string | null };
 
 export type ExistingComponent = {
@@ -43,6 +43,7 @@ export type ExistingVariant = {
   pricing_type: "FIXED" | "VARIABLE";
   default_purchase_cost: number | null;
   in_stock: number | null;
+  low_stock_threshold: number | null;
   components: ExistingComponent[];
 };
 
@@ -92,6 +93,7 @@ type VariantRow = {
   default_purchase_cost: number | null;
   in_stock: number | null;
   initial_stock: string;
+  low_stock_threshold: string;
   components: ComponentRow[];
 };
 
@@ -109,6 +111,7 @@ function emptyVariantRow(option1_value = "", option2_value = "", option3_value =
     default_purchase_cost: null,
     in_stock: null,
     initial_stock: "",
+    low_stock_threshold: "",
     components: [],
   };
 }
@@ -133,6 +136,7 @@ function seedRows(initial: ItemFormInitial | undefined): VariantRow[] {
     default_purchase_cost: v.default_purchase_cost,
     in_stock: v.in_stock,
     initial_stock: "",
+    low_stock_threshold: v.low_stock_threshold != null ? String(v.low_stock_threshold) : "",
     components: v.components.map((c) => ({
       rowId: crypto.randomUUID(),
       component_variant_id: c.component_variant_id,
@@ -285,6 +289,8 @@ export function ItemForm({
       pricing_type: r.pricing_type,
       initial_stock:
         mode === "create" && trackStock ? Number(r.initial_stock || 0) : undefined,
+      low_stock_threshold:
+        trackStock && r.low_stock_threshold !== "" ? Number(r.low_stock_threshold) : null,
     }));
 
     const componentsPayload =
@@ -518,6 +524,14 @@ export function ItemForm({
                       </Link>
                     </p>
                   )}
+                  {trackStock && (
+                    <NumberInput
+                      label="Minimum Stock"
+                      min={0}
+                      value={row.low_stock_threshold}
+                      onChange={(e) => updateRow(row.rowId, { low_stock_threshold: e.target.value })}
+                    />
+                  )}
                 </div>
 
                 {itemType === "composite" && (
@@ -567,6 +581,7 @@ export function ItemForm({
             <Checkbox
               key={m.id}
               label={m.name}
+              description={m.options.length > 0 ? m.options.join(", ") : undefined}
               checked={selectedModifierIds.includes(m.id)}
               onChange={(checked) => toggleModifier(m.id, checked)}
             />

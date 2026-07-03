@@ -50,7 +50,7 @@ export default async function EditItemPage({ params }: { params: Promise<{ id: s
       supabase
         .from("item_variants")
         .select(
-          "id, sku, barcode, option1_value, option2_value, option3_value, cost, default_price, pricing_type, default_purchase_cost, inventory_levels(in_stock)"
+          "id, sku, barcode, option1_value, option2_value, option3_value, cost, default_price, pricing_type, default_purchase_cost, inventory_levels(in_stock, low_stock_threshold)"
         )
         .eq("item_id", id)
         .is("deleted_at", null)
@@ -58,7 +58,11 @@ export default async function EditItemPage({ params }: { params: Promise<{ id: s
       supabase.from("item_modifiers").select("modifier_id").eq("item_id", id),
       supabase.from("categories").select("id, name").order("name"),
       supabase.from("suppliers").select("id, name").eq("is_active", true).order("name"),
-      supabase.from("modifiers").select("id, name").is("deleted_at", null).order("name"),
+      supabase
+        .from("modifiers")
+        .select("id, name, modifier_options(name)")
+        .is("deleted_at", null)
+        .order("name"),
     ]);
 
   const variantIds = (variantRows ?? []).map((v) => v.id);
@@ -83,6 +87,12 @@ export default async function EditItemPage({ params }: { params: Promise<{ id: s
     return { id: v.id, label: parent?.name ?? "Unknown item", sku: v.sku };
   });
 
+  const modifierOptions = (modifiers ?? []).map((m) => ({
+    id: m.id,
+    name: m.name,
+    options: (m.modifier_options ?? []).map((o: { name: string }) => o.name),
+  }));
+
   const variants: ExistingVariant[] = (variantRows ?? []).map((v) => ({
     id: v.id,
     sku: v.sku,
@@ -95,6 +105,7 @@ export default async function EditItemPage({ params }: { params: Promise<{ id: s
     pricing_type: v.pricing_type as "FIXED" | "VARIABLE",
     default_purchase_cost: v.default_purchase_cost !== null ? Number(v.default_purchase_cost) : null,
     in_stock: firstOf(v.inventory_levels)?.in_stock ?? 0,
+    low_stock_threshold: firstOf(v.inventory_levels)?.low_stock_threshold ?? null,
     components: (componentRows ?? [])
       .filter((c) => c.composite_variant_id === v.id)
       .map((c) => ({
@@ -109,7 +120,7 @@ export default async function EditItemPage({ params }: { params: Promise<{ id: s
       itemId={item.id}
       categories={categories ?? []}
       suppliers={suppliers ?? []}
-      modifiers={modifiers ?? []}
+      modifiers={modifierOptions}
       componentOptions={componentOptions}
       initial={{
         name: item.name,
