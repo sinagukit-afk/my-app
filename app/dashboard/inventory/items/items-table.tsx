@@ -189,6 +189,21 @@ export function ItemsTable({ data, canWrite }: Props) {
     },
   ];
 
+  if (canWrite) {
+    columns.push({
+      key: "id",
+      header: "",
+      render: (value) => (
+        <Link
+          href={`/dashboard/inventory/items/${String(value)}/edit`}
+          className="text-sm text-(--color-primary) underline"
+        >
+          Edit
+        </Link>
+      ),
+    });
+  }
+
   return (
     <div className="space-y-4">
       <PageHeader

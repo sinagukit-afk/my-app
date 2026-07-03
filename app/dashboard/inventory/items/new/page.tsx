@@ -1,8 +1,11 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/page-header";
-import { Button } from "@/components/ui/button";
+import { ItemForm } from "../item-form";
+
+function firstOf<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
 
 export default async function NewItemPage() {
   const supabase = await createClient();
@@ -29,23 +32,30 @@ export default async function NewItemPage() {
     );
   }
 
+  const [{ data: categories }, { data: suppliers }, { data: modifiers }, { data: variantRows }] =
+    await Promise.all([
+      supabase.from("categories").select("id, name").order("name"),
+      supabase.from("suppliers").select("id, name").eq("is_active", true).order("name"),
+      supabase.from("modifiers").select("id, name").is("deleted_at", null).order("name"),
+      supabase
+        .from("item_variants")
+        .select("id, sku, items(name)")
+        .is("deleted_at", null)
+        .order("sku"),
+    ]);
+
+  const componentOptions = (variantRows ?? []).map((v) => {
+    const item = firstOf(v.items);
+    return { id: v.id, label: item?.name ?? "Unknown item", sku: v.sku };
+  });
+
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Add Item"
-        description="Create a new catalog item and push it to Loyverse."
-      />
-      <Card>
-        <CardContent className="flex flex-col items-start gap-3 p-6">
-          <p className="text-sm text-(--color-text-muted)">
-            The Add/Edit item form ships with ITEM-5. This page is a placeholder
-            so navigation and role gating are already in place.
-          </p>
-          <Button asChild variant="secondary">
-            <Link href="/dashboard/inventory/items">Back to Item List</Link>
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
+    <ItemForm
+      mode="create"
+      categories={categories ?? []}
+      suppliers={suppliers ?? []}
+      modifiers={modifiers ?? []}
+      componentOptions={componentOptions}
+    />
   );
 }
