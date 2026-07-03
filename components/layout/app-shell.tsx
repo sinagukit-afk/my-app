@@ -41,6 +41,7 @@ const NAV: NavEntry[] = [
         kind: "subgroup",
         label: "Inventory",
         children: [
+          { kind: "item", label: "Item List", href: "/dashboard/inventory/items", icon: LayersIcon },
           { kind: "item", label: "Incoming Inventory", href: "/dashboard/inventory/incoming", icon: LayersIcon },
           { kind: "item", label: "Item Adjustment", href: "/dashboard/inventory/adjustment", icon: LayersIcon },
           { kind: "item", label: "Stock Movement", href: "/dashboard/inventory/stock-movement", icon: LayersIcon },

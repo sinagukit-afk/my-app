@@ -27,6 +27,8 @@ export default async function ItemAdjustmentPage() {
     .from("items")
     .select("name, item_variants(id, sku, option1_value, inventory_levels(in_stock))")
     .eq("track_stock", true)
+    .is("deleted_at", null)
+    .is("item_variants.deleted_at", null)
     .order("name");
 
   const variants: VariantOption[] = (itemData ?? []).flatMap((item) => {

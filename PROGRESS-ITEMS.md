@@ -143,7 +143,9 @@ Composite item push (task 5) and modifier no-push (task 6) are handled as design
 
 ---
 
-## ITEM-4 — Item List screen
+## ITEM-4 — Item List screen ✅ DONE (pending commit gate sign-off)
+
+**Status:** Built and verified 2026-07-03. Awaiting Sinag's manual commit.
 
 **Objective:** the main list view.
 
@@ -155,6 +157,22 @@ Composite item push (task 5) and modifier no-push (task 6) are handled as design
 5. Role-gated "Add Item" button (admin/manager only) — but list itself visible to all roles per the locked read-access decision.
 
 **Manual commit gate:** filters verified against real data (all 59+ items), sync-failure state visible when deliberately triggered.
+
+**Decisions made at phase start (Sinag, 2026-07-03):** nav placement = Inventory → "Item List", first entry (`/dashboard/inventory/items`); status filter defaults to all non-archived (Archived is an explicit filter chip); Add Item links to a live stub page at `/new` ("form ships with ITEM-5") so routing + role gating are testable now; sync-failure badge verified by temporarily flipping one real row and reverting.
+
+**What was built:**
+- `app/dashboard/inventory/items/page.tsx` (server: fetch + row mapping incl. price label and stock rollup) + `items-table.tsx` (client: columns, status chips via `FilterBar`, category/type `Select`s, sync badges) + `new/page.tsx` (role-gated ITEM-5 stub). Nav entry added to `AppShell`. Columns: name, category, SKU (+n more for multi-variant), price (FIXED price / range / "Variable"), stock (summed across variants; "—" when untracked, incl. composites), type, status, sync. Pagination via the shared `DataTable` (10/page).
+- **Migration `item4_list_visibility_rls`** — two gaps found during preflight, same legacy-policy class as ITEM-1/3's findings:
+  1. `items_select` / `item_variants_select` were hard-filtered to `deleted_at IS NULL` for *everyone* (admin included) — the spec's Archived status filter (and ITEM-6's archive/restore) would have been dead code. Now: non-archived visible to all roles, archived rows additionally visible to admin/manager only.
+  2. `inventory_levels` SELECT was admin/encoder only — the stock column would have been blank for manager/cashier/viewer, violating the locked all-roles-read decision. Replaced legacy `"Encoder select inventory_levels"` with `inventory_levels_select` (all roles), per the `{table}_{action}` convention.
+  - Because archived items/variants became visible to admin/manager, the six existing item pickers that relied purely on RLS to hide them (PO new/detail, adjustment, quotes new/edit, order edit) got explicit `.is("deleted_at", null)` + `.is("item_variants.deleted_at", null)` filters — no behavior change today (0 archived rows), just defense-in-depth per the app conventions.
+
+**Gate verification (2026-07-03, browser preview + direct Postgres):**
+- All 59 items render with correct columns; pagination footer paging works (11–20 of 59 on page 2).
+- Filters against real data: category Product → 18; status Available → 27 (= 59 − 32 not-for-sale); type Composite → 22; search "bottle opener" → 4; Archived → empty state (0 archived rows exist).
+- Sync-failure visibility: flipped one real item to `sync_status='failed'` with a test error → red "Failed" badge + truncated error text + full error in hover title; reverted to exact prior state (`synced`/`NULL`) and confirmed in UI.
+- Roles: admin sees Add Item + Archived chip + stub page; encoder sees the full list incl. stock but no Add button, no Archived chip, and the stub page rejects with a permission message. Direct Postgres with per-role JWT claims: manager/cashier/viewer all see all 32 `inventory_levels` rows and all 59 items; a deliberately-inserted archived test item+variant visible to manager, invisible to viewer/cashier; test rows hard-deleted after, counts back to exactly 59/59.
+- `npx tsc --noEmit` clean; patched picker pages (adjustment, quotes/new) re-loaded without errors; `get_advisors` (security): no new findings (only the pre-existing SECURITY DEFINER RPC + leaked-password-protection warnings).
 
 ---
 

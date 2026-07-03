@@ -27,6 +27,8 @@ export default async function NewQuotePage() {
     .from("items")
     .select("name, item_variants(id, sku, option1_value, default_price)")
     .eq("is_available_for_sale", true)
+    .is("deleted_at", null)
+    .is("item_variants.deleted_at", null)
     .order("name");
 
   const variantOptions: VariantOption[] = (itemData ?? []).flatMap((item) =>

@@ -69,6 +69,8 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
     .from("items")
     .select("name, item_variants(id, sku, option1_value, cost)")
     .eq("track_stock", true)
+    .is("deleted_at", null)
+    .is("item_variants.deleted_at", null)
     .order("name");
 
   const variantOptions = (itemData ?? []).flatMap((item) =>
