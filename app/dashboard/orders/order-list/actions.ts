@@ -19,6 +19,12 @@ export type OrderItemInput = {
 export async function adjustOrderItems(orderId: string, formData: FormData): Promise<ActionResult> {
   const customer_id = (formData.get('customer_id') as string) || null
   const note = (formData.get('note') as string)?.trim() || null
+  const same_as_customer = formData.get('same_as_customer') !== 'false'
+  const receiver_name = (formData.get('receiver_name') as string)?.trim() || null
+
+  if (!same_as_customer && !receiver_name) {
+    return { success: false, error: 'Receiver name is required when shipping to someone other than the customer.' }
+  }
 
   let items: OrderItemInput[] = []
   try {
@@ -38,6 +44,18 @@ export async function adjustOrderItems(orderId: string, formData: FormData): Pro
     p_lines: validItems,
     p_customer_id: customer_id,
     p_note: note,
+    p_same_as_customer: same_as_customer,
+    p_receiver_name: same_as_customer ? null : receiver_name,
+    p_receiver_phone: same_as_customer ? null : (formData.get('receiver_phone') as string)?.trim() || null,
+    p_receiver_address_line1: same_as_customer
+      ? null
+      : (formData.get('receiver_address_line1') as string)?.trim() || null,
+    p_receiver_barangay: same_as_customer ? null : (formData.get('receiver_barangay') as string)?.trim() || null,
+    p_receiver_city: same_as_customer ? null : (formData.get('receiver_city') as string)?.trim() || null,
+    p_receiver_province: same_as_customer ? null : (formData.get('receiver_province') as string)?.trim() || null,
+    p_receiver_postal_code: same_as_customer
+      ? null
+      : (formData.get('receiver_postal_code') as string)?.trim() || null,
   })
 
   if (error) return { success: false, error: error.message }

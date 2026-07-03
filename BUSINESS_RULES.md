@@ -43,6 +43,19 @@ Status Flow: Quote → Confirmed → In Production → Completed (+ Cancelled).
 -   Confirmed and In Production orders **can be edited** (customer, notes, line items) via the `adjust_order_items` RPC. It diffs old vs. new BOM-expanded quantities per variant, blocks the whole edit if any variant would go short, and posts one `inventory_movements` row per changed variant (negative for a net deduction, positive for a net return).
 -   `orders`/`order_items` have **no rollup trigger** (unlike `purchase_orders`). Any code path that changes order line items must explicitly recompute `subtotal`/`total_discount`/`total_money` — it will not happen automatically.
 
+## Customers
+
+-   `customers` is the single BMS profile per person, still pull-synced from Loyverse. `customer_sources` links a customer to any number of external identities (`loyverse` | `facebook` | `instagram` | `manual` | `walkin`) — a new platform is a new `source` value, not a new migration.
+-   Manual customer creation (walk-ins/leads) is BMS-only — no push back to Loyverse.
+-   Facebook/Instagram matching and sync are not built. `customer_sources.source` accepts those values but nothing writes them yet.
+
+## Orders — Shipping Receiver
+
+-   `same_as_customer` (default `true`) + `receiver_*` fields on `orders` capture who an order actually ships to, snapshotted per-order (same pattern as `order_items.item_name_snapshot`) since the receiver can differ from the paying customer and can change order to order.
+-   Check constraint: `receiver_name` is required whenever `same_as_customer = false`.
+-   `same_as_customer`, `receiver_*`, and `fulfillment_method` are excluded from any Loyverse push payload — these fields are BMS-only, never synced.
+-   Confirmed/In Production orders can only change these fields through the `adjust_order_items` RPC (same path as line-item edits) — a plain table UPDATE on `orders` past `quote` status is admin-only, so encoder/manager edits must go through the RPC.
+
 ## Security
 
 -   SELECT: any authenticated user

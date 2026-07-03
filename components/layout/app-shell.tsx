@@ -60,6 +60,7 @@ const NAV: NavEntry[] = [
         kind: "subgroup",
         label: "Orders",
         children: [
+          { kind: "item", label: "Customers", href: "/dashboard/orders/customers", icon: ClipboardIcon },
           { kind: "item", label: "Quotes", href: "/dashboard/orders/quotes", icon: ClipboardIcon },
           { kind: "item", label: "Order List", href: "/dashboard/orders/order-list", icon: ClipboardIcon },
           { kind: "item", label: "Production Queue", href: "/dashboard/orders/production-queue", icon: ClipboardIcon },

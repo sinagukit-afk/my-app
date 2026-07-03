@@ -18,7 +18,9 @@ export default async function EditQuotePage({ params }: { params: Promise<{ id: 
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id, status, customer_id, note, created_by")
+    .select(
+      "id, status, customer_id, note, created_by, same_as_customer, receiver_name, receiver_phone, receiver_address_line1, receiver_barangay, receiver_city, receiver_province, receiver_postal_code"
+    )
     .eq("id", id)
     .single();
 
@@ -60,6 +62,16 @@ export default async function EditQuotePage({ params }: { params: Promise<{ id: 
       orderId={order.id}
       customerId={order.customer_id}
       note={order.note}
+      receiver={{
+        same_as_customer: order.same_as_customer,
+        receiver_name: order.receiver_name,
+        receiver_phone: order.receiver_phone,
+        receiver_address_line1: order.receiver_address_line1,
+        receiver_barangay: order.receiver_barangay,
+        receiver_city: order.receiver_city,
+        receiver_province: order.receiver_province,
+        receiver_postal_code: order.receiver_postal_code,
+      }}
       items={existingItems ?? []}
       customers={customers}
       variantOptions={variantOptions}

@@ -18,9 +18,40 @@ export type NewOrderItemInput = {
   line_discount: number
 }
 
+function readReceiverFields(formData: FormData) {
+  const same_as_customer = formData.get('same_as_customer') !== 'false'
+  if (same_as_customer) {
+    return {
+      same_as_customer: true,
+      receiver_name: null,
+      receiver_phone: null,
+      receiver_address_line1: null,
+      receiver_barangay: null,
+      receiver_city: null,
+      receiver_province: null,
+      receiver_postal_code: null,
+    }
+  }
+  return {
+    same_as_customer: false,
+    receiver_name: (formData.get('receiver_name') as string)?.trim() || null,
+    receiver_phone: (formData.get('receiver_phone') as string)?.trim() || null,
+    receiver_address_line1: (formData.get('receiver_address_line1') as string)?.trim() || null,
+    receiver_barangay: (formData.get('receiver_barangay') as string)?.trim() || null,
+    receiver_city: (formData.get('receiver_city') as string)?.trim() || null,
+    receiver_province: (formData.get('receiver_province') as string)?.trim() || null,
+    receiver_postal_code: (formData.get('receiver_postal_code') as string)?.trim() || null,
+  }
+}
+
 export async function createQuoteWithItems(formData: FormData): Promise<CreateResult> {
   const customer_id = (formData.get('customer_id') as string) || null
   const note = (formData.get('note') as string)?.trim() || null
+  const receiverFields = readReceiverFields(formData)
+
+  if (!receiverFields.same_as_customer && !receiverFields.receiver_name) {
+    return { success: false, error: 'Receiver name is required when shipping to someone other than the customer.' }
+  }
 
   let items: NewOrderItemInput[] = []
   try {
@@ -52,6 +83,7 @@ export async function createQuoteWithItems(formData: FormData): Promise<CreateRe
       total_discount,
       total_tax: 0,
       total_money: subtotal,
+      ...receiverFields,
     })
     .select('id')
     .single()
@@ -82,6 +114,11 @@ export async function createQuoteWithItems(formData: FormData): Promise<CreateRe
 export async function updateQuoteWithItems(orderId: string, formData: FormData): Promise<ActionResult> {
   const customer_id = (formData.get('customer_id') as string) || null
   const note = (formData.get('note') as string)?.trim() || null
+  const receiverFields = readReceiverFields(formData)
+
+  if (!receiverFields.same_as_customer && !receiverFields.receiver_name) {
+    return { success: false, error: 'Receiver name is required when shipping to someone other than the customer.' }
+  }
 
   let items: NewOrderItemInput[] = []
   try {
@@ -151,7 +188,7 @@ export async function updateQuoteWithItems(orderId: string, formData: FormData):
 
   const { error: updateError } = await supabase
     .from('orders')
-    .update({ customer_id, note, subtotal, total_discount, total_money: subtotal })
+    .update({ customer_id, note, subtotal, total_discount, total_money: subtotal, ...receiverFields })
     .eq('id', orderId)
 
   if (updateError) return { success: false, error: updateError.message }

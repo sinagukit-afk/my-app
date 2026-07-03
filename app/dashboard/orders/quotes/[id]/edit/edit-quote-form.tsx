@@ -15,6 +15,8 @@ import { Select } from "@/components/ui/select";
 import { TextArea } from "@/components/ui/textarea";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { NumberInput } from "@/components/ui/number-input";
+import { Input } from "@/components/ui/input";
+import { Toggle } from "@/components/ui/toggle";
 import { Button } from "@/components/ui/button";
 import { updateQuoteWithItems, type NewOrderItemInput } from "../../actions";
 
@@ -48,18 +50,31 @@ function emptyRow(): ItemRow {
   return { rowId: crypto.randomUUID(), variantId: "", quantity: "1", unitPrice: "", discount: "0" };
 }
 
+export type ReceiverInfo = {
+  same_as_customer: boolean;
+  receiver_name: string | null;
+  receiver_phone: string | null;
+  receiver_address_line1: string | null;
+  receiver_barangay: string | null;
+  receiver_city: string | null;
+  receiver_province: string | null;
+  receiver_postal_code: string | null;
+};
+
 type Props = {
   orderId: string;
   customerId: string | null;
   note: string | null;
+  receiver: ReceiverInfo;
   items: ExistingItem[];
   customers: CustomerOption[];
   variantOptions: VariantOption[];
 };
 
-export function EditQuoteForm({ orderId, customerId, note, items, customers, variantOptions }: Props) {
+export function EditQuoteForm({ orderId, customerId, note, receiver, items, customers, variantOptions }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [sameAsCustomer, setSameAsCustomer] = useState(receiver.same_as_customer);
   const [rows, setRows] = useState<ItemRow[]>(
     items.length > 0
       ? items.map((item) => ({
@@ -125,7 +140,13 @@ export function EditQuoteForm({ orderId, customerId, note, items, customers, var
       return;
     }
 
+    if (!sameAsCustomer && !(formData.get("receiver_name") as string)?.trim()) {
+      alert("Receiver name is required when shipping to someone other than the customer.");
+      return;
+    }
+
     formData.set("items_json", JSON.stringify(newItems));
+    formData.set("same_as_customer", String(sameAsCustomer));
 
     startTransition(async () => {
       const res = await updateQuoteWithItems(orderId, formData);
@@ -154,6 +175,40 @@ export function EditQuoteForm({ orderId, customerId, note, items, customers, var
             options={customers.map((c) => ({ value: c.id, label: c.name }))}
           />
           <TextArea label="Notes" name="note" rows={2} defaultValue={note ?? ""} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Shipping</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Toggle
+            label="Ships to customer?"
+            description="Turn off if this order ships to someone other than the customer above."
+            checked={sameAsCustomer}
+            onChange={setSameAsCustomer}
+          />
+          {!sameAsCustomer && (
+            <div className="space-y-4 border-t border-(--color-border) pt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="Receiver Name" name="receiver_name" defaultValue={receiver.receiver_name ?? ""} required />
+                <Input label="Receiver Phone" name="receiver_phone" defaultValue={receiver.receiver_phone ?? ""} />
+              </div>
+              <Input
+                label="Address Line 1"
+                name="receiver_address_line1"
+                placeholder="Building no., street, house no."
+                defaultValue={receiver.receiver_address_line1 ?? ""}
+              />
+              <div className="grid grid-cols-3 gap-4">
+                <Input label="Barangay" name="receiver_barangay" defaultValue={receiver.receiver_barangay ?? ""} />
+                <Input label="City / Municipality" name="receiver_city" defaultValue={receiver.receiver_city ?? ""} />
+                <Input label="Province" name="receiver_province" defaultValue={receiver.receiver_province ?? ""} />
+              </div>
+              <Input label="Postal Code" name="receiver_postal_code" defaultValue={receiver.receiver_postal_code ?? ""} />
+            </div>
+          )}
         </CardContent>
       </Card>
 

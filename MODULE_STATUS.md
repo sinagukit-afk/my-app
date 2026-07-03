@@ -28,10 +28,22 @@ activity logging, BMS→Loyverse push-sync via n8n. See `PROGRESS-ITEMS.md`
 
 ## Orders
 
-🟩 Quotes
-🟩 Order List
+🟩 Customers — profile + linked-sources (Loyverse/Facebook/Instagram/
+manual) + order history (orders ∪ receipts), manual walk-in creation.
+Facebook/Instagram are schema-ready (`customer_sources.source`) but
+unbuilt — "Link Facebook" is a disabled stub. See `PROGRESS-CUSTOMERS.md`
+(CUST-0..4) and D022/D023 in `DECISIONS.md`.
+🟩 Quotes — now includes a "Ships to customer?" receiver toggle
+(`same_as_customer`/`receiver_*` on `orders`), excluded from any future
+Loyverse push payload.
+🟩 Order List — same receiver toggle, persisted via the extended
+`adjust_order_items` RPC (D023).
 🟩 Production Queue
 🟩 Completed Orders
+⬜ Shipping — schema only (`order_shipments`, `couriers`, migration
+`0023_shipping`), no page. Blocked on unresolved TBDs (shipment status
+workflow, pickup handling, shipping-fee reconciliation) — see
+`PROGRESS-CUSTOMERS.md` Part 2.
 
 ## Finance
 

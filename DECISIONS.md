@@ -220,3 +220,41 @@ in the UI); `use_production` is still pulled from Loyverse and stored
 nesting is capped at 3 levels with recursive-CTE cycle/depth
 validation in `upsert_item`. Revisit only if the Advanced Inventory
 subscription is ever purchased.
+
+## D022
+
+Widened `customers`/`customer_sources` RLS (migration
+`0024_customers_manager_rls`, Customer Management build,
+`PROGRESS-CUSTOMERS.md` CUST-1) to the general admin/manager/encoder
+convention for SELECT/INSERT/UPDATE. Reason: found during preflight
+that `customers` SELECT was admin+encoder only (no manager) and
+INSERT/UPDATE/DELETE was admin-only (no manager, no encoder) —
+contradicting both the feature brief's own stated intent
+("encoder read/insert/update") and this project's documented general
+convention. Left as-is, this would have kept manager unable to see
+customer names anywhere in the app (including the pre-existing
+Quotes/Order List `customers(name)` embeds — a latent bug exposed,
+not introduced, by this feature) and blocked encoder from using
+Add/Edit Customer at all. Confirmed with Sinag before changing RLS.
+DELETE stays admin-only, unchanged, via the existing `Admin full
+access` `ALL` policies on both tables.
+
+## D023
+
+Extended the `adjust_order_items` RPC (migration
+`0025_adjust_order_items_receiver_fields`) with 9 new trailing
+optional parameters, rather than adding a second RPC or a plain
+table update, to let Order List edits persist
+`same_as_customer`/`receiver_*`/`fulfillment_method` (Customer
+Management + Shipping build, `PROGRESS-CUSTOMERS.md` CUST-4). Reason:
+`adjust_order_items` is the only write path into a confirmed/
+in_production `orders` row available to encoder/manager — a direct
+table UPDATE past `quote` status is admin-only per
+`orders_admin_update`, so a plain-table receiver-field update from
+the client would silently fail RLS for non-admin roles editing their
+own confirmed orders. New params default to `true`/`NULL` and are set
+directly (not `COALESCE`d) on the same final UPDATE that already sets
+`customer_id`/`note`, since the calling form always submits full
+current state, not a partial patch. Quotes' create/edit stayed a
+plain table insert/update (no RPC involved, already covered by
+existing `orders` RLS), so only this one RPC needed extending.

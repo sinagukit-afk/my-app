@@ -15,6 +15,8 @@ import { Select } from "@/components/ui/select";
 import { TextArea } from "@/components/ui/textarea";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { NumberInput } from "@/components/ui/number-input";
+import { Input } from "@/components/ui/input";
+import { Toggle } from "@/components/ui/toggle";
 import { Button } from "@/components/ui/button";
 import { createQuoteWithItems, type NewOrderItemInput } from "../actions";
 
@@ -48,6 +50,7 @@ export function NewQuoteForm({ customers, variantOptions }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [rows, setRows] = useState<ItemRow[]>([emptyRow()]);
+  const [sameAsCustomer, setSameAsCustomer] = useState(true);
 
   function updateRow(rowId: string, patch: Partial<ItemRow>) {
     setRows((prev) => prev.map((r) => (r.rowId === rowId ? { ...r, ...patch } : r)));
@@ -102,7 +105,13 @@ export function NewQuoteForm({ customers, variantOptions }: Props) {
       return;
     }
 
+    if (!sameAsCustomer && !(formData.get("receiver_name") as string)?.trim()) {
+      alert("Receiver name is required when shipping to someone other than the customer.");
+      return;
+    }
+
     formData.set("items_json", JSON.stringify(items));
+    formData.set("same_as_customer", String(sameAsCustomer));
 
     startTransition(async () => {
       const res = await createQuoteWithItems(formData);
@@ -130,6 +139,39 @@ export function NewQuoteForm({ customers, variantOptions }: Props) {
             options={customers.map((c) => ({ value: c.id, label: c.name }))}
           />
           <TextArea label="Notes" name="note" rows={2} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Shipping</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Toggle
+            label="Ships to customer?"
+            description="Turn off if this order ships to someone other than the customer above."
+            checked={sameAsCustomer}
+            onChange={setSameAsCustomer}
+          />
+          {!sameAsCustomer && (
+            <div className="space-y-4 border-t border-(--color-border) pt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="Receiver Name" name="receiver_name" required />
+                <Input label="Receiver Phone" name="receiver_phone" />
+              </div>
+              <Input
+                label="Address Line 1"
+                name="receiver_address_line1"
+                placeholder="Building no., street, house no."
+              />
+              <div className="grid grid-cols-3 gap-4">
+                <Input label="Barangay" name="receiver_barangay" />
+                <Input label="City / Municipality" name="receiver_city" />
+                <Input label="Province" name="receiver_province" />
+              </div>
+              <Input label="Postal Code" name="receiver_postal_code" />
+            </div>
+          )}
         </CardContent>
       </Card>
 
