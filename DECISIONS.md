@@ -188,3 +188,14 @@ is built as an addition to the existing `Loyverse Sync - Modifiers &
 Discounts` workflow (id `F6CfXnxji98Y75JJ`), not a new standalone one
 — confirmed with Sinag, despite that workflow's existing inactive
 status and known unfixed upsert-node bug (see `bms-supabase` skill).
+
+**Correction 2026-07-03 (ITEM-2 build):** Loyverse's API does support
+outbound webhooks (`ITEM_UPDATED` event, `/v1/webhooks`, live since
+Jan 2021) — the "or ... if Loyverse has no outbound webhook support"
+framing above was wrong to assume without checking. ITEM-2 still
+shipped the `updated_at`-newer guard (not full webhook-driven pull),
+since registering a Loyverse webhook subscription is a separate,
+externally-dependent piece of work (needs Sinag in the Loyverse
+dashboard) that fully satisfies the race-condition requirement either
+way. Revisit full webhook migration as a fast-follow only if the
+15-minute poll window becomes an actual problem.

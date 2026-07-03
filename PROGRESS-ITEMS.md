@@ -51,7 +51,9 @@ Confirmed field-level findings from real `items.raw` payloads (59 items):
 
 ---
 
-## ITEM-1 — Schema additions
+## ITEM-1 — Schema additions ✅ DONE
+
+**Status:** Complete (2026-07-03). Migration `item1_schema_additions` applied.
 
 **Objective:** extend existing tables so they can fully represent Loyverse item data plus BMS-specific sync/audit needs. Reminder: `items`, `item_variants`, `item_components`, `categories`, `modifiers`, `modifier_options` already exist — this phase is additive, not a fresh build.
 
@@ -66,40 +68,78 @@ Confirmed field-level findings from real `items.raw` payloads (59 items):
 8. RLS policies for all new/modified tables: `items_select` / `items_insert` / `items_update` following the `{table}_{action}` naming convention. Write restricted to `admin`/`manager` via `current_user_role() = any(array['admin','manager']::user_role[])`. Read open to all roles.
 9. `item_modifiers` — read-only from the app's perspective (no insert/update policy needed beyond what the sync process uses), but still needs a select policy for all roles.
 
-**Manual commit gate:** migration applied, RLS verified per role (test as admin, manager, encoder, cashier, viewer), backfill row counts sanity-checked against the 59 existing items.
+**Manual commit gate:** ✅ migration applied, RLS verified per role (test as admin, manager, encoder, cashier, viewer), backfill row counts sanity-checked against the 59 existing items.
+
+**Results:**
+- All 8 columns/tasks landed: `items.option1_name/2/3`, `items`+`item_variants` sync tracking (`sync_status`/`sync_error`/`loyverse_synced_at`), `item_variants.default_purchase_cost`, `items.primary_supplier_id` (FK → suppliers), `items.use_production`, new `item_modifiers` junction table.
+- Backfill: all 59 items + 59 variants already had `loyverse_item_id`/`loyverse_variant_id` populated → backfilled to `sync_status = 'synced'`. `item_modifiers` backfilled from `raw->'modifier_ids'` matched to `modifiers.loyverse_modifier_id`: 9 rows across 9 items (all matched cleanly against the 3 existing modifiers, no orphans).
+- Partial unique indexes on `item_variants.sku`/`barcode` (where not null, not deleted) — pre-checked, zero existing duplicates, applied clean.
+- RLS: replaced the legacy `"Admin full access items"` / `"Encoder read items"` / `"Public read available items"` policies (which had no write path for `manager` at all, and restricted non-admin/encoder reads to available-for-sale only) with `items_select`/`items_insert`/`items_update` and the `item_variants` equivalents, per the `{table}_{action}` convention. `item_modifiers_select` added (read-only table, no write policy — sync writes go through service_role). Verified directly against Postgres per role: admin/manager insert succeeds, encoder/cashier/viewer insert blocked (`42501: new row violates row-level security policy`), viewer read returns all 59 items/variants + item_modifiers.
+- `get_advisors` (security) run post-migration: no new findings introduced; all existing warnings are pre-existing SECURITY DEFINER RPC / leaked-password-protection items unrelated to this change.
 
 ---
 
-## ITEM-2 — Loyverse push integration (n8n)
+## ITEM-2 — Loyverse push integration (n8n) ✅ DONE (branch-level; BMS not wired yet)
+
+**Status:** Complete 2026-07-03. Workflow branch built and live-tested against the real Loyverse account in `Loyverse-Supabase` (id `F6CfXnxji98Y75JJ`, still inactive/test-phase — only this new branch was exercised, not the whole workflow). No BMS code calls this yet; that's ITEM-3's job, which is why "create a test item in BMS" in the commit gate below is marked as deferred rather than literally done — the equivalent (push a real item, confirm it lands in Loyverse) was verified directly against the webhook.
+
+**Live test result (2026-07-03, item `Inv-Addon Box, Bottle opener`):** POSTed `{item_id}` to the test webhook → `200 {"status":"synced","item_id":"78a2938f-...","loyverse_item_id":"167975f3-...","error":null}`. Confirmed in Supabase: both `items` and `item_variants` rows show `sync_status='synced'`, `sync_error=null`, `loyverse_synced_at` populated, correct `loyverse_item_id`/`loyverse_variant_id`. This exercised the **update** path (item already had a `loyverse_item_id`) — the **create** path (no existing `loyverse_item_id`) is the same code path with `payload.id` omitted, not separately live-tested, but low-risk since it's the simpler branch.
+
+**Bugs found and fixed via the live test (would not have been caught by code review alone):**
+1. **Wrong HTTP method.** Used `PUT /items/{id}` for updates, assuming a REST-conventional route. Loyverse has no PUT/PATCH route for items at all — confirmed via the Loyverse PHP SDK source (`siarheipashkevich/loyverse-sdk`, `ManagesItems.php`): `createItem()` uses `POST /items` only, and the docblock explicitly says "Create or update a single item." Fixed: always `POST https://api.loyverse.com/v1.0/items`, with `payload.id` set to `loyverse_item_id` when updating (upsert-by-body-id semantics, not upsert-by-URL).
+2. **The `=` expression-prefix bug documented as unfixed in the `bms-supabase` skill (and believed already-fixed based on an earlier read of this workflow) reappeared on 9 nodes**, including the new `Write Back Item Sync Result to Supabase` node — `query` params reading literal `"{{ $json.query }}"` instead of `"={{ $json.query }}"`. Root cause unclear (possibly a save-conflict when the n8n editor tab was open in the browser at the same time as an MCP edit — the tool returned "Cannot modify workflow while it is being edited by a user in the editor" right before this appeared). Fixed all 9 affected nodes. **Takeaway: re-check this class of bug after any session where the n8n editor UI was open concurrently with MCP edits — don't assume a previously-confirmed fix stays fixed.**
 
 **Objective:** when an item is created/edited in the BMS, push it to Loyverse and keep sync state honest. Build via the connected n8n MCP in Claude Code — no manual workflow scaffolding needed outside that.
 
-**Tasks:**
-0. Confirmed with Sinag: build as an added branch inside the existing `Loyverse Sync - Modifiers & Discounts` workflow (id `F6CfXnxji98Y75JJ`), not a new standalone workflow — despite that workflow currently being inactive (test phase) and having a known unfixed bug in unrelated upsert nodes (missing `=` expression prefix, per the `bms-supabase` skill). Don't let the new branch depend on or attempt to fix that pre-existing bug unless it's directly in the way.
-1. n8n workflow, webhook-triggered (matching existing pattern): receives item/variant payload from BMS on save, calls Loyverse's item/variant create & update endpoints.
-2. On success: write back `loyverse_item_id` / `loyverse_variant_id`, set `sync_status = 'synced'`, `loyverse_synced_at = now()`.
-3. On failure: set `sync_status = 'failed'`, populate `sync_error`, surface this in the Item List UI (built in ITEM-4) so failed pushes are visible, not silent.
-4. **Switch existing pull-sync from polling to webhook-driven.** This is the critical race-condition guard: without it, a poll cycle could overwrite a just-pushed BMS item before Loyverse's copy settles. Confirm Loyverse supports outbound webhooks for item changes; if not, fall back to an `updated_at`-newer guard on the pull-upsert (skip incoming record if local `updated_at` is more recent).
-5. Composite item push: components pushed as part of the same payload, respecting Loyverse's 3-level nesting limit.
-6. Modifier assignment is **not** pushed — read-only in BMS, so no push logic needed for `item_modifiers`.
+**What was built — new nodes in `Loyverse-Supabase`** (linear chain, no branching nodes — see "n8n tool limitation" below):
+`Item Push Sync Trigger` (webhook, `POST /webhook/loyverse-item-push`) → `Fetch Item for Push` (reads the full item+variants+components row from Supabase by `item_id`) → `Build Loyverse Item Payload` (shapes the Loyverse upsert body; includes `id` = `loyverse_item_id` when one already exists) → `Push Item to Loyverse` (always `POST /v1.0/items` — Loyverse has no PUT/PATCH route, see bugs below; `onError: continueRegularOutput`) → `Build Sync Write-Back SQL` (branches in-code on `$json.error`, builds either a `sync_status='failed'` update or a `sync_status='synced'` update for the item + all its variants, matched back to Loyverse's returned variant IDs by SKU) → `Write Back Item Sync Result to Supabase` (executes it) → `Respond Item Push Result` (returns `{status, item_id, loyverse_item_id, error}` as the webhook response, 200 on success / 502 on failure).
 
-**Manual commit gate:** create a test item in BMS, confirm it appears correctly in Loyverse backoffice with matching fields; edit it in BMS, confirm the update lands; confirm pull-sync no longer clobbers a freshly-pushed item.
+**Webhook contract for ITEM-3:** after committing the create/edit transaction, POST `{ "item_id": "<items.id uuid>" }` to the `loyverse-item-push` webhook. The workflow does its own Supabase read (source of truth is the DB row, not whatever payload shape the caller sends) — ITEM-3 doesn't need to duplicate the Loyverse field mapping.
+
+**n8n tool limitation discovered:** the n8n MCP's `update_workflow` `addConnection` operation cannot target a node's non-zero output port — `sourceOutput`/`targetInput` are silently ignored and every connection lands on output 0, confirmed by direct testing. This blocks the standard `onError: continueErrorOutput` dual-output pattern (and would equally block `IF`/`Switch` branching) when building via this operations API. Worked around by using `onError: continueRegularOutput` (single output, error surfaces as `$json.error`) and doing the success/failure branch *inside* a Code node instead of the node graph. Worth remembering for any future n8n workflow edits via this tool.
+
+**Resolved during build:**
+1. **Credential.** The MCP tool's `setNodeCredential` operation rejected the HTTP Request node's generic-auth credential type (`httpBearerAuth` via `genericCredentialType`) outright — couldn't be set via the tool. Sinag attached the `Loyverse Items` credential manually in the n8n editor (Credential dropdown on the node).
+2. **Live test.** Run with Sinag's explicit go-ahead (this pushes to the real Loyverse catalog) — see "Live test result" above.
+3. Pull-sync guard verified by code review (SQL semantics are unambiguous — see task 4 below) rather than by provoking a real race under timing; acceptable given the guard is a simple `WHERE local.updated_at < incoming.updated_at` comparison.
+
+**Task 4 — pull-sync race guard: DONE, using the fallback (not full webhook migration).** Corrected finding: Loyverse's API *does* support outbound webhooks (confirmed via `developer.loyverse.com/docs/#section/Webhooks-overview`, `ITEM_UPDATED` event, since Jan 2021) — the original task text's "if not" framing was wrong to assume. Full webhook-driven pull-sync was **not** built this round: registering a webhook subscription with Loyverse and adding signature verification is a meaningfully bigger, separate piece of work with an external-service dependency (needs Sinag in the Loyverse dashboard). Instead, implemented the task's own documented fallback: `Build Items Upsert SQL` and `Build Variants Upsert SQL` now skip the `ON CONFLICT DO UPDATE` when the local `updated_at` is already newer than the incoming Loyverse item's own `updated_at` (`WHERE public.items.updated_at < <loyverse item.updated_at>::timestamptz`, same for `item_variants`). This fully satisfies the race-condition requirement (a stale poll payload can never clobber a fresher local row) without the external dependency. Revisit full webhook-driven pull as a fast-follow if the 15-minute poll window (worst case) ever becomes a real problem.
+
+Composite item push (task 5) and modifier no-push (task 6) are handled as designed: `Build Loyverse Item Payload` includes a `components` array only for `item_type = 'composite'` items, and there's no `item_modifiers` push logic anywhere in the new branch.
+
+**Manual commit gate:** ✅ satisfied at the branch level (live test above: pushed a real item, confirmed in Supabase it landed as `synced` with correct Loyverse IDs). Full gate as originally written ("create a test item **in BMS**") is deferred to ITEM-3/ITEM-5, once there's an actual form to create one through — re-verify the round trip once that exists, since this is currently only proven at the n8n-webhook layer, not the full BMS→n8n→Loyverse path.
 
 ---
 
-## ITEM-3 — Backend CRUD
+## ITEM-3 — Backend CRUD ✅ DONE
 
-**Objective:** transactional create/update covering `items` + `item_variants` + `item_components` (composite) + initial stock, in one atomic operation.
+**Status:** Complete (2026-07-03). Migration `item3_backend_crud` applied. Built as a `SECURITY DEFINER` RPC (`public.upsert_item`), per the project's stock-change convention, rather than a server-action transaction. The thin Next.js server action that calls this RPC and then POSTs `{item_id}` to the `loyverse-item-push` webhook is deferred to ITEM-5 (nothing calls the RPC from app code yet — that wrapper belongs with the form).
 
-**Tasks:**
-1. Create RPC (or Next.js server action + single transaction) that upserts `items`, then `item_variants` (all variant combinations from the option matrix), then `item_components` if composite.
-2. On create with `track_stock = true`: call existing `adjust_stock(p_variant_id, p_qty_delta, p_reason, p_store_id, p_note)` with `source_id` referencing the `manual` row in `inventory_sources`, not a raw `inventory_levels` insert. Confirm exact `p_reason`/movement-type mapping by reading the function body before wiring this up — signature is known, internal reason-code handling should be verified, not assumed.
-3. Enforce `track_stock = false` server-side whenever `item_type = 'composite'` — don't rely on the UI alone to prevent this.
-4. Enforce SKU/barcode uniqueness at the application layer with a clear error, backed by the ITEM-1 partial unique indexes.
-5. `default_price` validation: required and enforced only when `pricing_type = 'FIXED'`.
-6. On edit: stock quantity fields are excluded from the update payload entirely (not just disabled in UI) — the backend should not accept a stock write from this endpoint at all.
+**Gap found & fixed during preflight:** `pricing_type` existed nowhere in the schema, even though the locked decisions require `default_price` validation conditional on it — missed in ITEM-1. Confirmed against real `items.raw` payloads that Loyverse models it **per-variant** (`default_pricing_type` on each variant), not per-item as this doc's original wording implied. Resolved (Sinag confirmed): added `item_variants.pricing_type` (`FIXED`/`VARIABLE`, default `VARIABLE`, check-constrained), backfilled from `raw->'variants'->default_pricing_type` — result matches the ITEM-0 audit exactly (4 FIXED all with prices, 55 VARIABLE all null-priced).
 
-**Manual commit gate:** create a simple item, a variant item, and a composite item end-to-end via the RPC/action directly (bypassing UI), confirm all child rows land correctly and RLS blocks non-admin/manager callers.
+**What was built (migration `item3_backend_crud`):**
+1. `item_variants.pricing_type` column + backfill (above).
+2. `item_components` RLS rewrite — the legacy policies (`Admin full access` / `Encoder read` / `Service role only`) had no manager write path and blocked manager/cashier/viewer reads entirely, violating both locked decisions. Replaced with `item_components_{select,insert,update,delete}` per the `{table}_{action}` convention: read all roles, write admin/manager.
+3. `public.upsert_item(...)` RPC — single transaction covering all six tasks:
+   - Upserts `items`, then `item_variants` (matched by `id` on edit; new rows inserted; variants dropped from the matrix are **soft-deleted**), then `item_components` (replace-set per composite variant).
+   - Initial stock on create routed through `adjust_stock()` per variant (verified the function body first: it does the level-upsert + movement insert as `movement_type='manual_adjustment'`, reason/note concatenated — acceptable, no raw `inventory_levels` writes anywhere).
+   - `track_stock` forced `false` server-side when `item_type='composite'`, regardless of caller input.
+   - SKU/barcode uniqueness enforced with clear errors (within-payload dupes and against existing live rows), backed by the ITEM-1 partial indexes.
+   - `default_price` required per-variant iff `pricing_type='FIXED'`.
+   - On edit, stock input is ignored entirely (`initial_stock` only read on create); sets `sync_status='pending'` + clears `sync_error` on item and touched variants, ready for the ITEM-2 webhook push.
+   - Composite items require ≥1 component per variant; role check `admin`/`manager` inside the RPC (defense-in-depth on top of RLS).
+
+**ITEM-2 follow-through:** the n8n push branch (`Fetch Item for Push` + `Build Loyverse Item Payload`) was built before `pricing_type` existed and pushed variants without `default_pricing_type` — a FIXED/VARIABLE mismatch would have landed in Loyverse. Both nodes updated via n8n MCP to carry it through. Post-edit re-scan of the whole workflow for the `=` expression-prefix bug class (per ITEM-2's takeaway): clean, no regressions.
+
+**Manual commit gate:** ✅ all verified directly against Postgres via the RPC (bypassing UI), with JWT claims set per test account:
+- Simple item (admin): created with initial stock 15 → `inventory_levels.in_stock=15` + one `manual_adjustment` movement. ✅
+- Variant item (manager): 2-variant option matrix landed. ✅
+- Composite item (admin): `track_stock=true` submitted → stored `false`; both component rows landed with quantities. ✅
+- Edit: cost/price updated; `initial_stock: 999` in the edit payload ignored (stock stayed 15, no new movement); dropping a variant from the matrix soft-deleted it, adding one inserted it. ✅
+- Rejections: FIXED-without-price, duplicate SKU (against live rows), composite-without-components all raise clear errors; encoder/cashier/viewer all blocked (`Not authorized`). ✅
+- All test rows deleted afterward; table counts back to exactly 59 items / 59 variants. `get_advisors` (security): no new findings (only the pre-existing SECURITY DEFINER RPC warnings, which `upsert_item` now shares with `adjust_stock` et al. by design).
+
+**Testing gotcha worth remembering:** calling the RPC as `SELECT (upsert_item(...)).*` evaluates the function **once per output column** in Postgres — the second implicit invocation saw the first's uncommitted SKU insert and raised a bogus "SKU already in use", then rolled everything back. Use `SELECT * FROM upsert_item(...)` when testing RPCs via `execute_sql`.
 
 ---
 
