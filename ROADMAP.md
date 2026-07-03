@@ -8,6 +8,8 @@ Continuation of the Phase 0–15 build log after Phase 16 (Administration, scope
 
 **Not included on purpose:** the Integrations group (AI, n8n, Loyverse Sync, Barcode, Reports). Per D001/D008, Loyverse sync and n8n automation are deliberately disabled right now — building those screens would contradict a settled decision. Revisit only if that decision changes.
 
+**Update (2026-07-03):** D020 scopes an exception to this for items specifically — see `PROGRESS-ITEMS.md` (ITEM-2). D001/D008 still apply to everything else (receipts, and any Integrations screen not related to item push-sync).
+
 ---
 
 ### Phase 17 — Dashboard: Wire to Real Data

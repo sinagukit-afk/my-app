@@ -171,3 +171,20 @@ auth.uid()` pattern already used elsewhere (e.g.
 `orders_encoder_update_own_quote`). Policy-only change, no schema or
 data affected; the one real write path is unaffected since it already
 used the caller's own id.
+
+## D020
+
+Supersedes D001/D008 for items specifically: starting with the Item
+List feature (`PROGRESS-ITEMS.md`), the BMS becomes the source of
+truth for item/variant data going forward. Create/Edit in the BMS
+pushes to Loyverse via API (ITEM-2); pull-sync switches from polling
+to webhook-driven (or an `updated_at`-newer guard if Loyverse has no
+outbound webhook support) to avoid a poll cycle clobbering a
+just-pushed item. Reason: confirmed with Sinag 2026-07-03. D001/D008
+still stand for everything else not covered by this feature (e.g.
+receipts remain manual/receipt-only) — this is a scoped reversal, not
+a blanket re-enable of Loyverse automation. The push-sync n8n workflow
+is built as an addition to the existing `Loyverse Sync - Modifiers &
+Discounts` workflow (id `F6CfXnxji98Y75JJ`), not a new standalone one
+— confirmed with Sinag, despite that workflow's existing inactive
+status and known unfixed upsert-node bug (see `bms-supabase` skill).
