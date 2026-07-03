@@ -16,6 +16,10 @@ existing `incoming_items_apply_inventory_movement` trigger on INSERT.
 🟩 Stock Movement
 🟩 Item Adjustment
 🟩 Suppliers
+🟩 Item List — full Loyverse-parity Add/Edit (variant matrix, composite
+components, modifier assignment, minimum stock threshold), archive,
+activity logging, BMS→Loyverse push-sync via n8n. See `PROGRESS-ITEMS.md`
+(ITEM-0..7) and D020/D021 in `DECISIONS.md`.
 
 ## Purchasing
 
@@ -90,6 +94,14 @@ number/birthday, password change via Supabase Auth reset-email link
 (no raw password fields in app code)
 
 ## Integrations
+
+> No dedicated Integrations screens exist in the BMS UI. That said,
+> Loyverse sync is functionally live as of the Item List feature
+> (D020): pull-sync for categories/items/customers/inventory/receipts/
+> payment types/modifiers/discounts runs daily via the n8n workflow
+> `Loyverse-Supabase`, and BMS item Create/Edit pushes to Loyverse in
+> real time. This all runs invisibly under Inventory > Item List —
+> none of it surfaces as an "Integrations" screen below.
 
 ⬜ AI
 ⬜ n8n

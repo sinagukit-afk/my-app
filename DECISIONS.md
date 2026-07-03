@@ -199,3 +199,24 @@ externally-dependent piece of work (needs Sinag in the Loyverse
 dashboard) that fully satisfies the race-condition requirement either
 way. Revisit full webhook migration as a fast-follow only if the
 15-minute poll window becomes an actual problem.
+
+**Closed out (ITEM-7, 2026-07-03):** push-sync is live end-to-end —
+`Loyverse-Supabase` (`F6CfXnxji98Y75JJ`) is active/published, and
+ITEM-6/6.5/6.6 live-tested create, update, modifier-assignment,
+composite, and minimum-stock-threshold pushes against the real
+Loyverse catalog. Two standing test fixtures intentionally remain in
+both Loyverse and Supabase per Sinag's call (see `PROGRESS-ITEMS.md`).
+
+## D021
+
+Composite items use a simple auto-decompose-at-sale model only — no
+Production/Disassembly workflow. Reason: that's Loyverse's Advanced
+Inventory feature, and the store isn't subscribed to it. Consequences
+locked in during the Item List build (`PROGRESS-ITEMS.md`):
+`track_stock` is forced `false` server-side for composite items
+regardless of form input (enforced in `upsert_item`, not just hidden
+in the UI); `use_production` is still pulled from Loyverse and stored
+(informational, read-only), but no BMS logic acts on it; component
+nesting is capped at 3 levels with recursive-CTE cycle/depth
+validation in `upsert_item`. Revisit only if the Advanced Inventory
+subscription is ever purchased.

@@ -310,15 +310,17 @@ Composite item push (task 5) and modifier no-push (task 6) are handled as design
 
 ---
 
-## ITEM-7 — Testing & docs
+## ITEM-7 — Testing & docs 🟨 IN PROGRESS
+
+**Status:** Tasks 2-4 done 2026-07-03. Task 1 partially blocked — see below.
 
 **Tasks:**
-1. Full round-trip test: create item in BMS → confirm correct in Loyverse → sell via POS → confirm receipt/stock movement syncs back correctly.
-2. Update `MODULE_STATUS.md`.
-3. Update `DECISIONS.md` — lock in the push-sync direction decision and the composite/no-Production decision (both are meaningful architectural calls that should be discoverable later, not just buried in this doc).
-4. Update `ROADMAP.md` — mark this feature complete, confirm no conflicts with Phase 11/12 as originally flagged.
+1. Full round-trip test: create item in BMS → confirm correct in Loyverse → sell via POS → confirm receipt/stock movement syncs back correctly. **Blocked on a real-world action:** ringing up an actual sale requires the physical/real Loyverse POS, which Claude Code has no access to — this step needs Sinag. Suggested target: sell the standing "ITEM-6.5 Live Test Simple" fixture (SKU `ITEM65-SIMPLE-001-EDITED`, already `sync_status='synced'` with a real `loyverse_item_id`) so no new item needs creating first. Once Sinag makes the sale, verification is: (a) `receipts`/`receipt_line_items`/`receipt_payments` show the new sale after the 2:35 AM PH `Receipts Sync Trigger` (or a manual `execute_workflow` re-trigger of that schedule node), (b) `inventory_levels`/`inventory_movements` reflect the decremented stock after the 2:25 AM PH `Inventory Sync Trigger`. Both pull-sync branches already exist in `Loyverse-Supabase` and are unmodified by this feature — this task is closing out the last unverified hop (a BMS-pushed item flowing all the way through a real POS sale and back), not building new sync logic.
+2. Update `MODULE_STATUS.md`. ✅ Done — added an Item List line under Inventory, plus a clarifying note under Integrations (no dedicated screens exist, but Loyverse sync is functionally live via n8n under the hood).
+3. Update `DECISIONS.md`. ✅ Done — added a closeout note to D020 (push-sync direction, now fully live-tested end to end) and a new **D021** locking in the composite/no-Production-workflow decision (`track_stock` forced off server-side, 3-level nesting cap, `use_production` pull-only).
+4. Update `ROADMAP.md`. ✅ Done — added a closeout note confirming no conflict with Phase 11/12 (both were already complete before this feature started; it only touched `items`/`item_variants` plus the new Item List screen/n8n branch).
 
-**Manual commit gate:** final sign-off, ready to start Phase 11 (Suppliers) on a clean base.
+**Manual commit gate:** outstanding — task 1's live POS round trip needs Sinag to perform the sale, then a follow-up verification pass (per the checklist above) before final sign-off. Once closed, ready to start Phase 11 (Suppliers) — though note that phase is already 🟩 Complete per `MODULE_STATUS.md`, so this line in the original gate wording is stale (see the ROADMAP.md closeout note above).
 
 ---
 

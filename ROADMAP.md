@@ -10,6 +10,8 @@ Continuation of the Phase 0–15 build log after Phase 16 (Administration, scope
 
 **Update (2026-07-03):** D020 scopes an exception to this for items specifically — see `PROGRESS-ITEMS.md` (ITEM-2). D001/D008 still apply to everything else (receipts, and any Integrations screen not related to item push-sync).
 
+**Update (2026-07-03, ITEM-7 closeout):** the Item List feature (`PROGRESS-ITEMS.md`, ITEM-0..7) is complete — no conflict with Phase 11 (Suppliers) or Phase 12 (Stock Movement/Item Adjustment) as this doc originally worried about; both were already 🟩 Complete before the Item List build started, and the feature only extended `items`/`item_variants` plus added the Item List screen and n8n push-sync, touching neither Phase 11's nor Phase 12's screens. See `MODULE_STATUS.md` and D020/D021 in `DECISIONS.md`.
+
 ---
 
 ### Phase 17 — Dashboard: Wire to Real Data
