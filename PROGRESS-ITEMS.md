@@ -223,18 +223,45 @@ Composite item push (task 5) and modifier no-push (task 6) are handled as design
 
 ---
 
-## ITEM-6 — Permissions, archive & audit
+## ITEM-6 — Permissions, archive & audit ✅ DONE (pending commit gate sign-off)
 
-**Tasks:**
-1. Confirm RLS (not just UI) blocks writes for encoder/cashier/viewer — test directly against the DB, not just through the app.
-2. Archive action (soft delete via `deleted_at`) available from the Item List screen for admin/manager.
-3. Log create/edit/archive actions to `activity_logs` (or whatever the established audit table is — confirm name before wiring).
+**Status:** Built and verified 2026-07-03. Awaiting Sinag's manual commit.
 
-**Manual commit gate:** attempt writes as each non-privileged role and confirm rejection at the RLS layer; confirm activity log entries appear correctly.
+**⚠️ Side effect requiring Sinag's attention — a real Loyverse test item was created live during this phase's verification, see below.**
+
+**Objective:** confirm write RLS, add an archive action, and audit-log item CRUD.
+
+**Audit table confirmed:** `activity_logs` (existing table, already used by D006 for quote edits — `user_id`, `action`, `entity_type`, `entity_id` (text), `description`, `metadata` jsonb). No DB-level `log_activity()` helper exists anywhere; all existing call sites insert directly from the server action, so `items/actions.ts` follows that same pattern rather than introducing a new convention. The `activity-logs-table.tsx` UI already had dead `create_item`/`update_item` badge entries pre-built from ITEM-4-era planning — now live. Added an `archive_item` badge entry (danger/red).
+
+**What was built:**
+1. **Migration `item6_archive_item_rpc`** — new `public.archive_item(p_item_id uuid)` RPC, `SECURITY DEFINER`, same role-check pattern as `upsert_item` (`admin`/`manager` only, raises `Not authorized to archive items` otherwise). Sets `items.deleted_at = now()` and cascades to all still-live `item_variants` for that item in the same statement (soft-deleting the variants too, which frees their SKUs for reuse per D003 — leaving them live would keep the partial-unique-index SKU reservation dangling under an archived item). Raises a friendly error on double-archive (`Item is already archived`) or a missing item. **No restore RPC was built** — not in the task list as written, and un-archiving safely is ambiguous once variants have been cascaded (can't tell which variants were independently dropped-from-matrix vs. archived-by-cascade). Flagging as an open follow-up rather than silently building it.
+2. **`app/dashboard/inventory/items/actions.ts`** — added `archiveItem(itemId)` server action (calls the RPC, logs `archive_item` to `activity_logs`, revalidates the list). Extended the existing `upsertItem()` to log `create_item`/`update_item` after a successful save (distinguished by whether `item_id` was present in the submitted form).
+3. **`app/dashboard/inventory/items/items-table.tsx`** — added an "Archive" button (red, `canWrite`-gated, hidden once a row is already archived) next to "Edit" in the actions column, with a `confirm()` guard matching the existing suppliers-table pattern (no dropdown-menu convention exists in this codebase, so this follows the plain-inline-button precedent from `suppliers-table.tsx`).
+4. **`app/dashboard/administration/activity-logs/activity-logs-table.tsx`** — added `archive_item: "danger"` to `ACTION_BADGE`.
+
+**RLS/RPC verification (2026-07-03, direct Postgres, real per-role accounts from `profiles`):**
+- Raw `UPDATE ... items`/`item_variants` (incl. setting `deleted_at`) as encoder, cashier, and viewer: all three affected 0 rows (RLS-filtered), confirming `items_update`/`item_variants_update` (admin/manager-only, from `item1_schema_additions`) still holds.
+- `archive_item()` RPC called directly as encoder, cashier, viewer: all three rejected with `Not authorized to archive items`.
+- `archive_item()` as manager: succeeded, cascaded to the variant, verified via direct Postgres read.
+- Re-calling `archive_item()` on the same item as admin: rejected with `Item is already archived`.
+- `get_advisors` (security): `archive_item` appears in the same pre-existing `SECURITY DEFINER`-callable-by-`anon`/`authenticated` warning bucket as every other RPC in this project (`upsert_item`, `adjust_stock`, etc.) — no new class of finding.
+
+**Browser + activity-log verification (2026-07-03, Claude admin test account):**
+- Created a throwaway item via direct RPC, archived it through the real Item List "Archive" button in the browser (with `confirm()` stubbed) — row disappeared from the default view, reappeared correctly under the "Archived" filter chip with the Archive button now hidden and only "Edit" showing. Confirmed in Postgres: `items.deleted_at` and the variant's `deleted_at` both set, exactly one `archive_item` row in `activity_logs`.
+- Created a second test item through the actual Add Item form (not a direct RPC call) and edited it through the actual Edit form — confirmed `create_item` then `update_item` rows landed in `activity_logs` with correct descriptions, and the Activity Logs page renders the new "Archive Item" badge correctly (red).
+- All test rows (items, variants, inventory_levels/movements, activity_logs) cleaned up afterward; `items`/`item_variants` counts back to exactly 59/59. `npx tsc --noEmit` clean.
+
+**⚠️ Unintended live Loyverse push — needs Sinag's decision:** the `Loyverse-Supabase` n8n workflow was already `active: true` going into this session (per ITEM-6.5's prior status note), which this session didn't re-check before using the real Add/Edit item form to verify `create_item`/`update_item` logging. Both the create and edit of "ITEM-6 Create Log Test" fired real, successful webhook pushes (`n8n` executions `100` and `101`) to the live Loyverse catalog — confirmed via `get_execution`: a real Loyverse item now exists, `loyverse_item_id = faf8b40b-0470-4f42-a3e5-c1bb59f85951`, SKU `ITEM6-CREATE-LOG-001`, name `"ITEM-6 Create Log Test (edited)"`, category matching local "Product". The local Supabase row was deleted as part of this phase's test cleanup (as usual), but that item **still exists in the real Loyverse account** — nothing in this codebase can delete a Loyverse item (only upsert). This incidentally satisfies part of ITEM-6.5's task 1/2 (create + update path, real Loyverse round trip, never live-tested before) as an unplanned side effect, but the leftover item needs Sinag to either remove it via the Loyverse dashboard or decide to keep/relabel it as a standing test fixture. **Takeaway for future sessions: re-check `get_workflow_details` → `active` before any browser-based item create/edit test, not just before ITEM-6.5's dedicated tasks** — this phase didn't anticipate the workflow being live already.
+
+**Sinag's decision (2026-07-03):** keep the test item in Loyverse as-is (no dashboard cleanup) — treat it as a standing test fixture rather than removing it.
+
+**Manual commit gate:** ✅ satisfied — commit approved.
 
 ---
 
 ## ITEM-6.5 — Live n8n Workflow Test Run
+
+**Status (2026-07-03):** `Loyverse-Supabase` (`F6CfXnxji98Y75JJ`) published/activated (`activeVersionId` `ad7a1521-2698-4adf-8102-0ec84d561972`) — preflight satisfied, ready to start the tasks below. Ahead of publishing, all 8 schedule triggers were also switched from polling (15-min/6-hr) to once-daily, staggered 5 min apart starting 2:00 AM PH time (Categories 2:00 → Discounts 2:05 → Payment Types 2:10 → Modifiers 2:15 → Items 2:20 → Inventory 2:25 → Customers 2:30 → Receipts 2:35), so the pull-sync branches won't fire mid-test unexpectedly. `N8N_WEBHOOK_BASE_URL` in `.env.local` was already pointing at the production `/webhook` path.
 
 **Objective:** once Sinag activates/publishes the `Loyverse-Supabase` n8n workflow (separate session, addressing whatever needs fixing there first), do a real end-to-end BMS → n8n → Loyverse test — closing out the deferred live-test gates from ITEM-2 ("create a test item in BMS," never done — only the raw webhook was exercised) and ITEM-5 (modifier push and composite push were built but never live-verified against the real Loyverse API).
 

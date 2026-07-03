@@ -33,6 +33,7 @@ const ACTION_BADGE: Record<string, "default" | "success" | "warning" | "danger" 
   create_item:     "success",
   create_category: "success",
   update_item:     "warning",
+  archive_item:    "danger",
   view_report:     "default",
   quote_edited:    "warning",
 };

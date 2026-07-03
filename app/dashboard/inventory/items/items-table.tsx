@@ -2,12 +2,14 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { Select } from "@/components/ui/select";
 import { FilterBar } from "@/components/business/filter-bar";
+import { archiveItem } from "./actions";
 
 export type ItemRow = {
   id: string;
@@ -55,9 +57,17 @@ type Props = {
 };
 
 export function ItemsTable({ data, canWrite }: Props) {
+  const router = useRouter();
   const [statusFilter, setStatusFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
+
+  async function handleArchive(row: ItemRow) {
+    if (!confirm(`Archive "${row.name}"? It will be hidden from the active catalog and no longer sync to Loyverse.`)) return;
+    const res = await archiveItem(row.id);
+    if (!res.success) alert(res.error);
+    else router.refresh();
+  }
 
   const categories = useMemo(
     () =>
@@ -193,13 +203,25 @@ export function ItemsTable({ data, canWrite }: Props) {
     columns.push({
       key: "id",
       header: "",
-      render: (value) => (
-        <Link
-          href={`/dashboard/inventory/items/${String(value)}/edit`}
-          className="text-sm text-(--color-primary) underline"
-        >
-          Edit
-        </Link>
+      render: (value, row) => (
+        <div className="flex items-center gap-3">
+          <Link
+            href={`/dashboard/inventory/items/${String(value)}/edit`}
+            className="text-sm text-(--color-primary) underline"
+          >
+            Edit
+          </Link>
+          {row.status !== "archived" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-(--color-danger)"
+              onClick={() => handleArchive(row)}
+            >
+              Archive
+            </Button>
+          )}
+        </div>
       ),
     });
   }

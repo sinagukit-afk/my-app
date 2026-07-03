@@ -84,8 +84,44 @@ export async function upsertItem(formData: FormData): Promise<UpsertItemResult> 
 
   if (error) return { success: false, error: error.message }
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  await supabase.from('activity_logs').insert({
+    user_id: user?.id ?? null,
+    action: item_id ? 'update_item' : 'create_item',
+    entity_type: 'item',
+    entity_id: data.id,
+    description: item_id ? `Item "${name}" updated` : `Item "${name}" created`,
+  })
+
   await triggerWorkflow('loyverse-item-push', { item_id: data.id })
 
   revalidatePath(LIST_PATH)
   return { success: true, itemId: data.id }
+}
+
+export async function archiveItem(itemId: string): Promise<UpsertItemResult> {
+  const supabase = await createClient()
+
+  const { data: item } = await supabase.from('items').select('name').eq('id', itemId).single()
+
+  const { error } = await supabase.rpc('archive_item', { p_item_id: itemId })
+  if (error) return { success: false, error: error.message }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  await supabase.from('activity_logs').insert({
+    user_id: user?.id ?? null,
+    action: 'archive_item',
+    entity_type: 'item',
+    entity_id: itemId,
+    description: item?.name ? `Item "${item.name}" archived` : 'Item archived',
+  })
+
+  revalidatePath(LIST_PATH)
+  return { success: true, itemId }
 }
