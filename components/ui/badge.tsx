@@ -11,6 +11,7 @@ const badgeVariants = cva(
         success:  "bg-(--color-success-light) text-(--color-success)",
         warning:  "bg-(--color-warning-light) text-(--color-warning)",
         danger:   "bg-(--color-danger-light) text-(--color-danger)",
+        info:     "bg-(--color-info-light) text-(--color-info)",
         neutral:  "bg-(--color-border) text-(--color-text-muted)",
       },
     },

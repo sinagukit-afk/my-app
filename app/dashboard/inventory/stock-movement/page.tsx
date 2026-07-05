@@ -13,7 +13,7 @@ export default async function StockMovementPage() {
   const { data, error } = await supabase
     .from("inventory_movements")
     .select(
-      `id, movement_type, quantity_change, quantity_after, note, occurred_at,
+      `id, movement_type, status, quantity_change, quantity_before, quantity_after, counterpart_status, note, occurred_at,
        item_variants(sku, option1_value, items(name)), stores(name)`
     )
     .order("occurred_at", { ascending: false })
@@ -26,8 +26,11 @@ export default async function StockMovementPage() {
     return {
       id: m.id,
       movement_type: m.movement_type,
+      status: m.status,
       quantity_change: m.quantity_change,
+      quantity_before: m.quantity_before,
       quantity_after: m.quantity_after,
+      counterpart_status: m.counterpart_status,
       note: m.note,
       occurred_at: m.occurred_at,
       item_name: item?.name ?? "Unknown item",

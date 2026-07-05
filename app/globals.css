@@ -184,6 +184,8 @@
   --color-warning-light:   #fdf5e6;
   --color-danger:          #D84A3A; /* Ember Red */
   --color-danger-light:    #fdf0ee;
+  --color-info:            #3b6ea5;
+  --color-info-light:      #eaf1f8;
 
   /* Neutrals */
   --color-bg:              #F6EFE4; /* Warm Ivory */
