@@ -1,9 +1,3 @@
-// Generated Supabase database types.
-// Regenerate after every schema migration via the Supabase MCP tool: generate_typescript_types
-// (or: npx supabase gen types typescript --project-id <project-id> --schema public)
-//
-// No credentials or project IDs belong in this file.
-
 export type Json =
   | string
   | number
@@ -1825,6 +1819,272 @@ export type Database = {
           },
         ]
       }
+      quote_item_modifiers: {
+        Row: {
+          created_at: string
+          id: string
+          modifier_id: string
+          modifier_option_id: string
+          name_snapshot: string | null
+          price_snapshot: number
+          quote_item_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          modifier_id: string
+          modifier_option_id: string
+          name_snapshot?: string | null
+          price_snapshot?: number
+          quote_item_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          modifier_id?: string
+          modifier_option_id?: string
+          name_snapshot?: string | null
+          price_snapshot?: number
+          quote_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_item_modifiers_modifier_id_fkey"
+            columns: ["modifier_id"]
+            isOneToOne: false
+            referencedRelation: "modifiers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_item_modifiers_modifier_option_id_fkey"
+            columns: ["modifier_option_id"]
+            isOneToOne: false
+            referencedRelation: "modifier_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_item_modifiers_quote_item_id_fkey"
+            columns: ["quote_item_id"]
+            isOneToOne: false
+            referencedRelation: "quote_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_items: {
+        Row: {
+          created_at: string
+          discount_id: string | null
+          id: string
+          item_name_snapshot: string | null
+          line_discount: number
+          line_note: string | null
+          quantity: number
+          quote_id: string
+          sku_snapshot: string | null
+          unit_price: number
+          variant_id: string
+        }
+        Insert: {
+          created_at?: string
+          discount_id?: string | null
+          id?: string
+          item_name_snapshot?: string | null
+          line_discount?: number
+          line_note?: string | null
+          quantity?: number
+          quote_id: string
+          sku_snapshot?: string | null
+          unit_price?: number
+          variant_id: string
+        }
+        Update: {
+          created_at?: string
+          discount_id?: string | null
+          id?: string
+          item_name_snapshot?: string | null
+          line_discount?: number
+          line_note?: string | null
+          quantity?: number
+          quote_id?: string
+          sku_snapshot?: string | null
+          unit_price?: number
+          variant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_items_discount_id_fkey"
+            columns: ["discount_id"]
+            isOneToOne: false
+            referencedRelation: "discounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "item_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "v_composite_bom"
+            referencedColumns: ["component_variant_id"]
+          },
+          {
+            foreignKeyName: "quote_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "v_composite_bom"
+            referencedColumns: ["composite_variant_id"]
+          },
+          {
+            foreignKeyName: "quote_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "v_inventory_overview"
+            referencedColumns: ["variant_id"]
+          },
+          {
+            foreignKeyName: "quote_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "v_item_catalog"
+            referencedColumns: ["variant_id"]
+          },
+        ]
+      }
+      quotes: {
+        Row: {
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          converted_at: string | null
+          converted_by: string | null
+          converted_order_id: string | null
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          id: string
+          note: string | null
+          quote_date: string
+          quote_number: string
+          status: string
+          store_id: string | null
+          subtotal: number
+          total_discount: number
+          total_money: number
+          total_tax: number
+          updated_at: string
+          valid_until: string
+        }
+        Insert: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          converted_at?: string | null
+          converted_by?: string | null
+          converted_order_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          id?: string
+          note?: string | null
+          quote_date?: string
+          quote_number: string
+          status?: string
+          store_id?: string | null
+          subtotal?: number
+          total_discount?: number
+          total_money?: number
+          total_tax?: number
+          updated_at?: string
+          valid_until: string
+        }
+        Update: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          converted_at?: string | null
+          converted_by?: string | null
+          converted_order_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          id?: string
+          note?: string | null
+          quote_date?: string
+          quote_number?: string
+          status?: string
+          store_id?: string | null
+          subtotal?: number
+          total_discount?: number
+          total_money?: number
+          total_tax?: number
+          updated_at?: string
+          valid_until?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_converted_by_fkey"
+            columns: ["converted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_converted_order_id_fkey"
+            columns: ["converted_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "v_customer_sales_summary"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "quotes_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       receipt_line_items: {
         Row: {
           cost_at_sale: number | null
@@ -2402,6 +2662,44 @@ export type Database = {
       archive_item: { Args: { p_item_id: string }; Returns: undefined }
       confirm_order: {
         Args: { p_order_id: string }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          fulfillment_method: string | null
+          id: string
+          loyverse_receipt_id: string | null
+          loyverse_receipt_number: string | null
+          note: string | null
+          payment_type_id: string | null
+          receiver_address_line1: string | null
+          receiver_barangay: string | null
+          receiver_city: string | null
+          receiver_name: string | null
+          receiver_phone: string | null
+          receiver_postal_code: string | null
+          receiver_province: string | null
+          same_as_customer: boolean
+          status: string
+          store_id: string | null
+          subtotal: number
+          sync_error: string | null
+          sync_status: string
+          synced_at: string | null
+          total_discount: number
+          total_money: number
+          total_tax: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      convert_quote_to_order: {
+        Args: { p_quote_id: string }
         Returns: {
           created_at: string
           created_by: string | null

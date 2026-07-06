@@ -40,19 +40,36 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
     .eq("customer_id", id)
     .order("created_at", { ascending: false });
 
+  const { data: quoteData } = await supabase
+    .from("quotes")
+    .select("id, quote_number, status, valid_until, total_money, created_at")
+    .eq("customer_id", id)
+    .order("created_at", { ascending: false });
+
   const { data: receiptData } = await supabase
     .from("receipts")
     .select("id, receipt_number, total_money, receipt_date, cancelled_at")
     .eq("customer_id", id)
     .order("receipt_date", { ascending: false });
 
+  const today = new Date().toISOString().slice(0, 10);
+
   const orderHistory: HistoryEntry[] = (orderData ?? []).map((o) => ({
     id: o.id,
     kind: "order",
-    label: o.status === "quote" ? "Quote" : "Order",
+    label: "Order",
     status: o.status,
     total: Number(o.total_money),
     date: o.created_at,
+  }));
+
+  const quoteHistory: HistoryEntry[] = (quoteData ?? []).map((q) => ({
+    id: q.id,
+    kind: "quote",
+    label: q.quote_number,
+    status: q.status === "open" && q.valid_until < today ? "expired" : q.status,
+    total: Number(q.total_money),
+    date: q.created_at,
   }));
 
   const receiptHistory: HistoryEntry[] = (receiptData ?? []).map((r) => ({
@@ -64,7 +81,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
     date: r.receipt_date,
   }));
 
-  const history = [...orderHistory, ...receiptHistory].sort(
+  const history = [...orderHistory, ...quoteHistory, ...receiptHistory].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 

@@ -19,36 +19,39 @@ export default async function QuotesPage() {
 
   const role = profile?.role ?? "";
   const canCreate = ["admin", "manager", "encoder"].includes(role);
-  const canConfirm = ["admin", "manager", "encoder"].includes(role);
-  const canDelete = role === "admin";
-  const isAdmin = role === "admin";
-  const canEditOwn = ["encoder", "manager"].includes(role);
 
   const { data, error } = await supabase
-    .from("orders")
-    .select(
-      "id, note, total_money, created_at, created_by, customers(name), order_items(id, item_name_snapshot, quantity, unit_price, line_discount)"
-    )
-    .eq("status", "quote")
+    .from("quotes")
+    .select("id, quote_number, status, quote_date, valid_until, total_money, customers(name)")
     .order("created_at", { ascending: false });
 
-  const rows: QuoteRow[] = (data ?? []).map((o) => {
-    const customer = firstOf(o.customers);
+  const { data: logsData } = await supabase
+    .from("activity_logs")
+    .select("entity_id, description, action, created_at")
+    .eq("entity_type", "quote")
+    .order("created_at", { ascending: false });
+
+  const lastActivityByQuote = new Map<string, string>();
+  for (const log of logsData ?? []) {
+    if (log.entity_id && !lastActivityByQuote.has(log.entity_id)) {
+      lastActivityByQuote.set(log.entity_id, log.description || log.action);
+    }
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const rows: QuoteRow[] = (data ?? []).map((q) => {
+    const customer = firstOf(q.customers);
+    const effectiveStatus = q.status === "open" && q.valid_until < today ? "expired" : q.status;
     return {
-      id: o.id,
+      id: q.id,
+      quoteNumber: q.quote_number,
       customerName: customer?.name ?? null,
-      note: o.note,
-      totalMoney: Number(o.total_money),
-      createdAt: o.created_at,
-      canEdit: isAdmin || (canEditOwn && o.created_by === user?.id),
-      canCancel: isAdmin || (canEditOwn && o.created_by === user?.id),
-      items: (o.order_items ?? []).map((it) => ({
-        id: it.id,
-        name: it.item_name_snapshot ?? "",
-        quantity: Number(it.quantity),
-        unitPrice: Number(it.unit_price),
-        discount: Number(it.line_discount),
-      })),
+      status: effectiveStatus,
+      quoteDate: q.quote_date,
+      validUntil: q.valid_until,
+      totalMoney: Number(q.total_money),
+      lastActivity: lastActivityByQuote.get(q.id) ?? "—",
     };
   });
 
@@ -57,7 +60,7 @@ export default async function QuotesPage() {
       {error && (
         <p className="text-sm text-(--color-danger)">Failed to load quotes: {error.message}</p>
       )}
-      <QuotesTable data={rows} canCreate={canCreate} canConfirm={canConfirm} canDelete={canDelete} />
+      <QuotesTable data={rows} canCreate={canCreate} />
     </div>
   );
 }

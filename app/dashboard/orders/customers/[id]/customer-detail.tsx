@@ -19,7 +19,7 @@ export type LinkedSource = {
 
 export type HistoryEntry = {
   id: string;
-  kind: "order" | "receipt";
+  kind: "order" | "quote" | "receipt";
   label: string;
   status: string | null;
   total: number;
@@ -46,7 +46,9 @@ function peso(n: number) {
 }
 
 const STATUS_VARIANT: Record<string, "default" | "success" | "warning" | "danger" | "neutral"> = {
-  quote: "neutral",
+  open: "success",
+  converted: "default",
+  expired: "warning",
   confirmed: "default",
   in_production: "warning",
   completed: "success",
@@ -183,8 +185,9 @@ export function CustomerDetail({ customer, sources, history, canWrite }: Props) 
             columns={historyColumns}
             data={history}
             searchable={false}
+            onRowClick={(row) => row.kind === "quote" && router.push(`/dashboard/orders/quotes/${row.id}`)}
             emptyMessage="No order history"
-            emptyDescription="This customer has no orders or receipts yet."
+            emptyDescription="This customer has no orders, quotes, or receipts yet."
           />
         </CardContent>
       </Card>

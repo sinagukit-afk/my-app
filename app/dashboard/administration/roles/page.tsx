@@ -41,7 +41,7 @@ const ROLE_DEFS: {
     description: "Data entry role. Focused on creating transactions and logging incoming stock.",
     permissions: [
       "Create & edit suppliers, purchase orders, quotes, orders",
-      "Edit own quotes only while still in Quote status",
+      "Edit or cancel own quotes only while still Open",
       "No delete access on business records",
       "Views only their own activity log",
     ],

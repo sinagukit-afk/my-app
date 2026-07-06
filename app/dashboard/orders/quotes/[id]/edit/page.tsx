@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { EditQuoteForm, type VariantOption } from "./edit-quote-form";
+import { EditQuoteForm } from "./edit-quote-form";
+import type { VariantOption, DiscountOption, ModifierGroupOption, QuoteLineRow } from "../../quote-line-items";
 
 export default async function EditQuotePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -16,31 +17,31 @@ export default async function EditQuotePage({ params }: { params: Promise<{ id: 
 
   const role = profile?.role ?? "";
 
-  const { data: order } = await supabase
-    .from("orders")
-    .select(
-      "id, status, customer_id, note, created_by, same_as_customer, receiver_name, receiver_phone, receiver_address_line1, receiver_barangay, receiver_city, receiver_province, receiver_postal_code"
-    )
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("id, status, valid_until, customer_id, note, quote_date, created_by")
     .eq("id", id)
     .single();
 
-  if (!order || order.status !== "quote") notFound();
+  const today = new Date().toISOString().slice(0, 10);
+  if (!quote || quote.status !== "open" || quote.valid_until < today) notFound();
 
-  const canEdit =
-    role === "admin" || (["encoder", "manager"].includes(role) && order.created_by === user?.id);
+  const canEdit = role === "admin" || (["encoder", "manager"].includes(role) && quote.created_by === user?.id);
 
   if (!canEdit) redirect("/dashboard/orders/quotes");
 
   const { data: existingItems } = await supabase
-    .from("order_items")
-    .select("variant_id, item_name_snapshot, sku_snapshot, quantity, unit_price, line_discount")
-    .eq("order_id", id);
+    .from("quote_items")
+    .select(
+      "id, variant_id, item_name_snapshot, sku_snapshot, quantity, unit_price, discount_id, line_discount, quote_item_modifiers(modifier_id, modifier_option_id)"
+    )
+    .eq("quote_id", id);
 
   const { data: customerData } = await supabase.from("customers").select("id, name").order("name");
 
   const { data: itemData } = await supabase
     .from("items")
-    .select("name, item_variants(id, sku, option1_value, default_price)")
+    .select("id, name, item_variants(id, sku, option1_value, default_price)")
     .eq("is_available_for_sale", true)
     .is("deleted_at", null)
     .is("item_variants.deleted_at", null)
@@ -49,32 +50,71 @@ export default async function EditQuotePage({ params }: { params: Promise<{ id: 
   const variantOptions: VariantOption[] = (itemData ?? []).flatMap((item) =>
     (item.item_variants ?? []).map((v) => ({
       id: v.id,
+      itemId: item.id,
       label: v.option1_value ? `${item.name} — ${v.option1_value}` : item.name,
       sku: v.sku,
       price: v.default_price,
     }))
   );
 
+  const { data: discountData } = await supabase
+    .from("discounts")
+    .select("id, name, discount_type, percentage, money_amount")
+    .is("deleted_at", null)
+    .neq("discount_type", "DISCOUNT_BY_POINTS")
+    .order("name");
+
+  const discounts: DiscountOption[] = (discountData ?? []).map((d) => ({
+    id: d.id,
+    name: d.name,
+    discountType: d.discount_type,
+    percentage: d.percentage,
+    moneyAmount: d.money_amount,
+  }));
+
+  const { data: itemModifierData } = await supabase
+    .from("item_modifiers")
+    .select("item_id, modifiers(id, name, modifier_options(id, name, price))");
+
+  const modifierGroups: ModifierGroupOption[] = (itemModifierData ?? []).flatMap((row) => {
+    const modifier = Array.isArray(row.modifiers) ? row.modifiers[0] : row.modifiers;
+    if (!modifier) return [];
+    return [
+      {
+        itemId: row.item_id,
+        modifierId: modifier.id,
+        modifierName: modifier.name,
+        options: (modifier.modifier_options ?? []).map((o) => ({ id: o.id, name: o.name, price: o.price })),
+      },
+    ];
+  });
+
   const customers = (customerData ?? []).filter((c) => c.name) as { id: string; name: string }[];
+
+  const initialRows: QuoteLineRow[] = (existingItems ?? []).map((item) => ({
+    rowId: crypto.randomUUID(),
+    variantId: item.variant_id,
+    quantity: String(item.quantity),
+    unitPrice: String(item.unit_price),
+    discountId: item.discount_id ?? "",
+    discountManualValue: "",
+    modifierSelections: Object.fromEntries(
+      (item.quote_item_modifiers ?? []).map((m) => [m.modifier_id, m.modifier_option_id])
+    ),
+  }));
 
   return (
     <EditQuoteForm
-      orderId={order.id}
-      customerId={order.customer_id}
-      note={order.note}
-      receiver={{
-        same_as_customer: order.same_as_customer,
-        receiver_name: order.receiver_name,
-        receiver_phone: order.receiver_phone,
-        receiver_address_line1: order.receiver_address_line1,
-        receiver_barangay: order.receiver_barangay,
-        receiver_city: order.receiver_city,
-        receiver_province: order.receiver_province,
-        receiver_postal_code: order.receiver_postal_code,
-      }}
-      items={existingItems ?? []}
+      quoteId={quote.id}
+      customerId={quote.customer_id}
+      note={quote.note}
+      quoteDate={quote.quote_date}
+      validUntil={quote.valid_until}
+      initialRows={initialRows}
       customers={customers}
       variantOptions={variantOptions}
+      discounts={discounts}
+      modifierGroups={modifierGroups}
     />
   );
 }

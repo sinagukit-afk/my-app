@@ -258,3 +258,36 @@ directly (not `COALESCE`d) on the same final UPDATE that already sets
 current state, not a partial patch. Quotes' create/edit stayed a
 plain table insert/update (no RPC involved, already covered by
 existing `orders` RLS), so only this one RPC needed extending.
+
+## D024
+
+Quotes split into a standalone `quotes`/`quote_items`/
+`quote_item_modifiers` table set, separate from `orders`, superseding
+the model D023 describes (`orders.status = 'quote'`). Reason: a
+handed-over Quote Module BRS assumed Quote and Sales Order are two
+distinct linked documents (conversion creates a *new* Sales Order,
+locks the original Quote permanently); the single-table status-flip
+model couldn't represent that without contradicting the BRS's
+numbering, validity-period, and audit requirements. Confirmed with
+Sinag before building — see `PROGRESS-QUOTES.md`. `orders_status_check`
+narrowed to drop `'quote'` (QUOTE-5); the two quote-specific RLS
+policies on `orders`/`order_items` (`orders_encoder_update_own_quote`,
+`order_items_encoder_update_own_quote`) were dropped as dead code in
+the same migration, since their `using` clause required
+`status='quote'`, which no `orders` row can be anymore.
+
+## D025
+
+`convert_quote_to_order()` reserves stock (`available_qty` →
+`reserved_qty` via the existing `transfer_stock_status()`) instead of
+deducting `in_stock` outright, unlike the old `confirm_order()` it
+replaces for quotes. Reason: the BRS explicitly wants conversion to
+*reserve* available inventory, not consume it as a completed sale.
+When reserved stock becomes a real deduction (at Production
+completion, presumably) is an open design question explicitly
+deferred to a future "order page revision" phase, per Sinag's
+direction — not resolved here. Convert still blocks entirely on any
+stock shortage (kept `confirm_order()`'s all-or-nothing guard) rather
+than the BRS's "partial reserve, let shortfall ride," since that
+partial-allocation UX doesn't exist yet either and depends on the same
+deferred phase.

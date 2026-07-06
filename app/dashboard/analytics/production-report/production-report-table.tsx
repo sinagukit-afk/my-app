@@ -3,7 +3,7 @@
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 
-export type OrderStage = "quote" | "confirmed" | "in_production" | "completed" | "cancelled";
+export type OrderStage = "confirmed" | "in_production" | "completed" | "cancelled";
 
 export type ProductionOrderRow = {
   id: string;
@@ -18,7 +18,6 @@ function formatDate(iso: string) {
 }
 
 const STAGE_BADGE: Record<OrderStage, { label: string; variant: "neutral" | "default" | "warning" | "success" | "danger" }> = {
-  quote: { label: "Quote", variant: "neutral" },
   confirmed: { label: "Confirmed", variant: "default" },
   in_production: { label: "In Production", variant: "warning" },
   completed: { label: "Completed", variant: "success" },

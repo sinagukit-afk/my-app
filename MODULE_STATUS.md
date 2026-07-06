@@ -33,9 +33,14 @@ manual) + order history (orders ∪ receipts), manual walk-in creation.
 Facebook/Instagram are schema-ready (`customer_sources.source`) but
 unbuilt — "Link Facebook" is a disabled stub. See `PROGRESS-CUSTOMERS.md`
 (CUST-0..4) and D022/D023 in `DECISIONS.md`.
-🟩 Quotes — now includes a "Ships to customer?" receiver toggle
-(`same_as_customer`/`receiver_*` on `orders`), excluded from any future
-Loyverse push payload.
+🟩 Quotes — standalone document (`quotes`/`quote_items`/
+`quote_item_modifiers`, separate from `orders`), own numbering
+(`SQTYY-MMDD-0001`, yearly reset), Open/Converted/Cancelled/Expired
+lifecycle. Converting reserves stock (available→reserved) via
+`convert_quote_to_order()` rather than deducting outright, and creates
+a linked Sales Order. Discounts/modifiers picked from the Loyverse-
+synced tables; no shipping/receiver fields (those stay on Sales
+Orders). See `PROGRESS-QUOTES.md` (QUOTE-1..6).
 🟩 Order List — same receiver toggle, persisted via the extended
 `adjust_order_items` RPC (D023).
 🟩 Production Queue

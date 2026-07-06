@@ -92,7 +92,7 @@ export default async function DashboardPage() {
   const monthLabel = now.toLocaleDateString("en-PH", { month: "long", year: "numeric", timeZone: "UTC" });
   const todayLabel = now.toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
 
-  const [receiptsRes, ordersRes, inventoryRes, lowStockRes, activityRes] = await Promise.all([
+  const [receiptsRes, ordersRes, openQuotesRes, inventoryRes, lowStockRes, activityRes] = await Promise.all([
     supabase
       .from("receipts")
       .select("total_money, receipt_date")
@@ -102,8 +102,9 @@ export default async function DashboardPage() {
     supabase
       .from("orders")
       .select("id, status")
-      .in("status", ["quote", "confirmed", "in_production"])
+      .in("status", ["confirmed", "in_production"])
       .returns<OrderRow[]>(),
+    supabase.from("quotes").select("id", { count: "exact", head: true }).eq("status", "open"),
     supabase
       .from("inventory_levels")
       .select("in_stock, item_variants(cost, deleted_at, items(track_stock, deleted_at))")
@@ -127,9 +128,9 @@ export default async function DashboardPage() {
   const todaysReceipts = receipts.filter((r) => new Date(r.receipt_date) >= todayStart);
   const todaysSales = todaysReceipts.reduce((sum, r) => sum + Number(r.total_money ?? 0), 0);
 
-  // Pending orders
+  // Pending orders (open quotes + confirmed/in-production sales orders)
   const pendingOrders = ordersRes.data ?? [];
-  const pendingCount = pendingOrders.length;
+  const pendingCount = pendingOrders.length + (openQuotesRes.count ?? 0);
   const inProductionCount = pendingOrders.filter((o) => o.status === "in_production").length;
 
   // Inventory value (tracked, non-deleted items/variants only)

@@ -17,10 +17,9 @@ function formatDayLabel(iso: string) {
   return new Date(`${iso}T00:00:00`).toLocaleDateString("en-PH", { month: "short", day: "numeric" });
 }
 
-const STAGES: OrderStage[] = ["quote", "confirmed", "in_production", "completed", "cancelled"];
+const STAGES: OrderStage[] = ["confirmed", "in_production", "completed", "cancelled"];
 
 const STAGE_LABEL: Record<OrderStage, string> = {
-  quote: "Quotes",
   confirmed: "Confirmed",
   in_production: "In Production",
   completed: "Completed",
@@ -55,7 +54,6 @@ export default async function ProductionReportPage({ searchParams }: { searchPar
   const orders = orderRows ?? [];
 
   const stageCounts: Record<OrderStage, number> = {
-    quote: 0,
     confirmed: 0,
     in_production: 0,
     completed: 0,
