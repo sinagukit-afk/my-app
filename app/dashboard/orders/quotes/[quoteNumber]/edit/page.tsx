@@ -3,8 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { EditQuoteForm } from "./edit-quote-form";
 import type { VariantOption, DiscountOption, ModifierGroupOption, QuoteLineRow } from "../../quote-line-items";
 
-export default async function EditQuotePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function EditQuotePage({ params }: { params: Promise<{ quoteNumber: string }> }) {
+  const { quoteNumber } = await params;
   const supabase = await createClient();
 
   const {
@@ -20,7 +20,7 @@ export default async function EditQuotePage({ params }: { params: Promise<{ id: 
   const { data: quote } = await supabase
     .from("quotes")
     .select("id, status, valid_until, customer_id, note, quote_date, created_by")
-    .eq("id", id)
+    .eq("quote_number", quoteNumber)
     .single();
 
   const today = new Date().toISOString().slice(0, 10);
@@ -35,7 +35,7 @@ export default async function EditQuotePage({ params }: { params: Promise<{ id: 
     .select(
       "id, variant_id, item_name_snapshot, sku_snapshot, quantity, unit_price, discount_id, line_discount, quote_item_modifiers(modifier_id, modifier_option_id)"
     )
-    .eq("quote_id", id);
+    .eq("quote_id", quote.id);
 
   const { data: customerData } = await supabase.from("customers").select("id, name").order("name");
 

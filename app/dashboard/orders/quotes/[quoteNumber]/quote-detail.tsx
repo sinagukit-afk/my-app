@@ -112,11 +112,11 @@ export function QuoteDetail({ data, logs }: { data: QuoteDetailData; logs: Activ
         description={`Quote Date ${data.quoteDate} · Valid Until ${data.validUntil}`}
         actions={
           <div className="flex items-center gap-2">
-            <Link href={`/dashboard/orders/quotes/${data.id}/view`}>
+            <Link href={`/dashboard/orders/quotes/${data.quoteNumber}/view`}>
               <Button variant="secondary">View</Button>
             </Link>
             {data.canEdit && (
-              <Link href={`/dashboard/orders/quotes/${data.id}/edit`}>
+              <Link href={`/dashboard/orders/quotes/${data.quoteNumber}/edit`}>
                 <Button variant="secondary">Edit</Button>
               </Link>
             )}

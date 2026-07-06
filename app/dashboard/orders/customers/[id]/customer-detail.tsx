@@ -185,7 +185,7 @@ export function CustomerDetail({ customer, sources, history, canWrite }: Props) 
             columns={historyColumns}
             data={history}
             searchable={false}
-            onRowClick={(row) => row.kind === "quote" && router.push(`/dashboard/orders/quotes/${row.id}`)}
+            onRowClick={(row) => row.kind === "quote" && router.push(`/dashboard/orders/quotes/${row.label}`)}
             emptyMessage="No order history"
             emptyDescription="This customer has no orders, quotes, or receipts yet."
           />

@@ -205,7 +205,7 @@ export async function updateQuoteWithItems(quoteId: string, formData: FormData):
   if (updateError) return { success: false, error: updateError.message }
 
   revalidatePath(LIST_PATH)
-  revalidatePath(`${LIST_PATH}/${quoteId}`)
+  revalidatePath(LIST_PATH, 'layout')
   return { success: true }
 }
 
@@ -216,7 +216,7 @@ export async function convertQuote(quoteId: string): Promise<ActionResult> {
   if (error) return { success: false, error: error.message }
 
   revalidatePath(LIST_PATH)
-  revalidatePath(`${LIST_PATH}/${quoteId}`)
+  revalidatePath(LIST_PATH, 'layout')
   revalidatePath(ORDER_LIST_PATH)
   revalidatePath('/dashboard/inventory/stock-movement')
   return { success: true }
@@ -257,6 +257,6 @@ export async function cancelQuote(quoteId: string, reason: string): Promise<Acti
   })
 
   revalidatePath(LIST_PATH)
-  revalidatePath(`${LIST_PATH}/${quoteId}`)
+  revalidatePath(LIST_PATH, 'layout')
   return { success: true }
 }

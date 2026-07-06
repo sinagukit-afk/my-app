@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
+import { FilterBar } from "@/components/business/filter-bar";
+import { DateRangeFilter } from "@/components/business/date-range-filter";
 
 export type QuoteRow = {
   id: string;
@@ -25,6 +28,14 @@ const STATUS_VARIANT: Record<string, "success" | "default" | "danger" | "warning
   expired: "warning",
 };
 
+const STATUS_FILTER_OPTIONS = [
+  { label: "All", value: "" },
+  { label: "Open", value: "open" },
+  { label: "Converted", value: "converted" },
+  { label: "Cancelled", value: "cancelled" },
+  { label: "Expired", value: "expired" },
+];
+
 function peso(n: number) {
   return `₱${n.toFixed(2)}`;
 }
@@ -32,10 +43,15 @@ function peso(n: number) {
 type Props = {
   data: QuoteRow[];
   canCreate: boolean;
+  from: string;
+  to: string;
 };
 
-export function QuotesTable({ data, canCreate }: Props) {
+export function QuotesTable({ data, canCreate, from, to }: Props) {
   const router = useRouter();
+  const [statusFilter, setStatusFilter] = useState("");
+
+  const filteredData = statusFilter ? data.filter((row) => row.status === statusFilter) : data;
 
   const columns: Column<QuoteRow>[] = [
     {
@@ -47,15 +63,7 @@ export function QuotesTable({ data, canCreate }: Props) {
       key: "customerName",
       header: "Customer",
       sortable: true,
-      render: (value, row) => (
-        <Link
-          href={`/dashboard/orders/quotes/${row.id}`}
-          className="text-(--color-primary) hover:underline"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {(value as string) || "Walk-in"}
-        </Link>
-      ),
+      render: (value) => (value as string) || "Walk-in",
     },
     {
       key: "quoteDate",
@@ -105,13 +113,18 @@ export function QuotesTable({ data, canCreate }: Props) {
         }
       />
 
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <DateRangeFilter from={from} to={to} />
+        <FilterBar options={STATUS_FILTER_OPTIONS} value={statusFilter} onChange={setStatusFilter} />
+      </div>
+
       <DataTable
         columns={columns}
-        data={data}
+        data={filteredData}
         searchPlaceholder="Search quotes…"
         emptyMessage="No quotes yet"
         emptyDescription="Create a quote to get started."
-        onRowClick={(row) => router.push(`/dashboard/orders/quotes/${row.id}`)}
+        onRowClick={(row) => router.push(`/dashboard/orders/quotes/${row.quoteNumber}`)}
       />
     </div>
   );

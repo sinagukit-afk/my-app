@@ -13,8 +13,8 @@ function peso(n: number) {
   return `₱${n.toFixed(2)}`;
 }
 
-export default async function QuoteViewPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function QuoteViewPage({ params }: { params: Promise<{ quoteNumber: string }> }) {
+  const { quoteNumber } = await params;
   const supabase = await createClient();
 
   const { data: quote } = await supabase
@@ -22,7 +22,7 @@ export default async function QuoteViewPage({ params }: { params: Promise<{ id: 
     .select(
       "quote_number, status, quote_date, valid_until, note, subtotal, total_discount, total_money, store_id, customers(name, phone_number, email, address_line1, barangay, city, province), quote_items(id, item_name_snapshot, sku_snapshot, quantity, unit_price, discount_id, line_discount, quote_item_modifiers(name_snapshot, price_snapshot))"
     )
-    .eq("id", id)
+    .eq("quote_number", quoteNumber)
     .single();
 
   if (!quote) notFound();
@@ -39,7 +39,7 @@ export default async function QuoteViewPage({ params }: { params: Promise<{ id: 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex justify-end gap-2 print:hidden">
-        <Link href={`/dashboard/orders/quotes/${id}`}>
+        <Link href={`/dashboard/orders/quotes/${quoteNumber}`}>
           <Button variant="secondary">Back</Button>
         </Link>
       </div>

@@ -259,7 +259,7 @@ export function QuoteLineItemsEditor({ rows, onRowsChange, variantOptions, disco
                   {groups.map((g) => (
                     <Select
                       key={g.modifierId}
-                      label={g.modifierName}
+                      label={`Modifier(${g.modifierName})`}
                       placeholder="None"
                       value={row.modifierSelections[g.modifierId] ?? ""}
                       onChange={(e) =>

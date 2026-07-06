@@ -67,3 +67,25 @@ No cron job — `effectiveStatus` is computed wherever quote status is read or g
 **Not built (explicitly out of scope, per the kickoff decisions):**
 - Reserved → deducted-at-completion stock transition, and partial-reservation-on-shortage — both deferred to a future "order page revision" phase.
 - Printable/PDF Quote document, and BRS §13's cross-document reusable template architecture.
+
+---
+
+## QUOTE-7 — List/Detail UX fixes + Quote-No. routing + filters (Sinag's post-launch feedback, kickoff 2026-07-06)
+
+Five fixes requested after using the shipped Phase 1 module:
+
+1. **Duplicate navigation on the list row** — the Customer column had its own `<Link>` to the detail page, on top of the row's own `onRowClick` going to the same place. Remove the link; keep the row click as the sole navigation.
+2. **Route by Quote No. instead of raw id** — `/dashboard/orders/quotes/[id]` (and `/edit`, `/view`) will become `/dashboard/orders/quotes/[quoteNumber]`, so the address bar reads `SQT26-0706-0001` instead of a UUID. Chosen deliberately over just fixing a page header — Sinag confirmed this is about the URL itself. Note: **Sales Orders (`order-list/[id]`) keep UUID routing** — the app already has precedent for human-readable routing (`purchase-orders/[reference]`, `receiving/[reference]`), so Quotes joins that pattern rather than inventing a new one; Sales Orders just haven't been migrated to it. Verified `quotes.quote_number` already has a unique index (`quotes_quote_number_key`, not a named constraint but enforced) — safe to use as a lookup key, no migration needed. Pages resolve by `quote_number` then use the real id internally for mutations/RPCs; updated every internal link that pointed at `data.id`/`row.id` (list row, Details page's View/Edit buttons, View page's Back button, Customer History row-click) to use the quote number instead.
+3. **Discount/Modifier selects can't be reset to "No Discount"/"None"** — root cause: the shared `Select` component's placeholder `<option>` is `disabled`, so once a real value is picked the empty option can never be reselected. Fixed at the component level (`components/ui/select.tsx`), not just in Quotes — it's a genuine bug anywhere a `Select` has a `placeholder`.
+4. **Modifier select label unclear** — shows just the modifier-group name (e.g. "Coaster"); changed to `Modifier(Coaster)` in the line-item editor (shared by New and Edit forms).
+5. **Filters** — date-of-creation range filter matching the Sales Report's `DateRangeFilter` (presets + from/to, server-side on `quotes.created_at`), plus a client-side status `FilterBar` (All/Open/Converted/Cancelled/Expired) matching the Item List page's pattern.
+
+**Status: ✅ DONE**
+
+**Verification (browser preview, Claude admin test account, 2026-07-06):**
+- List page: Customer column is plain text (no link), row click navigates by quote number; date-range presets (This Month/Last Month/This Year/All Time) plus manual From/To filter `created_at` server-side — confirmed "Last Month" correctly returns zero rows against July-dated test quotes; status `FilterBar` (All/Open/Converted/Cancelled/Expired) correctly narrowed to just the one Cancelled quote.
+- Clicked a row → URL is `/dashboard/orders/quotes/SQT26-0706-0004` (not the UUID); breadcrumb and page title show the quote number; Edit button link resolves to `.../SQT26-0706-0004/edit` and loads the correct quote.
+- Edit form: set Discount to "10% Discount" then back to "No discount" — value correctly clears to `""` (previously stuck once a real value was picked, since the placeholder `<option>` was `disabled`); same reset check passed on the per-line Modifier select, now labeled `Modifier(Keychain)` instead of just `Keychain`.
+- No console errors during the walkthrough. `npm run build` clean (full type-check, all quote routes generated under the new `[quoteNumber]` segment).
+
+**Also fixed while here (not customer-detail-page code but touched for correctness):** `quotes.quote_number` turned out to already have a unique index (`quotes_quote_number_key`) even though no named constraint showed in `pg_constraint` — verified via direct query before relying on it as a routing key, no migration needed. `actions.ts`'s per-quote `revalidatePath` calls were switched from `${LIST_PATH}/${quoteId}` (stale now that the URL uses quote_number, not id) to `revalidatePath(LIST_PATH, 'layout')`, which invalidates all nested quote routes regardless of slug.

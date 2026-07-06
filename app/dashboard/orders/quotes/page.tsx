@@ -6,7 +6,10 @@ function firstOf<T>(value: T | T[] | null | undefined): T | null {
   return value ?? null;
 }
 
-export default async function QuotesPage() {
+type SearchParams = Promise<{ from?: string; to?: string }>;
+
+export default async function QuotesPage({ searchParams }: { searchParams: SearchParams }) {
+  const { from = "", to = "" } = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -20,10 +23,14 @@ export default async function QuotesPage() {
   const role = profile?.role ?? "";
   const canCreate = ["admin", "manager", "encoder"].includes(role);
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("quotes")
-    .select("id, quote_number, status, quote_date, valid_until, total_money, customers(name)")
-    .order("created_at", { ascending: false });
+    .select("id, quote_number, status, quote_date, valid_until, total_money, created_at, customers(name)");
+
+  if (from) query = query.gte("created_at", `${from}T00:00:00`);
+  if (to) query = query.lte("created_at", `${to}T23:59:59.999`);
+
+  const { data, error } = await query.order("created_at", { ascending: false });
 
   const { data: logsData } = await supabase
     .from("activity_logs")
@@ -60,7 +67,7 @@ export default async function QuotesPage() {
       {error && (
         <p className="text-sm text-(--color-danger)">Failed to load quotes: {error.message}</p>
       )}
-      <QuotesTable data={rows} canCreate={canCreate} />
+      <QuotesTable data={rows} canCreate={canCreate} from={from} to={to} />
     </div>
   );
 }

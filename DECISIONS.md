@@ -291,3 +291,42 @@ stock shortage (kept `confirm_order()`'s all-or-nothing guard) rather
 than the BRS's "partial reserve, let shortfall ride," since that
 partial-allocation UX doesn't exist yet either and depends on the same
 deferred phase.
+
+## D026
+
+Order Module Improvement (`PROGRESS-ORDERS.md`, ORDER-1, migration
+`0032_orders_module_improvement_schema`) — the deferred phase D025
+pointed to. Four schema calls made:
+
+- `orders.order_number` uses the exact same yearly-reset trigger
+  pattern as `quotes.quote_number` (D... see QUOTE-1), just with
+  prefix `SOD` instead of `SQT` (format `SOD<YY>-<MMDD>-<seq>`).
+  Confirmed with Sinag 2026-07-06.
+- `orders.target_date` (`NOT NULL`, no DB default) follows
+  `quotes.valid_until`'s existing convention: since the value derives
+  from a sibling column (order date + 5), which a column `DEFAULT`
+  can't reference, application code must set it explicitly at insert
+  time, not the database.
+- `orders_status_check` was expanded **additively** — the 6 new
+  statuses (`partially_completed`, `production_completed`,
+  `ready_for_shipping`, `shipped`, `delivered`, `on_hold`) were added
+  alongside the existing `completed`, not replacing it. Reason:
+  Completed Orders, Production Report, and Order List/Production
+  Queue all still filter on `'completed'` today — remapping or
+  removing it in a schema-only phase would break currently-working
+  pages before the phases that actually rework them (ORDER-4/6/7)
+  land. Whether `completed` becomes a permanent alias for `delivered`
+  or is migrated away entirely is still an open question.
+- New `order_payments` table reuses the existing `payment_types`
+  table via FK (`payment_type_id`, nullable, mirrors
+  `orders.payment_type_id`) instead of a free-text payment-method
+  column, to stay consistent with the Loyverse-synced payment-type
+  list already used elsewhere. RLS allows admin-only `UPDATE`/`DELETE`
+  for manual correction — the doc's "payment history must never be
+  deleted" was read as prohibiting *automatic*/cascading deletion, not
+  banning an admin fixing a data-entry mistake.
+
+`order_items.reserved_qty`/`completed_qty` were added as
+`NOT NULL default 0` and backfilled (`reserved_qty = quantity` for
+existing rows) but are **not yet populated by any RPC** — `ORDER-2`
+must land before new orders/edits get correct `reserved_qty` values.

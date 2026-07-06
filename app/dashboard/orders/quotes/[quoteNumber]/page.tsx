@@ -7,8 +7,8 @@ function firstOf<T>(value: T | T[] | null | undefined): T | null {
   return value ?? null;
 }
 
-export default async function QuoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function QuoteDetailPage({ params }: { params: Promise<{ quoteNumber: string }> }) {
+  const { quoteNumber } = await params;
   const supabase = await createClient();
 
   const {
@@ -26,7 +26,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
     .select(
       "id, quote_number, status, quote_date, valid_until, note, cancellation_reason, cancelled_at, created_by, converted_order_id, converted_at, subtotal, total_discount, total_money, customers(id, name, phone_number, email, address_line1, barangay, city, province), quote_items(id, item_name_snapshot, sku_snapshot, quantity, unit_price, discount_id, line_discount, quote_item_modifiers(name_snapshot, price_snapshot))"
     )
-    .eq("id", id)
+    .eq("quote_number", quoteNumber)
     .single();
 
   if (!quote) notFound();
@@ -35,7 +35,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
     .from("activity_logs")
     .select("id, action, description, created_at, profiles(full_name, email)")
     .eq("entity_type", "quote")
-    .eq("entity_id", id)
+    .eq("entity_id", quote.id)
     .order("created_at", { ascending: false });
 
   const logs: ActivityLogRow[] = (logsData ?? []).map((l) => {
