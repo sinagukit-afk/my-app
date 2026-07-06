@@ -162,7 +162,7 @@ export function EditOrderForm({ orderId, customerId, note, receiver, items, cust
     <form onSubmit={handleSubmit} className="space-y-6">
       <PageHeader
         title="Edit Order"
-        description="Change the customer, notes, or line items. Stock is automatically deducted or returned to match."
+        description="Change the customer, notes, or line items. Stock is automatically reserved or released to match."
       />
 
       <Card>
@@ -220,7 +220,8 @@ export function EditOrderForm({ orderId, customerId, note, receiver, items, cust
           <CardTitle>Line Items</CardTitle>
           <CardDescription>
             Add each item, quantity, unit price, and any per-item discount. Increasing a quantity or
-            adding an item deducts more stock; decreasing or removing one returns stock.
+            adding an item reserves more stock (partially, if not enough is available); decreasing or
+            removing one releases stock back.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

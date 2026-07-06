@@ -1325,6 +1325,7 @@ export type Database = {
       }
       order_items: {
         Row: {
+          completed_qty: number
           created_at: string
           id: string
           item_name_snapshot: string | null
@@ -1332,11 +1333,13 @@ export type Database = {
           line_note: string | null
           order_id: string
           quantity: number
+          reserved_qty: number
           sku_snapshot: string | null
           unit_price: number
           variant_id: string
         }
         Insert: {
+          completed_qty?: number
           created_at?: string
           id?: string
           item_name_snapshot?: string | null
@@ -1344,11 +1347,13 @@ export type Database = {
           line_note?: string | null
           order_id: string
           quantity?: number
+          reserved_qty?: number
           sku_snapshot?: string | null
           unit_price?: number
           variant_id: string
         }
         Update: {
+          completed_qty?: number
           created_at?: string
           id?: string
           item_name_snapshot?: string | null
@@ -1356,6 +1361,7 @@ export type Database = {
           line_note?: string | null
           order_id?: string
           quantity?: number
+          reserved_qty?: number
           sku_snapshot?: string | null
           unit_price?: number
           variant_id?: string
@@ -1402,6 +1408,61 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_item_catalog"
             referencedColumns: ["variant_id"]
+          },
+        ]
+      }
+      order_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          order_id: string
+          payment_date: string
+          payment_type_id: string | null
+          reference_no: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          order_id: string
+          payment_date?: string
+          payment_type_id?: string | null
+          reference_no?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          order_id?: string
+          payment_date?: string
+          payment_type_id?: string | null
+          reference_no?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_payments_payment_type_id_fkey"
+            columns: ["payment_type_id"]
+            isOneToOne: false
+            referencedRelation: "payment_types"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1485,6 +1546,7 @@ export type Database = {
           loyverse_receipt_id: string | null
           loyverse_receipt_number: string | null
           note: string | null
+          order_number: string
           payment_type_id: string | null
           receiver_address_line1: string | null
           receiver_barangay: string | null
@@ -1500,6 +1562,7 @@ export type Database = {
           sync_error: string | null
           sync_status: string
           synced_at: string | null
+          target_date: string
           total_discount: number
           total_money: number
           total_tax: number
@@ -1514,6 +1577,7 @@ export type Database = {
           loyverse_receipt_id?: string | null
           loyverse_receipt_number?: string | null
           note?: string | null
+          order_number: string
           payment_type_id?: string | null
           receiver_address_line1?: string | null
           receiver_barangay?: string | null
@@ -1529,6 +1593,7 @@ export type Database = {
           sync_error?: string | null
           sync_status?: string
           synced_at?: string | null
+          target_date: string
           total_discount?: number
           total_money?: number
           total_tax?: number
@@ -1543,6 +1608,7 @@ export type Database = {
           loyverse_receipt_id?: string | null
           loyverse_receipt_number?: string | null
           note?: string | null
+          order_number?: string
           payment_type_id?: string | null
           receiver_address_line1?: string | null
           receiver_barangay?: string | null
@@ -1558,6 +1624,7 @@ export type Database = {
           sync_error?: string | null
           sync_status?: string
           synced_at?: string | null
+          target_date?: string
           total_discount?: number
           total_money?: number
           total_tax?: number
@@ -2531,102 +2598,60 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      adjust_order_items:
-        | {
-            Args: {
-              p_customer_id?: string
-              p_lines: Json
-              p_note?: string
-              p_order_id: string
-            }
-            Returns: {
-              created_at: string
-              created_by: string | null
-              customer_id: string | null
-              fulfillment_method: string | null
-              id: string
-              loyverse_receipt_id: string | null
-              loyverse_receipt_number: string | null
-              note: string | null
-              payment_type_id: string | null
-              receiver_address_line1: string | null
-              receiver_barangay: string | null
-              receiver_city: string | null
-              receiver_name: string | null
-              receiver_phone: string | null
-              receiver_postal_code: string | null
-              receiver_province: string | null
-              same_as_customer: boolean
-              status: string
-              store_id: string | null
-              subtotal: number
-              sync_error: string | null
-              sync_status: string
-              synced_at: string | null
-              total_discount: number
-              total_money: number
-              total_tax: number
-              updated_at: string
-            }
-            SetofOptions: {
-              from: "*"
-              to: "orders"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
-        | {
-            Args: {
-              p_customer_id?: string
-              p_fulfillment_method?: string
-              p_lines: Json
-              p_note?: string
-              p_order_id: string
-              p_receiver_address_line1?: string
-              p_receiver_barangay?: string
-              p_receiver_city?: string
-              p_receiver_name?: string
-              p_receiver_phone?: string
-              p_receiver_postal_code?: string
-              p_receiver_province?: string
-              p_same_as_customer?: boolean
-            }
-            Returns: {
-              created_at: string
-              created_by: string | null
-              customer_id: string | null
-              fulfillment_method: string | null
-              id: string
-              loyverse_receipt_id: string | null
-              loyverse_receipt_number: string | null
-              note: string | null
-              payment_type_id: string | null
-              receiver_address_line1: string | null
-              receiver_barangay: string | null
-              receiver_city: string | null
-              receiver_name: string | null
-              receiver_phone: string | null
-              receiver_postal_code: string | null
-              receiver_province: string | null
-              same_as_customer: boolean
-              status: string
-              store_id: string | null
-              subtotal: number
-              sync_error: string | null
-              sync_status: string
-              synced_at: string | null
-              total_discount: number
-              total_money: number
-              total_tax: number
-              updated_at: string
-            }
-            SetofOptions: {
-              from: "*"
-              to: "orders"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
+      adjust_order_items: {
+        Args: {
+          p_customer_id?: string
+          p_fulfillment_method?: string
+          p_lines: Json
+          p_note?: string
+          p_order_id: string
+          p_receiver_address_line1?: string
+          p_receiver_barangay?: string
+          p_receiver_city?: string
+          p_receiver_name?: string
+          p_receiver_phone?: string
+          p_receiver_postal_code?: string
+          p_receiver_province?: string
+          p_same_as_customer?: boolean
+        }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          fulfillment_method: string | null
+          id: string
+          loyverse_receipt_id: string | null
+          loyverse_receipt_number: string | null
+          note: string | null
+          order_number: string
+          payment_type_id: string | null
+          receiver_address_line1: string | null
+          receiver_barangay: string | null
+          receiver_city: string | null
+          receiver_name: string | null
+          receiver_phone: string | null
+          receiver_postal_code: string | null
+          receiver_province: string | null
+          same_as_customer: boolean
+          status: string
+          store_id: string | null
+          subtotal: number
+          sync_error: string | null
+          sync_status: string
+          synced_at: string | null
+          target_date: string
+          total_discount: number
+          total_money: number
+          total_tax: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       adjust_stock: {
         Args: {
           p_note?: string
@@ -2660,44 +2685,6 @@ export type Database = {
         }
       }
       archive_item: { Args: { p_item_id: string }; Returns: undefined }
-      confirm_order: {
-        Args: { p_order_id: string }
-        Returns: {
-          created_at: string
-          created_by: string | null
-          customer_id: string | null
-          fulfillment_method: string | null
-          id: string
-          loyverse_receipt_id: string | null
-          loyverse_receipt_number: string | null
-          note: string | null
-          payment_type_id: string | null
-          receiver_address_line1: string | null
-          receiver_barangay: string | null
-          receiver_city: string | null
-          receiver_name: string | null
-          receiver_phone: string | null
-          receiver_postal_code: string | null
-          receiver_province: string | null
-          same_as_customer: boolean
-          status: string
-          store_id: string | null
-          subtotal: number
-          sync_error: string | null
-          sync_status: string
-          synced_at: string | null
-          total_discount: number
-          total_money: number
-          total_tax: number
-          updated_at: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "orders"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
       convert_quote_to_order: {
         Args: { p_quote_id: string }
         Returns: {
@@ -2709,6 +2696,7 @@ export type Database = {
           loyverse_receipt_id: string | null
           loyverse_receipt_number: string | null
           note: string | null
+          order_number: string
           payment_type_id: string | null
           receiver_address_line1: string | null
           receiver_barangay: string | null
@@ -2724,6 +2712,7 @@ export type Database = {
           sync_error: string | null
           sync_status: string
           synced_at: string | null
+          target_date: string
           total_discount: number
           total_money: number
           total_tax: number

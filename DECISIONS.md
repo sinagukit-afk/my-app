@@ -330,3 +330,50 @@ pointed to. Four schema calls made:
 `NOT NULL default 0` and backfilled (`reserved_qty = quantity` for
 existing rows) but are **not yet populated by any RPC** — `ORDER-2`
 must land before new orders/edits get correct `reserved_qty` values.
+
+## D027
+
+`adjust_order_items()` rewritten (`PROGRESS-ORDERS.md` ORDER-2,
+migrations `0033`-`0035`) to reserve stock (`available_qty` →
+`reserved_qty` via `transfer_stock_status()`) instead of deducting
+`in_stock` directly, and to support partial-reserve-on-shortage
+instead of blocking the whole edit — the two things D025 explicitly
+deferred to this phase. Also dropped `confirm_order()` (dead code
+since QUOTE-5 narrowed `orders_status_check` to drop `'quote'`) and an
+orphaned 4-param `adjust_order_items()` overload left over from 0025
+(the app only ever called the 8-extra-param version).
+
+Shortage-splitting policy (confirmed with Sinag): **greedy by line
+order** — lines are processed in the order the caller submits them
+(matches on-screen order in the edit form); an earlier line claims a
+shared raw-material component in full before a later line, so when
+the component runs short, the shortfall lands on the later line(s)
+rather than blocking the whole order. Proportional splitting was the
+rejected alternative (fairer but more complex, can leave rounding
+remainders).
+
+Implementation note: rather than adapting the old delta-based
+temp-table approach, the edit flow now (1) releases the order's
+*entire* current reservation footprint back to `available` — expanded
+from each existing line's `reserved_qty`, not its ordered `quantity`,
+since a prior edit may have only partially reserved a line on
+shortage — then (2) deletes and reinserts `order_items` from the new
+line list, then (3) loops the new lines in submitted order, computing
+each line's feasible whole-unit reservation as the `MIN` across its
+required components (BOM-expanded, or itself if not composite) of
+`floor(available_qty / per_unit_ratio)`, and reserves that amount
+before moving to the next line. `track_stock` lives on the *component*
+item, never the composite/kit item itself (composites are always
+`track_stock=false`), so the tracked/untracked check happens on the
+expanded component rows, not the line's own item.
+
+Known gap, not fixed here: the edit flow's delete+reinsert of
+`order_items` means any manually-entered `completed_qty` (ORDER-3,
+not yet built) would be wiped back to 0 by a subsequent line-item
+edit. No data has `completed_qty > 0` yet since ORDER-3 doesn't exist,
+so this is a documented follow-up for ORDER-3/6, not a live bug.
+
+`confirm_order()` was retired rather than repurposed as the Method-2
+(direct order creation) entry point — ORDER-5 needs different inputs
+(no existing `order_items` to expand from; must set
+`order_number`/`target_date`) so it gets its own RPC.
