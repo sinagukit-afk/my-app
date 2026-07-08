@@ -863,3 +863,43 @@ no longer get a distinct `SSP` number prefix.
   complete, with stock deducted correctly for both fulfillment types. Editing a `preparing`
   shipment and flipping its type preserves already-entered product-line quantities (no
   lines lost on toggle).
+
+## D041
+
+**`adjust_order_items()` reconciles `production_orders` instead of orphaning them on
+every post-`start_production()` edit (2026-07-08, INV-9).** `production_orders.quantity`
+was a frozen snapshot taken once at `start_production()` time (D033); `order_items.
+production_order_id` was the only live link back to it, and `adjust_order_items()`'s
+delete-and-reinsert of `order_items` (D007) dropped that link on every edit, silently
+breaking `complete_production_order()`'s `completed_qty` backfill for the rest of that
+order's life. Found as a flagged-but-deferred item at the bottom of INV-7.
+
+- **Sinag's call, given after three options were laid out**: relink-only (cheapest, still
+  leaves `quantity` stale and new lines untracked), restrict edits entirely once production
+  starts (reverses D007's existing editability), or full reconcile. Chose full reconcile.
+- `production_orders.quantity` is now a **live rollup**, not a frozen snapshot — resynced
+  to the sum of its linked `order_items.quantity` on every edit that touches those lines.
+- New guard (no earlier equivalent existed): an edit that would drop an active Production
+  Order's linked total below its own `completed_qty`, or to zero, is blocked outright.
+  Necessary because `add_production_completed_qty`'s partial-completion progress lives only
+  on `production_orders`, never synced back to `order_items.completed_qty` (that only
+  happens on full completion) — so nothing upstream of this guard could have caught a
+  shrink below partial progress.
+- A line with no matching active Production Order (a genuinely new variant+modifier combo
+  added after production started, or one whose only prior Production Order already
+  completed/cancelled) gets a **new** Production Order auto-created for it, mirroring
+  `start_production()`'s own grouping — **gated admin-only**, matching D033's existing
+  restriction on `start_production()` itself, rather than letting a routine encoder/manager
+  edit conjure a new Production Order through a side door. Relinking/resyncing an
+  *existing* Production Order stays open to admin/manager/encoder, same as
+  `adjust_order_items()` always has been.
+- Verified live (Supabase MCP, admin + encoder test accounts, fresh order
+  `SOD26-0708-0022`): quantity increase on a linked line resynced its Production Order and
+  logged `production_order_quantity_adjusted`; a genuinely new line auto-created a new
+  Production Order as admin and was blocked with a clear error as encoder; shrinking a
+  line below its Production Order's partial `completed_qty`, and removing every line of a
+  Production Order outright, were both blocked; `complete_production_order()` on the
+  edited (quantity-resynced) Production Order correctly backfilled `order_items.
+  completed_qty` again — the exact assertion that silently failed before this fix. Cleaned
+  up via `cancel_production_order()`/`transfer_stock_status()`; `inventory_levels` for all
+  4 touched variants matched their pre-test values exactly afterward.
