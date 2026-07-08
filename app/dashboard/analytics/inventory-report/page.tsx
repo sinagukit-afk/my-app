@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/business/stat-card";
 import { DateRangeFilter } from "@/components/business/date-range-filter";
 import { BarChart, type BarChartDatum } from "@/components/business/bar-chart";
+import { getOnHand } from "@/lib/inventory/calculations";
 import { InventoryStockTable, type StockRow } from "./inventory-report-table";
 
 type SearchParams = Promise<{ from?: string; to?: string }>;
@@ -29,7 +30,7 @@ export default async function InventoryReportPage({ searchParams }: { searchPara
   const stockQuery = supabase
     .from("inventory_levels")
     .select(
-      "id, in_stock, low_stock_threshold, item_variants(sku, option1_value, cost, deleted_at, items(name, track_stock, deleted_at, categories(name)))"
+      "id, available_qty, reserved_qty, in_production_qty, on_hold_qty, low_stock_threshold, item_variants(sku, option1_value, cost, deleted_at, items(name, track_stock, deleted_at, categories(name)))"
     );
 
   let movementsQuery = supabase
@@ -55,14 +56,23 @@ export default async function InventoryReportPage({ searchParams }: { searchPara
     const item = firstOf(variant.items);
     if (!item || !item.track_stock || item.deleted_at) continue;
 
-    const inStock = Number(row.in_stock ?? 0);
+    const availableQty = Number(row.available_qty ?? 0);
+    const inStock = getOnHand({
+      available_qty: availableQty,
+      reserved_qty: Number(row.reserved_qty ?? 0),
+      in_production_qty: Number(row.in_production_qty ?? 0),
+      on_hold_qty: Number(row.on_hold_qty ?? 0),
+      incoming_qty: 0,
+    });
     const threshold = row.low_stock_threshold != null ? Number(row.low_stock_threshold) : null;
     const unitCost = Number(variant.cost ?? 0);
     const stockValue = inStock * unitCost;
     totalStockValue += stockValue;
 
-    const isOut = inStock <= 0;
-    const isLow = !isOut && threshold != null && inStock <= threshold;
+    // Low/out-of-stock reflects sellable stock (available_qty), not total on-hand —
+    // reserved/in-production stock is already committed and can't cover a new sale.
+    const isOut = availableQty <= 0;
+    const isLow = !isOut && threshold != null && availableQty <= threshold;
     if (isOut) outOfStockCount += 1;
     if (isLow) lowStockCount += 1;
 

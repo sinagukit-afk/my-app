@@ -223,6 +223,27 @@ Source doc: `Inventory-Status-Phase1-Kickoff.md` (repo root).
 
 ---
 
+## INV-13 — Analytics/Inventory Report and Dashboard KPIs still read legacy `in_stock` ✅ DONE (2026-07-08)
+
+**Found while investigating a "Analytics/Inventory Report's In Stock doesn't match Inventory Status" report from Sinag.** Root cause: `in_stock` and the decomposed model (`available_qty`/`reserved_qty`/`in_production_qty`/`on_hold_qty`) are two independent representations of stock on `inventory_levels`. `transfer_stock_status()` — the RPC every order-confirm/production/hold flow uses (`create_order`, `adjust_order_items`, `convert_quote_to_order`, `override_reserved_qty`, `cancel_production_order`) — only ever moves the four bucket columns and never touches `in_stock`, by design (INV-1). `in_stock` is only kept in step by three RPCs (`adjust_stock`, the PO-receive trigger, `deduct_stock_out`). That holds in the common case, but any direct correction to the bucket columns (several happened this same week during INV-6/7/8/9 live-verification test cleanup, done via direct Postgres) silently breaks the "these two totals agree" assumption — no constraint or log catches it.
+
+**Verified live before fixing:** compared `in_stock` to computed on-hand (`available_qty+reserved_qty+in_production_qty+on_hold_qty`) across all 32 tracked `inventory_levels` rows — 5 already diverged: `SUIV-0013` (350 vs 50, +300), `SUIV-0012` (276 vs 96, +180), `SUIV-0004` (222 vs 215, +7), `SUIV-0018` (272.9 vs 292.9, −20), `SUIV-0019` (288.9 vs 308.9, −20). All five sit on production/adjustment paths exercised by this week's INV-7/8/9 test orders. `/dashboard/inventory/status` (the correct, decomposed-model page) and `/dashboard/analytics/inventory-report` (still reading raw `in_stock`) were each querying their own column correctly — the two pages just no longer have any invariant tying them together.
+
+**Scope confirmed with Sinag before building:** fix both Analytics/Inventory Report and the Dashboard's Inventory Value/Low Stock KPIs together in one pass (the Report page's own footer text claims it matches the Dashboard KPI — fixing one alone would've just moved the mismatch from Report-vs-Status to Report-vs-Dashboard). Sinag also picked `available_qty` (not on-hand) as the basis for low-stock/out-of-stock comparisons — reserved/in-production stock is already committed and can't cover a new sale, so it shouldn't count toward "do we need to reorder."
+
+**What was built (no migration — read-side only, no RPC/schema change):**
+- [`app/dashboard/analytics/inventory-report/page.tsx`](app/dashboard/analytics/inventory-report/page.tsx): stock query now selects `available_qty, reserved_qty, in_production_qty, on_hold_qty` instead of `in_stock`. Displayed "In Stock" / Stock Value / Inventory Value now come from `getOnHand()` ([`lib/inventory/calculations.ts`](lib/inventory/calculations.ts), the same helper Inventory Status already uses — guarantees the two pages can't diverge again). Low Stock / Out of Stock badges now compare `available_qty` against `low_stock_threshold` instead of on-hand.
+- [`app/dashboard/page.tsx`](app/dashboard/page.tsx): Inventory Value KPI now sums `getOnHand()` × cost instead of raw `in_stock` × cost. Low Stock Items card now filters/sorts/displays `available_qty` instead of `in_stock`.
+- `in_stock` itself was **not** touched or backfilled — per this project's additive-only convention and INV-1's original decision to leave it as "a visible data-quality flag." If it should be reconciled or dropped from the schema, that needs its own explicit decision, not a side effect of a read-side fix.
+
+**Verification:** `npx tsc --noEmit` clean; confirmed no remaining `in_stock` references in either changed file. **Live browser verification (Claude admin test account, after freeing the dev server port from a stale process):**
+- Dashboard Inventory Value = ₱229,565, matching a direct SQL sum of `getOnHand() × cost` (₱229,564.64) across all 32 tracked rows.
+- Inventory Report Stock Value = ₱229,564.641, Tracked SKUs = 32, no console errors.
+- All 5 previously-diverged SKUs now show the correct on-hand figure on the Report: `SUIV-0013`→50, `SUIV-0012`→96, `SUIV-0004`→215, `SUIV-0018`→292.903, `SUIV-0019`→308.903 (matches the mismatch table above exactly).
+- Cross-checked `SUIV-0013` directly against `/dashboard/inventory/status`: On Hand = 50, matching the Report's In Stock = 50 — the two pages now agree.
+
+---
+
 ## Open / deferred (not blocking this phase)
 
 - Wiring the generated `Database` type into `lib/supabase/client.ts`/`server.ts` and the ~23 call sites (INV-2) — separate follow-up, not part of Phase 1.

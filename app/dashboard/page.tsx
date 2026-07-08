@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { getOnHand } from "@/lib/inventory/calculations";
 
 function firstOf<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
@@ -20,7 +21,13 @@ type VariantForValue = {
   deleted_at: string | null;
   items: ItemForValue | ItemForValue[] | null;
 };
-type InventoryValueRow = { in_stock: number; item_variants: VariantForValue | VariantForValue[] | null };
+type InventoryValueRow = {
+  available_qty: number;
+  reserved_qty: number;
+  in_production_qty: number;
+  on_hold_qty: number;
+  item_variants: VariantForValue | VariantForValue[] | null;
+};
 
 type ItemForLowStock = { name: string };
 type VariantForLowStock = {
@@ -30,7 +37,7 @@ type VariantForLowStock = {
 };
 type LowStockRow = {
   id: string;
-  in_stock: number;
+  available_qty: number;
   low_stock_threshold: number | null;
   item_variants: VariantForLowStock | VariantForLowStock[] | null;
 };
@@ -107,11 +114,13 @@ export default async function DashboardPage() {
     supabase.from("quotes").select("id", { count: "exact", head: true }).eq("status", "open"),
     supabase
       .from("inventory_levels")
-      .select("in_stock, item_variants(cost, deleted_at, items(track_stock, deleted_at))")
+      .select(
+        "available_qty, reserved_qty, in_production_qty, on_hold_qty, item_variants(cost, deleted_at, items(track_stock, deleted_at))"
+      )
       .returns<InventoryValueRow[]>(),
     supabase
       .from("inventory_levels")
-      .select("id, in_stock, low_stock_threshold, item_variants(sku, option1_value, items(name))")
+      .select("id, available_qty, low_stock_threshold, item_variants(sku, option1_value, items(name))")
       .not("low_stock_threshold", "is", null)
       .returns<LowStockRow[]>(),
     supabase
@@ -143,13 +152,22 @@ export default async function DashboardPage() {
     const item = firstOf(variant.items);
     if (!item || !item.track_stock || item.deleted_at) continue;
     skuCount += 1;
-    inventoryValue += Number(row.in_stock ?? 0) * Number(variant.cost ?? 0);
+    const onHand = getOnHand({
+      available_qty: Number(row.available_qty ?? 0),
+      reserved_qty: Number(row.reserved_qty ?? 0),
+      in_production_qty: Number(row.in_production_qty ?? 0),
+      on_hold_qty: Number(row.on_hold_qty ?? 0),
+      incoming_qty: 0,
+    });
+    inventoryValue += onHand * Number(variant.cost ?? 0);
   }
 
-  // Low stock (only rows with a configured threshold)
+  // Low stock (only rows with a configured threshold). Compares against available_qty
+  // (sellable stock), not total on-hand — reserved/in-production stock is already
+  // committed and can't cover a new sale.
   const lowStockRows = (lowStockRes.data ?? [])
-    .filter((r) => r.low_stock_threshold != null && Number(r.in_stock) <= Number(r.low_stock_threshold))
-    .sort((a, b) => Number(a.in_stock) - Number(b.in_stock))
+    .filter((r) => r.low_stock_threshold != null && Number(r.available_qty) <= Number(r.low_stock_threshold))
+    .sort((a, b) => Number(a.available_qty) - Number(b.available_qty))
     .slice(0, 5)
     .map((r) => {
       const variant = firstOf(r.item_variants);
@@ -158,7 +176,7 @@ export default async function DashboardPage() {
         id: r.id,
         name: item?.name ?? variant?.sku ?? "Unknown item",
         variantLabel: variant?.option1_value ?? null,
-        stock: Number(r.in_stock),
+        stock: Number(r.available_qty),
         min: Number(r.low_stock_threshold),
       };
     });
