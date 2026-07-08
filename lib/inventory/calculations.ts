@@ -18,3 +18,14 @@ export function getAvailableToSell(row: InventoryStatusQuantities): number {
 export function getProjectedStock(row: InventoryStatusQuantities): number {
   return row.available_qty + row.incoming_qty
 }
+
+export type StockStatus = 'ok' | 'low' | 'out'
+
+export function getStockStatus(row: {
+  available_qty: number
+  low_stock_threshold: number | null
+}): StockStatus {
+  if (row.available_qty <= 0) return 'out'
+  if (row.low_stock_threshold != null && row.available_qty <= row.low_stock_threshold) return 'low'
+  return 'ok'
+}

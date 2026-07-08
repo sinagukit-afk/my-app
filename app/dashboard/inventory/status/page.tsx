@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
-import { getOnHand, getProjectedStock } from "@/lib/inventory/calculations";
+import { StatCard } from "@/components/business/stat-card";
+import { getOnHand, getProjectedStock, getStockStatus } from "@/lib/inventory/calculations";
 import { InventoryMonitoringTable, type InventoryMonitoringRow } from "./inventory-monitoring-table";
 
 function firstOf<T>(value: T | T[] | null | undefined): T | null {
@@ -22,7 +23,7 @@ export default async function InventoryStatusPage() {
       .select(
         `name, categories(name),
          item_variants(id, sku, option1_value, deleted_at,
-           inventory_levels(id, store_id, available_qty, reserved_qty, in_production_qty, on_hold_qty, stores(name)))`
+           inventory_levels(id, store_id, available_qty, reserved_qty, in_production_qty, on_hold_qty, low_stock_threshold, stores(name)))`
       )
       .eq("track_stock", true)
       .is("deleted_at", null)
@@ -56,6 +57,7 @@ export default async function InventoryStatusPage() {
           on_hold_qty: Number(level.on_hold_qty),
           incoming_qty: incomingByVariant.get(variant.id) ?? 0,
         };
+        const threshold = level.low_stock_threshold != null ? Number(level.low_stock_threshold) : null;
         return {
           id: level.id,
           variant_id: variant.id,
@@ -67,10 +69,21 @@ export default async function InventoryStatusPage() {
           ...quantities,
           on_hand: getOnHand(quantities),
           projected_stock: getProjectedStock(quantities),
+          threshold,
+          status: getStockStatus({ available_qty: quantities.available_qty, low_stock_threshold: threshold }),
         };
       })
     );
   });
+
+  const summary = {
+    lowStock: rows.filter((r) => r.status === "low").length,
+    outOfStock: rows.filter((r) => r.status === "out").length,
+    onHold: rows.filter((r) => r.on_hold_qty > 0).length,
+    inProduction: rows.filter((r) => r.in_production_qty > 0).length,
+    incoming: rows.filter((r) => r.incoming_qty > 0).length,
+    reserved: rows.filter((r) => r.reserved_qty > 0).length,
+  };
 
   return (
     <div className="space-y-6">
@@ -81,6 +94,23 @@ export default async function InventoryStatusPage() {
           </CardContent>
         </Card>
       )}
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <StatCard
+          label="Low Stock"
+          value={summary.lowStock.toLocaleString("en-PH")}
+          trend={summary.lowStock > 0 ? "down" : "neutral"}
+        />
+        <StatCard
+          label="Out of Stock"
+          value={summary.outOfStock.toLocaleString("en-PH")}
+          trend={summary.outOfStock > 0 ? "down" : "neutral"}
+        />
+        <StatCard label="On Hold" value={summary.onHold.toLocaleString("en-PH")} />
+        <StatCard label="In Production" value={summary.inProduction.toLocaleString("en-PH")} />
+        <StatCard label="Incoming" value={summary.incoming.toLocaleString("en-PH")} />
+        <StatCard label="Reserved" value={summary.reserved.toLocaleString("en-PH")} />
+      </div>
 
       <InventoryMonitoringTable data={rows} />
     </div>

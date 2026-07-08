@@ -3,6 +3,7 @@ import {
   getAvailableToSell,
   getOnHand,
   getProjectedStock,
+  getStockStatus,
   type InventoryStatusQuantities,
 } from './calculations'
 
@@ -71,5 +72,22 @@ describe('On Hand invariant under a status_transfer', () => {
     const onHandBefore = getOnHand(before)
     const after = row({ available_qty: 10, incoming_qty: 0 })
     expect(getOnHand(after)).toBe(onHandBefore + 5)
+  })
+})
+
+describe('getStockStatus', () => {
+  it('is "out" when available_qty is zero or negative, regardless of threshold', () => {
+    expect(getStockStatus({ available_qty: 0, low_stock_threshold: 5 })).toBe('out')
+    expect(getStockStatus({ available_qty: -2, low_stock_threshold: null })).toBe('out')
+  })
+
+  it('is "low" when available_qty is positive but at or below the threshold', () => {
+    expect(getStockStatus({ available_qty: 3, low_stock_threshold: 5 })).toBe('low')
+    expect(getStockStatus({ available_qty: 5, low_stock_threshold: 5 })).toBe('low')
+  })
+
+  it('is "ok" when available_qty is above the threshold or no threshold is set', () => {
+    expect(getStockStatus({ available_qty: 6, low_stock_threshold: 5 })).toBe('ok')
+    expect(getStockStatus({ available_qty: 1, low_stock_threshold: null })).toBe('ok')
   })
 })

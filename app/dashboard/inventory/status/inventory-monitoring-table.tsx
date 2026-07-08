@@ -3,6 +3,7 @@
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
+import type { StockStatus } from "@/lib/inventory/calculations";
 
 export type InventoryMonitoringRow = {
   id: string;
@@ -19,6 +20,14 @@ export type InventoryMonitoringRow = {
   incoming_qty: number;
   on_hand: number;
   projected_stock: number;
+  threshold: number | null;
+  status: StockStatus;
+};
+
+const STATUS_BADGE: Record<StockStatus, { label: string; variant: "success" | "warning" | "danger" }> = {
+  ok: { label: "OK", variant: "success" },
+  low: { label: "Low Stock", variant: "warning" },
+  out: { label: "Out of Stock", variant: "danger" },
 };
 
 function formatQty(value: number) {
@@ -85,6 +94,21 @@ export function InventoryMonitoringTable({ data }: Props) {
       header: "Projected",
       sortable: true,
       render: (v) => <span className="font-medium">{formatQty(Number(v))}</span>,
+    },
+    {
+      key: "threshold",
+      header: "Threshold",
+      sortable: true,
+      render: (v) => (v == null ? <span className="text-(--color-text-subtle)">—</span> : formatQty(Number(v))),
+    },
+    {
+      key: "status",
+      header: "Status",
+      sortable: true,
+      render: (v) => {
+        const status = STATUS_BADGE[v as StockStatus];
+        return <Badge variant={status.variant}>{status.label}</Badge>;
+      },
     },
   ];
 

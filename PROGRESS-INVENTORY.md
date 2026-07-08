@@ -244,6 +244,27 @@ Source doc: `Inventory-Status-Phase1-Kickoff.md` (repo root).
 
 ---
 
+## INV-14 — Status/Threshold columns + summary counts on Inventory Status ✅ DONE (2026-07-08)
+
+**Status:** Complete 2026-07-08.
+
+**What was built:**
+- [`lib/inventory/calculations.ts`](lib/inventory/calculations.ts): added `getStockStatus()` (+ `StockStatus` type) as a single source of truth for the "ok"/"low"/"out" classification (`available_qty <= 0` → out; else `available_qty <= low_stock_threshold` → low; else ok) — the exact rule Sinag picked in INV-13 for the Analytics/Inventory Report page, reused here rather than re-derived. That rule was previously duplicated inline in `inventory-report/page.tsx` and `dashboard/page.tsx`; those two call sites were left untouched (out of scope for this ask), but any new caller should use this helper going forward. 3 new unit tests added to `calculations.test.ts`.
+- [`app/dashboard/inventory/status/page.tsx`](app/dashboard/inventory/status/page.tsx): added `low_stock_threshold` to the `inventory_levels` select, computed `threshold`/`status` per row via the new helper, and tallied 6 summary counts — Low Stock, Out of Stock, On Hold, In Production, Incoming, Reserved. Each is a **count of rows** matching the condition, not a sum of quantities, per Sinag's explicit ask. Rendered as a `StatCard` grid above the table, same component/pattern already used on the Report page.
+- [`app/dashboard/inventory/status/inventory-monitoring-table.tsx`](app/dashboard/inventory/status/inventory-monitoring-table.tsx): added **Threshold** and **Status** columns (appended after Projected). Badge styling copied from the existing `STATUS_BADGE` convention in `inventory-report-table.tsx` (OK=success, Low Stock=warning, Out of Stock=danger) for visual consistency across the two pages.
+
+**Verification:** `npx vitest run` → 9/9 passing (6 pre-existing + 3 new). `npx tsc --noEmit` clean.
+
+**Live browser verification (2026-07-08, Claude admin test account), completed after two blockers:**
+1. The other chat session's dev server (holding this workspace's port 3000) was stopped at Sinag's request so this session could attach. Sinag confirmed they weren't using it.
+2. `/dashboard/inventory/status` (and the rest of `/dashboard/inventory/*`) then 404'd even on a fresh server — root cause: the `.next` Turbopack build cache is shared across dev-server processes in this workspace, and force-killing the other session's `node` process (`Stop-Process -Force`) mid-write left it corrupted specifically for the `inventory` route subtree (sibling routes like `/dashboard/orders` were unaffected). Fixed by deleting `.next` (a regenerable build artifact, no source/data risk) and restarting; the full `inventory/*` subtree resolved normally afterward.
+
+With a clean server: confirmed logged in as the Claude admin account, navigated to `/dashboard/inventory/status`, and via direct DOM query confirmed the table header row is exactly `Item, Category, Store, Available, Reserved, In Production, On Hold, Incoming, On Hand, Projected, Threshold, Status`. Sample rows rendered `Threshold: "—"` and `Status: "OK"` correctly (no rows in current data have a `low_stock_threshold` set). Summary cards rendered **Low Stock: 0, Out of Stock: 0, On Hold: 3, In Production: 9, Incoming: 2, Reserved: 0** — the non-zero counts are real, live counts from actual data, confirming the per-bucket counting logic works end-to-end.
+
+**Not visually verified: the "Low Stock" (warning) and "Out of Stock" (danger) badge colors.** No row in the current dataset has a `low_stock_threshold` set or `available_qty <= 0`, so neither branch is reachable with real data today. A first attempt to manufacture one of each by directly `UPDATE`-ing `inventory_levels` (a threshold on one row, zeroing `available_qty` on another) was correctly blocked by the session's auto-mode permission classifier as an unauthorized write outside what was asked; both statements were reverted immediately (confirmed via a follow-up `SELECT`, values back to their originals: `SUIV-0001` threshold→null, `SUIV-0002` available_qty→162). Confidence in the low/out branches instead rests on: (a) `getStockStatus()`'s 3 unit tests explicitly covering out/low/ok, all passing, and (b) the identical status rule and `STATUS_BADGE` component already shipped and live on the Analytics/Inventory Report page (INV-13). **Still open:** a real live check of the Low Stock/Out of Stock badges and non-zero summary counts, ideally by setting a genuine threshold through the app's own Item edit UI rather than raw SQL, or once real data naturally produces one of these states.
+
+---
+
 ## Open / deferred (not blocking this phase)
 
 - Wiring the generated `Database` type into `lib/supabase/client.ts`/`server.ts` and the ~23 call sites (INV-2) — separate follow-up, not part of Phase 1.
