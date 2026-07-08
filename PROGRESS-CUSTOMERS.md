@@ -35,8 +35,8 @@ self-contained).
   "Loyverse Receipt #" field in Production Queue's complete-order dialog writes
   `loyverse_receipt_number` by hand), so this is a forward-looking guard, not a fix to
   existing code.
-- **Shipping (Part 2) is schema-only, not built.** `order_shipments`/`couriers` tables exist
-  (migration `0023_shipping`) but the page is intentionally deferred — see the TBD list below.
+- **Shipping (Part 2) is done**, built as ORDER-7 — see `PROGRESS-ORDERS.md`/D030 and the
+  updated section below.
 
 ---
 
@@ -194,7 +194,25 @@ See D023 in `DECISIONS.md`.
 
 ---
 
-## Part 2 — Shipping — schema-only, **not started**
+## Part 2 — Shipping — ✅ DONE (built as ORDER-7, see `PROGRESS-ORDERS.md`/D030)
+
+**Resolved 2026-07-06** — TBDs #1-#3 below were confirmed with Sinag and built:
+1. **Shipment status workflow** — `order_shipments.status` now has a `CHECK` restricted to
+   `shipped`/`delivered` (no `pending`/`failed`/`returned` — the order's own `status` already
+   carries `ready_for_shipping` before a shipment row exists, and cancellation is a separate
+   `orders.status` path, not a shipment failure state).
+2. **Pickup orders and `order_shipments`** — confirmed: pickup orders get **no**
+   `order_shipments` row at all; they skip `ready_for_shipping`/`shipped` entirely and go
+   `production_completed` → `delivered` directly via `mark_picked_up()`.
+3. **Shipping fee reconciliation** — confirmed informational-only: `shipping_cost`/
+   `shipping_fee_charged` are recorded on the shipment record but never affect
+   `orders.total_money` or Payment Status.
+
+TBDs #4 (Accounting linking) and #5 (split shipments to multiple receivers) remain open,
+not built — out of scope for ORDER-7, tracked here for whoever picks them up next.
+
+<details>
+<summary>Original TBD text (for history)</summary>
 
 Not scoped for this build. `order_shipments`/`couriers` tables exist and are empty (no
 couriers seeded yet). Do not build the Shipping page until the TBDs below are resolved — at
@@ -209,13 +227,27 @@ minimum #1 and #2, per the original brief.
 3. **Shipping fee reconciliation** — `order_shipments.shipping_fee_charged` vs.
    `orders.total_money` — unclear whether a shipping charge is a separate field or folded into
    the order total. Must be decided before any reporting touches it, to avoid double-counting.
+
+</details>
 4. **Linking to Accounting** — `journal_entries.source_type = 'order'` exists but is unused;
    posting `shipping_cost` as a courier expense is an ACCT-side integration, not scoped here,
    and Accounting is separately paused (see `MODULE_STATUS.md`).
-5. **Split shipments to different receivers** — today `order_shipments` has no receiver
+5. **Split shipments to different receivers** — ~~today `order_shipments` has no receiver
    override of its own; a single order shipping to multiple different people/venues across
-   batches isn't supported. Flag if it turns out to be a real need.
+   batches isn't supported.~~ **Resolved by PS-18** (2026-07-08,
+   `PROGRESS-PRODUCTION-SHIPPING.md`/`DECISIONS.md` D040): `order_shipments` gained its own
+   `ships_to_customer`/`receiver_*` fields, and the order-level `same_as_customer`/
+   `receiver_*` system documented in this file (CUST-3/CUST-4 below) was retired in favor
+   of it — each shipment now picks its own receiver independently.
 
 **Do-not-yet reminder for whoever builds Part 2:** exclude `fulfillment_method`,
 `order_shipments`, and every `receiver_*`/`same_as_customer` field on `orders` from any future
 Loyverse push payload (same guard as CUST-3).
+
+---
+
+**2026-07-06 — path update (D031):** `app/dashboard/orders/customers` moved
+to `app/dashboard/management/customers` as part of the Operations nav
+restructure (new Management/Orders/Inventory sidebar groups). File names/
+contents unchanged, only the route + physical folder moved. See
+`DECISIONS.md` D031.

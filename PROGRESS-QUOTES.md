@@ -89,3 +89,11 @@ Five fixes requested after using the shipped Phase 1 module:
 - No console errors during the walkthrough. `npm run build` clean (full type-check, all quote routes generated under the new `[quoteNumber]` segment).
 
 **Also fixed while here (not customer-detail-page code but touched for correctness):** `quotes.quote_number` turned out to already have a unique index (`quotes_quote_number_key`) even though no named constraint showed in `pg_constraint` — verified via direct query before relying on it as a routing key, no migration needed. `actions.ts`'s per-quote `revalidatePath` calls were switched from `${LIST_PATH}/${quoteId}` (stale now that the URL uses quote_number, not id) to `revalidatePath(LIST_PATH, 'layout')`, which invalidates all nested quote routes regardless of slug.
+
+---
+
+**2026-07-06 — path update (D031):** `app/dashboard/orders/quotes` moved
+to `app/dashboard/orders/quotation` as part of the Operations nav
+restructure (sidebar label also changed "Quotes" → "Quotation"). File
+names/contents unchanged, only the route + physical folder moved. See
+`DECISIONS.md` D031.

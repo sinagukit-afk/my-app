@@ -97,7 +97,7 @@ export function CompletedOrdersTable({ data }: Props) {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Completed Orders"
+        title="Completed"
         description="Archive of fulfilled orders."
       />
 
@@ -106,7 +106,7 @@ export function CompletedOrdersTable({ data }: Props) {
         data={data}
         searchPlaceholder="Search orders…"
         emptyMessage="No completed orders yet"
-        emptyDescription="Orders marked completed from the Production Queue will appear here."
+        emptyDescription="Orders marked completed from Production will appear here."
       />
 
       <Dialog open={Boolean(viewing)} onOpenChange={(open) => !open && setViewing(null)}>

@@ -8,7 +8,7 @@ import { SalesByItemTable, type ItemSalesRow } from "./sales-report-table";
 
 type SearchParams = Promise<{ from?: string; to?: string }>;
 
-const REVENUE_STATUSES = ["confirmed", "in_production", "completed"];
+const REVENUE_STATUSES = ["confirmed", "in_production", "delivered"];
 
 function firstOf<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;

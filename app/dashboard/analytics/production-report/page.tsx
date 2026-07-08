@@ -4,7 +4,11 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/business/stat-card";
 import { DateRangeFilter } from "@/components/business/date-range-filter";
 import { BarChart, type BarChartDatum } from "@/components/business/bar-chart";
-import { ProductionOrdersTable, type ProductionOrderRow, type OrderStage } from "./production-report-table";
+import {
+  ProductionOrdersTable,
+  type ProductionOrderRow,
+  type ProductionOrderStatus,
+} from "./production-report-table";
 
 type SearchParams = Promise<{ from?: string; to?: string }>;
 
@@ -17,59 +21,68 @@ function formatDayLabel(iso: string) {
   return new Date(`${iso}T00:00:00`).toLocaleDateString("en-PH", { month: "short", day: "numeric" });
 }
 
-const STAGES: OrderStage[] = ["confirmed", "in_production", "completed", "cancelled"];
-
-const STAGE_LABEL: Record<OrderStage, string> = {
-  confirmed: "Confirmed",
-  in_production: "In Production",
-  completed: "Completed",
-  cancelled: "Cancelled",
-};
-
 export default async function ProductionReportPage({ searchParams }: { searchParams: SearchParams }) {
   const { from = "", to = "" } = await searchParams;
 
   const supabase = await createClient();
 
-  let ordersQuery = supabase
-    .from("orders")
-    .select("id, status, created_at, updated_at, customers(name)");
+  let productionOrdersQuery = supabase
+    .from("production_orders")
+    .select(
+      "id, production_order_number, item_name_snapshot, sku_snapshot, modifiers_snapshot, quantity, status, created_at, updated_at, orders(order_number)"
+    );
 
-  if (from) ordersQuery = ordersQuery.gte("created_at", `${from}T00:00:00`);
-  if (to) ordersQuery = ordersQuery.lte("created_at", `${to}T23:59:59.999`);
+  if (from) productionOrdersQuery = productionOrdersQuery.gte("created_at", `${from}T00:00:00`);
+  if (to) productionOrdersQuery = productionOrdersQuery.lte("created_at", `${to}T23:59:59.999`);
 
   let completedQuery = supabase
-    .from("orders")
+    .from("production_orders")
     .select("id, updated_at")
     .eq("status", "completed");
 
   if (from) completedQuery = completedQuery.gte("updated_at", `${from}T00:00:00`);
   if (to) completedQuery = completedQuery.lte("updated_at", `${to}T23:59:59.999`);
 
-  const [{ data: orderRows, error }, { data: completedRows, error: completedError }] = await Promise.all([
-    ordersQuery.order("created_at", { ascending: false }),
+  const [{ data: poRows, error }, { data: completedRows, error: completedError }] = await Promise.all([
+    productionOrdersQuery.order("created_at", { ascending: false }),
     completedQuery.order("updated_at"),
   ]);
 
-  const orders = orderRows ?? [];
+  const productionOrders = poRows ?? [];
 
-  const stageCounts: Record<OrderStage, number> = {
-    confirmed: 0,
-    in_production: 0,
-    completed: 0,
-    cancelled: 0,
-  };
+  let inProductionCount = 0;
+  let completedCount = 0;
+  let inProductionUnits = 0;
+  let completedUnits = 0;
 
-  const tableRows: ProductionOrderRow[] = orders.map((order) => {
-    const status = order.status as OrderStage;
-    stageCounts[status] = (stageCounts[status] ?? 0) + 1;
-    const customer = firstOf(order.customers);
+  const tableRows: ProductionOrderRow[] = productionOrders.map((po) => {
+    const status = po.status as ProductionOrderStatus;
+    const quantity = Number(po.quantity);
+    if (status === "completed") {
+      completedCount += 1;
+      completedUnits += quantity;
+    } else if (status !== "cancelled") {
+      // not_started / wip / partially_completed all still count as "in production"
+      inProductionCount += 1;
+      inProductionUnits += quantity;
+    }
+
+    const order = firstOf(po.orders);
+    const modifiers = Array.isArray(po.modifiers_snapshot)
+      ? (po.modifiers_snapshot as { name_snapshot?: string }[]).map((m) => m.name_snapshot ?? "").filter(Boolean)
+      : [];
+
     return {
-      id: order.id,
-      customer: customer?.name ?? "Walk-in / unspecified",
+      id: po.id,
+      productionOrderNumber: po.production_order_number,
+      orderNumber: order?.order_number ?? "",
+      itemName: po.item_name_snapshot ?? "",
+      sku: po.sku_snapshot,
+      modifiers,
+      quantity,
       status,
-      createdAt: order.created_at,
-      updatedAt: order.updated_at,
+      createdAt: po.created_at,
+      updatedAt: po.updated_at,
     };
   });
 
@@ -86,7 +99,7 @@ export default async function ProductionReportPage({ searchParams }: { searchPar
     <div className="space-y-6">
       <PageHeader
         title="Production Report"
-        description="Order counts by stage and completion throughput, within current data limits."
+        description="Production Order counts by status and completion throughput, within current data limits."
       />
 
       <DateRangeFilter from={from} to={to} />
@@ -99,19 +112,20 @@ export default async function ProductionReportPage({ searchParams }: { searchPar
         </Card>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-5">
-        {STAGES.map((stage) => (
-          <StatCard key={stage} label={STAGE_LABEL[stage]} value={stageCounts[stage].toLocaleString("en-PH")} />
-        ))}
+      <div className="grid gap-4 sm:grid-cols-4">
+        <StatCard label="In Production" value={inProductionCount.toLocaleString("en-PH")} />
+        <StatCard label="Completed" value={completedCount.toLocaleString("en-PH")} />
+        <StatCard label="Units In Production" value={inProductionUnits.toLocaleString("en-PH")} />
+        <StatCard label="Units Completed" value={completedUnits.toLocaleString("en-PH")} />
       </div>
 
       <Card>
         <CardContent className="p-4">
           <div className="mb-3 flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-(--color-text)">Completed Orders per Day</h2>
+            <h2 className="text-sm font-semibold text-(--color-text)">Completed Production Orders per Day</h2>
           </div>
           <p className="mb-3 text-xs text-(--color-text-muted)">
-            {(completedRows ?? []).length.toLocaleString("en-PH")} orders completed in range
+            {(completedRows ?? []).length.toLocaleString("en-PH")} production orders completed in range
           </p>
           <BarChart data={completedChartData} />
         </CardContent>
@@ -120,7 +134,7 @@ export default async function ProductionReportPage({ searchParams }: { searchPar
       <Card>
         <CardContent className="p-4">
           <h2 className="mb-3 text-sm font-semibold text-(--color-text)">
-            Orders Created in Range — Current Stage
+            Production Orders Created in Range
           </h2>
           <ProductionOrdersTable data={tableRows} />
         </CardContent>
@@ -128,13 +142,16 @@ export default async function ProductionReportPage({ searchParams }: { searchPar
 
       <Card>
         <CardContent className="p-4 text-xs text-(--color-text-muted)">
-          Stage counts reflect orders created in the selected range, grouped by their current status —
-          not a snapshot of every order ever created. Completed-per-day uses each order&apos;s{" "}
-          <code>updated_at</code> timestamp as a proxy for completion time, since orders have no dedicated
-          status-change log; this is reliable for completed orders specifically because nothing updates a
-          completed order afterward. There is currently no way to measure average time-in-stage (e.g. how
-          long an order sits in production before completion) — that would require a dedicated
-          status-change history table, which is out of scope for this report.
+          Counts reflect individual Production Orders (one per product+modifier grouping within a
+          customer order, see the Production Orders page), not customer orders themselves — one
+          customer order can span several Production Orders. A Production Order only exists once its
+          customer order enters production, so orders still awaiting production (Confirmed) don&apos;t
+          appear here. Completed-per-day uses each Production Order&apos;s <code>updated_at</code>{" "}
+          timestamp as a proxy for completion time, since Production Orders have no dedicated
+          status-change log; this is reliable for completed rows specifically because nothing updates a
+          completed Production Order afterward. There is currently no way to measure average
+          time-in-production — that would require a dedicated status-change history table, which is out
+          of scope for this report.
         </CardContent>
       </Card>
     </div>

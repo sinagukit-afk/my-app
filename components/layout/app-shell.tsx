@@ -39,32 +39,40 @@ const NAV: NavEntry[] = [
     children: [
       {
         kind: "subgroup",
-        label: "Inventory",
+        label: "Management",
         children: [
-          { kind: "item", label: "Item List", href: "/dashboard/inventory/items", icon: LayersIcon },
-          { kind: "item", label: "Incoming Inventory", href: "/dashboard/inventory/incoming", icon: LayersIcon },
-          { kind: "item", label: "Item Adjustment", href: "/dashboard/inventory/adjustment", icon: LayersIcon },
-          { kind: "item", label: "Stock Movement", href: "/dashboard/inventory/stock-movement", icon: LayersIcon },
-          { kind: "item", label: "Suppliers", href: "/dashboard/inventory/suppliers", icon: LayersIcon },
-        ],
-      },
-      {
-        kind: "subgroup",
-        label: "Purchasing",
-        children: [
-          { kind: "item", label: "Purchase Orders", href: "/dashboard/purchasing/purchase-orders", icon: ShoppingCartIcon },
-          { kind: "item", label: "Receiving", href: "/dashboard/purchasing/receiving", icon: ShoppingCartIcon },
+          { kind: "item", label: "Customer", href: "/dashboard/management/customers", icon: ClipboardIcon },
+          { kind: "item", label: "Supplier", href: "/dashboard/management/suppliers", icon: ClipboardIcon },
+          { kind: "item", label: "Item List", href: "/dashboard/management/items", icon: ClipboardIcon },
+          { kind: "item", label: "Item Category", href: "/dashboard/management/item-categories", icon: ClipboardIcon },
+          { kind: "item", label: "Product Modifier", href: "/dashboard/management/product-modifiers", icon: ClipboardIcon },
+          { kind: "item", label: "Couriers", href: "/dashboard/management/couriers", icon: ClipboardIcon },
+          { kind: "item", label: "Stores", href: "/dashboard/management/stores", icon: ClipboardIcon },
         ],
       },
       {
         kind: "subgroup",
         label: "Orders",
         children: [
-          { kind: "item", label: "Customers", href: "/dashboard/orders/customers", icon: ClipboardIcon },
-          { kind: "item", label: "Quotes", href: "/dashboard/orders/quotes", icon: ClipboardIcon },
-          { kind: "item", label: "Order List", href: "/dashboard/orders/order-list", icon: ClipboardIcon },
-          { kind: "item", label: "Production Queue", href: "/dashboard/orders/production-queue", icon: ClipboardIcon },
-          { kind: "item", label: "Completed Orders", href: "/dashboard/orders/completed", icon: ClipboardIcon },
+          { kind: "item", label: "Active Orders", href: "/dashboard/orders/active-orders", icon: ShoppingCartIcon },
+          { kind: "item", label: "Quotation", href: "/dashboard/orders/quotation", icon: ShoppingCartIcon },
+          { kind: "item", label: "Confirmed", href: "/dashboard/orders/confirmed", icon: ShoppingCartIcon },
+          { kind: "item", label: "Production", href: "/dashboard/orders/production", icon: ShoppingCartIcon },
+          { kind: "item", label: "Shipping", href: "/dashboard/orders/shipping", icon: ShoppingCartIcon },
+          { kind: "item", label: "Payment", href: "/dashboard/orders/payment", icon: ShoppingCartIcon },
+          { kind: "item", label: "Completed", href: "/dashboard/orders/completed", icon: ShoppingCartIcon },
+        ],
+      },
+      {
+        kind: "subgroup",
+        label: "Inventory",
+        children: [
+          { kind: "item", label: "Inventory Status", href: "/dashboard/inventory/status", icon: LayersIcon },
+          { kind: "item", label: "Items for Review", href: "/dashboard/inventory/items-for-review", icon: LayersIcon },
+          { kind: "item", label: "Item Adjustment", href: "/dashboard/inventory/adjustment", icon: LayersIcon },
+          { kind: "item", label: "Stock Movement", href: "/dashboard/inventory/stock-movement", icon: LayersIcon },
+          { kind: "item", label: "Purchase Orders", href: "/dashboard/inventory/purchase-orders", icon: LayersIcon },
+          { kind: "item", label: "Receiving", href: "/dashboard/inventory/receiving", icon: LayersIcon },
         ],
       },
     ],
@@ -251,6 +259,10 @@ function groupContainsActive(group: NavGroup, pathname: string): boolean {
   });
 }
 
+function subgroupContainsActive(subgroup: NavSubGroup, pathname: string): boolean {
+  return subgroup.children.some((leaf) => pathname === leaf.href || pathname.startsWith(leaf.href + "/"));
+}
+
 function isLeafActive(leaf: NavLeaf, pathname: string): boolean {
   if (leaf.href === "/dashboard") return pathname === "/dashboard";
   return pathname === leaf.href || pathname.startsWith(leaf.href + "/");
@@ -362,6 +374,29 @@ export function AppShell({ children, userEmail, userRole, signOutAction }: AppSh
     });
   }
 
+  // Track which subgroups are open; auto-open the subgroup that contains the active route
+  const [openSubgroups, setOpenSubgroups] = React.useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    for (const entry of NAV) {
+      if (entry.kind !== "group") continue;
+      for (const child of entry.children) {
+        if (child.kind === "subgroup" && subgroupContainsActive(child, pathname)) {
+          initial.add(child.label);
+        }
+      }
+    }
+    return initial;
+  });
+
+  function toggleSubgroup(label: string) {
+    setOpenSubgroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-(--color-bg)">
       {/* ── Sidebar ─────────────────────────────────────────── */}
@@ -437,25 +472,34 @@ export function AppShell({ children, userEmail, userRole, signOutAction }: AppSh
                     <ul className={cn("flex flex-col gap-0.5", !collapsed && "mt-0.5")}>
                       {entry.children.map((child) => {
                         if (child.kind === "subgroup") {
+                          const isSubOpen = openSubgroups.has(child.label);
                           return (
                             <li key={child.label}>
                               {!collapsed && (
-                                <p className="px-2 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-widest text-(--color-text-subtle)">
-                                  {child.label}
-                                </p>
+                                <button
+                                  onClick={() => toggleSubgroup(child.label)}
+                                  className="flex w-full items-center gap-1 px-2 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-widest text-(--color-text-subtle) hover:text-(--color-text-muted) transition-colors"
+                                >
+                                  <span className="flex-1 text-left">{child.label}</span>
+                                  <ChevronDownIcon
+                                    className={cn("transition-transform duration-150", isSubOpen && "rotate-180")}
+                                  />
+                                </button>
                               )}
-                              <ul className="flex flex-col gap-0.5">
-                                {child.children.map((leaf) => (
-                                  <li key={leaf.href}>
-                                    <NavItemRow
-                                      leaf={leaf}
-                                      active={isLeafActive(leaf, pathname)}
-                                      collapsed={collapsed}
-                                      indent
-                                    />
-                                  </li>
-                                ))}
-                              </ul>
+                              {(isSubOpen || collapsed) && (
+                                <ul className="flex flex-col gap-0.5">
+                                  {child.children.map((leaf) => (
+                                    <li key={leaf.href}>
+                                      <NavItemRow
+                                        leaf={leaf}
+                                        active={isLeafActive(leaf, pathname)}
+                                        collapsed={collapsed}
+                                        indent
+                                      />
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
                             </li>
                           );
                         }

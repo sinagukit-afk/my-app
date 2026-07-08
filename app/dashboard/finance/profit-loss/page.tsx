@@ -7,7 +7,7 @@ import { ExpenseBreakdownTable, type ExpenseCategoryRow } from "./expense-breakd
 
 type SearchParams = Promise<{ from?: string; to?: string }>;
 
-const REVENUE_STATUSES = ["confirmed", "in_production", "completed"];
+const REVENUE_STATUSES = ["confirmed", "in_production", "delivered"];
 
 function money(v: number) {
   return `₱${v.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;

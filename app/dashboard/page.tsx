@@ -41,7 +41,7 @@ type ActivityRow = { id: string; action: string; description: string | null; cre
 const QUICK_ACTIONS = [
   { label: "New Order", href: "/dashboard/orders", variant: "primary" },
   { label: "Add Inventory", href: "/dashboard/inventory", variant: "secondary" },
-  { label: "New Purchase", href: "/dashboard/purchasing", variant: "secondary" },
+  { label: "New Purchase", href: "/dashboard/inventory/purchase-orders", variant: "secondary" },
   { label: "View Finance", href: "/dashboard/finance", variant: "secondary" },
 ] as const;
 

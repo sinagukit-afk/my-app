@@ -377,3 +377,489 @@ so this is a documented follow-up for ORDER-3/6, not a live bug.
 (direct order creation) entry point — ORDER-5 needs different inputs
 (no existing `order_items` to expand from; must set
 `order_number`/`target_date`) so it gets its own RPC.
+
+## D028
+
+Order Detail page (`PROGRESS-ORDERS.md` ORDER-3) surfaced a mismatch
+between the original kickoff decision text ("Completed Qty entry by
+admin/manager") and the live RLS: `order_items_admin_update` and
+`orders_admin_update` are both **admin-only** — no manager-level
+UPDATE policy exists on either table. Per the `bms-supabase` skill's
+preflight instruction (flag doc/system mismatches before proceeding),
+this was surfaced to Sinag rather than assumed either way. Decision:
+gate Completed Qty entry to **admin-only** in the UI, matching live
+RLS exactly, rather than silently widening RLS as a side effect of a
+UI-focused phase. Widening to admin+manager (a new RLS policy) is left
+as an explicit, separate follow-up if still wanted.
+
+Also added migration `0036_order_items_completed_qty_check`: additive
+`CHECK (completed_qty <= quantity)` on `order_items`, enforcing
+"Ordered Qty must never be less than Completed Qty" at the DB layer
+(the UI also clamps client-side, but the DB is the authoritative
+guard). `updateCompletedQty()` loops individual per-row `UPDATE`s
+rather than a bulk `upsert`, per the ON-CONFLICT-checks-the-raw-INSERT-
+row-before-redirecting-to-UPDATE gotcha already documented for
+`adjust_stock` (see memory `project_adjust_stock_upsert_check_constraint_fix`)
+— avoids re-hitting that class of bug for a second table.
+
+Payment Status (Unpaid/Partially Paid/Paid/Overpaid) and Total
+Paid/Remaining Balance/Change are computed client-side from
+`sum(order_payments.amount)` vs `orders.total_money` — no new stored
+column, since these are pure derived display values with no other
+consumer yet.
+
+Order Detail routing stays **UUID-based** (`[id]`), not
+`order_number`-based like Quotes (QUOTE-7) — that migration remains
+an open question tracked at the bottom of `PROGRESS-ORDERS.md`, not
+decided in this phase.
+
+## D030
+
+ORDER-7 (`PROGRESS-ORDERS.md`, migration `0038_order_status_workflow`)
+resolved the Shipping TBDs `MODULE_STATUS.md` and `PROGRESS-CUSTOMERS.md`
+Part 2 had flagged as blocking since the Customer/Shipping build
+(D022/D023): shipment status workflow, whether pickup orders get an
+`order_shipments` row, and shipping-fee reconciliation. Confirmed with
+Sinag before building:
+
+- **Cancel** releases the full `reserved_qty` of every line back to
+  available regardless of `completed_qty` — there is no separate
+  "consumed" inventory bucket (Production consumption is out of scope
+  for Inventory Phase 1). Allowed from `confirmed`/`in_production`/
+  `partially_completed` only, admin-only (matches the existing
+  admin-only `orders_admin_update` RLS, same gap D028 found).
+- **On Hold** pauses only (inventory stays reserved, no transfer);
+  allowed from `confirmed`/`in_production`/`partially_completed`/
+  `production_completed`/`ready_for_shipping`, admin-only. A new
+  `orders.on_hold_previous_status` column stores what to restore on
+  Resume, since Resume can't be derived from data the way
+  `recompute_order_status()` derives the production-family statuses.
+- **Pickup vs delivery**: the Ready for Shipping → Shipped → Delivered
+  chain (and `order_shipments`/`couriers`) applies to delivery orders
+  only — pickup orders go `production_completed` → `delivered`
+  directly, no `order_shipments` row created. Shipment actions
+  (mark ready/ship/deliver) are admin+encoder, matching the existing
+  `order_shipments` RLS exactly (no RLS change needed).
+- **Shipping fees** (`shipping_cost`/`shipping_fee_charged`) are
+  informational only on the shipment record — no effect on
+  `orders.total_money` or Payment Status.
+
+Blocker found and fixed as a prerequisite: `orders.fulfillment_method`
+had existed as a column since migration `0023_shipping` (and
+`create_order`/`adjust_order_items` already accepted a
+`p_fulfillment_method` param) but no UI ever set it — every order had
+it `NULL`, which would have made the pickup/delivery branch above
+undecidable. Added a Fulfillment Method select (defaults to Pickup) to
+both New Order and Edit Order, and wired the param through
+`actions.ts`, which previously omitted it entirely (silently NULLing
+it on every save even though the RPCs already supported it).
+
+Also built: a Couriers management page
+(`app/dashboard/orders/couriers/`), mirroring the existing Suppliers
+page pattern — the `couriers` table existed since `0023_shipping` with
+no admin UI at all, needed so staff can populate the courier picker in
+the new Ship Order dialog. Admin-only write, matching `couriers`'
+existing RLS (no manager/encoder write policy exists on that table).
+
+## D029
+
+ORDER-6's status matrix (`PROGRESS-ORDERS.md`) assumed a status-
+transition mechanism that didn't exist in the code — nothing
+previously set `partially_completed`/`production_completed`. Two
+gaps surfaced and were resolved with Sinag before building, same
+"flag doc/system mismatches" pattern as D028:
+
+1. Order status **auto-derives from Completed Qty**, not a manual
+   picker — recomputed from `sum(completed_qty)` vs `sum(quantity)`
+   every time Completed Qty is saved, and reversible (dropping
+   completed qty back to 0 reverts the status).
+2. New line items can still be added through Confirmed, In
+   Production, and Partially Completed — only Production Completed
+   fully freezes the line list. The "restrictions" applied to In
+   Production/Partially Completed are exactly the doc's other two
+   rules (no removing a line with `completed_qty > 0`; quantity
+   can't drop below `completed_qty`), not a separate new mechanic.
+
+`adjust_order_items()`'s Production Completed branch never parses
+`p_lines` at all, rather than validating submitted lines match the
+existing set — simpler, and makes line-item changes structurally
+impossible at that status instead of relying on a check. No new
+UI was built for Notes/Shipping-only editing at Production
+Completed; the existing Edit Order page is reused with its Line
+Items card disabled, since Payments were already status-independent
+via the pre-existing Add Payment dialog.
+
+## D031
+
+**Operations nav restructure (2026-07-06):** the sidebar's flat
+Inventory/Purchasing/Orders subgroups under "Operations" were
+reorganized into three subgroups — **Management** (master data:
+Customer, Supplier, Item List, Item Category*, Product Modifier*,
+Couriers, Stores*), **Orders** (Quotation, Active Orders, Production,
+Shipping*, Payment*, Completed Orders), and **Inventory** (Inventory
+Status*, Item Adjustment, Stock Movement, Purchase Orders, Receiving)
+— per Sinag's request. `*` = new blank placeholder pages, not yet
+built.
+
+This was a **full physical restructure**, not just a nav relabel —
+folders and URLs were moved to match:
+
+- `orders/customers` → `management/customers`
+- `inventory/suppliers` → `management/suppliers`
+- `inventory/items` → `management/items`
+- `orders/couriers` → `management/couriers`
+- `orders/quotes` → `orders/quotation`
+- `orders/order-list` → `orders/active-orders`
+- `orders/production-queue` → `orders/production`
+- `purchasing/purchase-orders` → `inventory/purchase-orders`
+- `purchasing/receiving` → `inventory/receiving`
+- `orders/completed`, `inventory/adjustment`, `inventory/stock-movement`
+  stayed put — already in their target group.
+
+The now-empty `app/dashboard/purchasing/` (a "Coming soon" stub hub
+page, no real content) was deleted. All internal `href`/
+`revalidatePath`/redirect references were updated to match; `tsc
+--noEmit` is clean. Historical `PROGRESS-*.md` entries describing
+work under the old paths were left as-is (they're append-only logs of
+what was true at build time) — only `MODULE_STATUS.md` (a living
+status doc) and each affected `PROGRESS-*.md`'s file list were
+updated to the new paths, with a short dated note added.
+
+## D032
+
+**Orders subgroup reorder + new "Received" item (2026-07-06):** per
+Sinag's follow-up request, the Orders sidebar subgroup order changed
+to Active Orders, Quotation, Received*, Production, Shipping, Payment,
+Completed (`*` = new blank placeholder). Also: "Completed Orders" →
+"Completed" (label only, route unchanged — already
+`/dashboard/orders/completed`).
+
+New blank page `app/dashboard/orders/received/page.tsx` — not yet
+defined what this represents business-wise (distinct from Inventory's
+existing Receiving, which is PO/stock-side); flagged as TBD in
+`MODULE_STATUS.md` until Sinag specifies scope.
+
+## D033
+
+**Production Orders introduced, formally superseding D030's
+production-consumption scope-out (2026-07-07, PS-2):** D030 recorded
+that "Production consumption is out of scope for Inventory Phase 1"
+and that Cancel simply releases the full `reserved_qty` because "there
+is no separate 'consumed' inventory bucket." `PROGRESS-PRODUCTION-
+SHIPPING.md` (PS-2) is that deferred phase — a new `production_orders`
+table now exists, and `start_production()` (replacing the old bare
+`orders.status` flip) does a real Reserved→In Production stock
+transfer per order line, BOM-expanded the same way `create_order`/
+`adjust_order_items`/`cancel_order` already do. This is a partial
+supersession only: the full `completed`/`delivered` alias resolution
+D030 also touched on is deferred to PS-7, not resolved here.
+
+Two build-time decisions, not pre-planned in the kickoff doc:
+
+- **Numbering prefix is `SPR`, not `SPO`.** The kickoff doc's gap
+  analysis cited "the yearly-reset numbering trigger pattern (SQT/
+  SOD/SPO)" as reusable precedent, but `SPO` was already live —
+  it's `purchase_orders.reference`'s prefix (`set_purchase_order_
+  reference()`), unrelated to Production Orders. Caught by querying
+  the live DB for existing prefixes before generating one, per this
+  project's "verify against the live system, not the docs" convention.
+  Production Order Number is `SPRYY-MMDD-0001`.
+- **Order Items link to their Production Order via a plain FK
+  column** (`order_items.production_order_id`, nullable, `ON DELETE
+  SET NULL`), not a junction table. Kickoff decision #2's merge rule
+  (duplicate SKU+modifier lines within one order collapse into one
+  Production Order) is inherently one-to-many from `order_items`'
+  side — each line ends up in exactly one Production Order — so a
+  junction table would have added generality nothing needs yet.
+
+Start Production stays **admin-only** (RPC-internal role check),
+matching the existing `canAdvance` UI gate — not widened as part of
+this phase.
+
+## D034
+
+**Production Order Detail UI + Completed Qty retirement (2026-07-07,
+PS-3):** built the Production Orders list/detail screens on top of
+D033's schema, and retired ORDER-3/D028's manual Completed Qty entry
+now that Production Orders exist to derive it from.
+
+- **"Complete Production Order" lives only on the Production Order
+  Detail page**, not as an inline action in the list. This is a
+  deliberate departure from the old Production Queue it replaces
+  (which had "Mark Completed" directly in the list via a dialog) —
+  the newer Quotes/Active Orders convention of putting mutating
+  actions on the detail page and using the list purely for navigation
+  (`onRowClick`) was followed instead, for consistency with those more
+  recently built screens.
+- **Completed Qty is now read-only** on Order Detail, showing a link
+  to the owning Production Order instead of an editable input. The
+  `update_completed_qty()` RPC was left in the database (not dropped,
+  per the additive-migrations convention) but its only caller
+  (`updateCompletedQty()` in `active-orders/actions.ts`) was deleted —
+  no UI path calls it anymore.
+- `recompute_order_status()` was rewritten in place (not a new
+  function) to derive order status from `production_orders` completion
+  counts instead of raw `sum(order_items.completed_qty)` — same
+  function name/signature, different derivation logic.
+
+Built alongside another session's in-flight PS-4 (Reserved Qty
+override) work touching the same `order-detail.tsx`/`page.tsx` files;
+edits were scoped narrowly and re-verified against the live file
+immediately before each change to avoid clobbering concurrent work.
+
+## D035
+
+**Mark Shipped → Inventory Out, order-level shipping rollup, `completed`
+retired (2026-07-07, PS-7):** closes the `completed`/`delivered` alias
+question left open since D026 and deferred again by D033 — resolved in
+favor of **`delivered`** as the single terminal `orders.status` for both
+pickup and delivery orders. The 2 live rows previously at `'completed'`
+were migrated to `'delivered'`, then `'completed'` was dropped from
+`orders_status_check` entirely (additive-then-subtractive: data first,
+constraint second, in the same migration).
+
+- New `mark_shipment_shipped(p_shipment_id)` (admin/encoder) is the
+  actual inventory-out step PS-6's `create_shipment()` deliberately
+  didn't do. Product lines are BOM-expanded through `item_components`
+  (same union-with-track_stock-filter pattern as `start_production`/
+  `adjust_order_items`/`cancel_order`) and deducted In Production →
+  Out via PS-5's `deduct_stock_out()`; packaging lines are deducted
+  Available → Out directly.
+- **Build-time fix, not pre-planned:** the first version raised on
+  packaging lines whose item has `track_stock = false` (a real test
+  item — `Pkg-Box, Medium 22.5x14x10.3` — configured that way), because
+  `deduct_stock_out()` raises rather than no-ops on untracked items.
+  Fixed by skipping untracked packaging lines in the loop instead of
+  raising, matching the rest of the codebase's convention of silently
+  excluding untracked items from stock movement (`start_production`'s
+  BOM filter, `adjust_order_items`' `v_feasible is null` branch) —
+  caught by testing against live data before assuming the RPC was
+  correct, not by inspection.
+- New `mark_shipment_delivered(p_shipment_id)` (admin/encoder) is the
+  terminal per-shipment transition.
+- New `recompute_shipping_status(p_order_id)` derives the order's
+  status from **all** `order_shipments` rows, mirroring
+  `recompute_order_status()`'s Production Order completion-count
+  pattern: `shipped` once any shipment reaches shipped/delivered,
+  `delivered` once every shipment does. Guarded to only act when the
+  order is currently `ready_for_shipping`/`shipped`, same guard style
+  as `recompute_order_status`, so it can't clobber `on_hold`/
+  `cancelled`/pickup-track orders.
+- Verified live (Supabase MCP, simulated admin JWT): ran
+  `mark_shipment_shipped` on one of two `preparing` shipments against
+  real order `SOD26-0707-0007` — confirmed BOM-expanded deduction
+  (`in_production_qty` 42→12, `in_stock` 83→53), order rolled up to
+  `shipped` (one shipment shipped, one still preparing); the second
+  shipment's attempt correctly raised "Insufficient in_production
+  quantity" (only 12 left, needed 20) and rolled back cleanly, no
+  partial state; a null-role caller was correctly rejected. Separately
+  ran `mark_shipment_delivered` on an already-`shipped` single-shipment
+  order (`SSH26-0706-0002`) and confirmed the order rolled up to
+  `delivered`. `ship_order()`/`mark_delivered()` (the pre-PS-6
+  single-implicit-shipment RPCs) are left in the database untouched —
+  PS-8 is what cuts the UI over to `create_shipment` +
+  `mark_shipment_shipped` + `mark_shipment_delivered`.
+
+`BUSINESS_RULES.md` gained `## Production Orders`, `## Shipments`,
+`## Packaging Materials` sections and a rewritten `## Orders`/`## Quotes`
+in this same phase — those were assigned to PS-2/PS-3/PS-6/PS-1
+respectively in `PROGRESS-PRODUCTION-SHIPPING.md`'s docs table but had
+been left undone through those phases; bundled into this pass rather
+than left inconsistent, since PS-7 was already touching the file for
+its own assigned changes.
+
+## D037
+
+**Auto-advance to Ready for Shipping on production completion (2026-07-07,
+PS-13):** `recompute_order_status()` now sends delivery/null-fulfillment
+orders straight to `ready_for_shipping` the moment every Production Order
+finishes, instead of stopping at `production_completed` and waiting for a
+manual "Mark Ready for Shipping" click. Sinag's explicit request — once
+production is done, a delivery order genuinely has nothing left to decide,
+so the manual gate was pure friction. Pickup orders are **excluded**: they
+still stop at `production_completed` and require a manual `mark_picked_up()`
+click, since that represents a real-world event (the customer physically
+arriving) rather than a pure system state — Sinag confirmed this explicitly
+rather than assuming symmetry with the delivery track.
+
+- The now-permanently-unreachable "Mark Ready for Shipping" button/handler
+  is removed from Order Detail (`order-detail.tsx`/`page.tsx`) and its
+  `markReadyForShipping` wrapper removed from `active-orders/actions.ts`
+  (no caller left) — same treatment `shipOrder`/`markDelivered` got in
+  D036. The underlying `mark_ready_for_shipping()` RPC stays in the
+  database untouched, per this project's additive-migrations convention.
+- One-time backfill in the same migration (`ps13_auto_ready_for_shipping`)
+  pushed the 2 live orders already stuck at `production_completed` with
+  non-pickup fulfillment (`SOD26-0707-0010`, `SOD26-0707-0012`) forward to
+  `ready_for_shipping`, so behavior is consistent for orders that completed
+  production before this shipped.
+- `recompute_order_status()` now writes an `activity_logs` row
+  (`order_ready_for_shipping`) when it auto-advances an order, mirroring
+  the log line the manual button used to write, so the Activity Log panel
+  keeps showing this transition even though no human triggers it anymore.
+
+## D036
+
+**Shipping UI rework (2026-07-07, PS-8):** Order Detail's single
+Shipment card + "Ship Order"/"Mark Delivered" buttons are replaced by a
+Shipments list (`order-shipments.tsx`) showing every `order_shipments`
+row for the order, each with its own Mark Shipped/Mark Delivered
+action, plus an "Add Shipment" dialog wired to PS-6's `create_shipment`
+RPC. `shipOrder`/`markDelivered` are removed from `active-orders/
+actions.ts` (no caller left); the underlying `ship_order`/
+`mark_delivered` RPCs stay in the database per the additive-migrations
+convention (same treatment `update_completed_qty` got in D034).
+
+- **"Add Shipment" only shows while `orders.status = 'ready_for_shipping'`
+  exactly** — matching `create_shipment()`'s existing gate (PS-6)
+  rather than loosening it. Once any shipment on the order is marked
+  Shipped, the order rolls up to `shipped` and the UI stops offering
+  Add Shipment, even if some order lines still have unshipped quantity
+  left. This means every shipment for an order must be planned (though
+  not necessarily executed) while it's still Ready for Shipping — a
+  real workflow constraint inherited from PS-6's design, not loosened
+  here. If Sinag wants to add shipments after the first is already
+  shipped, that requires deliberately relaxing `create_shipment`'s gate
+  — a future decision, not assumed here.
+- **Packaging Materials sub-editor is a small purpose-built row editor**,
+  not a literal reuse of `OrderLineItemsEditor` (ORDER-9) as the
+  original spec's "same interface as the Order Items page" wording
+  might suggest read literally — packaging lines have no price/
+  discount/modifier concept, so reusing that component's full field set
+  would have added dead UI. It mirrors that component's add/remove-row
+  interaction instead (Add Row button, disabled Remove at one row).
+- `lib/supabase/types.ts` regenerated — it predated PS-2 and was
+  missing `shipment_items`/`shipment_packaging_items`/the new RPCs
+  entirely; the new Order Detail queries wouldn't type-check without
+  this.
+- Verified live (Supabase MCP + browser, admin test account): full
+  Add Shipment → Mark Shipped (BOM-expanded stock deduction confirmed
+  via SQL on 3 underlying components) → Mark Delivered cycle, with the
+  order status rolling up `ready_for_shipping → shipped → delivered`
+  at each step. Separately confirmed (direct RPC call, not through the
+  UI) that over-shipping correctly raises and rolls back — the
+  automated preview tooling's `preview_eval`/`preview_click` calls hang
+  behind a blocking native `alert()` on that error path specifically;
+  this is a tooling limitation of the browser-preview harness, not an
+  app bug, and was confirmed not to leave any partial DB state.
+
+## D038
+
+**Payment close semantics — note required for partial close, overpaid treated as tip
+(2026-07-07, PS-16):** Closing an order's payment (`close_order_payment()`) is gated
+by the derived Payment Status bucket, not by `orders.status` — payment closing is a
+separate concept from the fulfillment lifecycle. `Unpaid` cannot be closed (nothing to
+close). `Partially Paid` requires a non-blank note, both client-side and enforced in the
+RPC — Sinag's explicit use case is writing off a balance once a customer stops
+responding after shipment, and a bare close with no explanation would leave no record of
+why. `Paid`/`Overpaid` close freely. Closing while `Overpaid` records the excess
+(`total_paid - total_money`) into a new `orders.tip_amount` column rather than leaving it
+as an ambiguous positive remaining-balance number — Sinag's explicit call that
+overpayment in this business is a customer tip, not a credit to reconcile later.
+
+- No reopen path is built — once closed, a payment stays closed. Flagged as a possible
+  future follow-up if a close ever needs correcting, not built speculatively.
+- New columns `orders.payment_closed_at`/`payment_closed_by`/`payment_close_note`/
+  `tip_amount` (migration `ps16_close_payment`); `lib/supabase/types.ts` regenerated.
+- The existing Payments card (Add Payment dialog + history) was extracted into a shared
+  `OrderPayments` component (`active-orders/[orderNumber]/order-payments.tsx`), reused by
+  both Order Detail and the new dedicated Payment page — same shared-component pattern
+  `OrderShipments` established in PS-15, so there's one implementation of the payment UI,
+  not two.
+- The Payment list (`/dashboard/orders/payment`) row click now goes to a dedicated
+  per-order Payment page instead of the full Order Detail — order/customer info and the
+  Payments card only, no line items or shipping (see `MODULE_STATUS.md`'s rewritten
+  Payment bullet). A read-only, print-friendly Payment Preview page (same convention as
+  the Quotation view, PS-16) was added for showing a customer their itemized remaining
+  balance.
+
+## D039
+
+**Fulfillment type moved from order-level to per-shipment (2026-07-08, PS-17); supersedes
+D036.** Requested by Sinag directly: pickup and delivery should be decided per-shipment in
+the Add Shipment dialog (defaulting to "Ship to Customer" = on), not once for the whole
+order — because a single order can be split across multiple shipments with different
+fulfillment types (some units picked up in person, the rest couriered later).
+
+- New `order_shipments.fulfillment_type` column (`pickup`/`delivery`, default `delivery`)
+  is now the single source of truth for how each shipment record is fulfilled.
+  `orders.fulfillment_method` is **left in the table, unused, on purpose** — removing it
+  was out of scope for this phase and no other code path still depends on it, but whether
+  to repurpose or drop it later is an **open decision**, not resolved here.
+- `recompute_order_status()`'s PS-13 special case (pickup orders stop at
+  `production_completed`) is retired — every order now advances straight to
+  `ready_for_shipping` once production completes, since it may need both pickup and
+  delivery shipments allocated from the same page.
+- New RPC `mark_shipment_picked_up()` — the pickup equivalent of `mark_shipment_shipped()`,
+  but a single atomic step (`shipped_at = delivered_at = now()`) since a pickup is one
+  real-world event, not ship-then-deliver. Reuses the same BOM-expanded stock-out logic
+  (factored into a shared private `_deduct_shipment_stock()` helper) — this is what
+  actually fixes the "pickup never deducts stock" gap the retired whole-order
+  `mark_picked_up()` had (flagged during Quote→Shipping end-to-end testing the same day).
+  The whole-order `mark_picked_up()` RPC and its Order Detail button are retired the same
+  way `ship_order`/`shipOrder` were in D036 — RPC left in the database, UI caller removed.
+- **Pickup shipment numbering uses a new `SSP` prefix**, distinct from delivery's existing
+  `SSH` — Sinag's explicit call, so the two fulfillment types stay visually distinguishable
+  in the numbering scheme itself, not just via a badge. Both prefixes coexist in the same
+  `order_shipments` table going forward; existing `SSH`-numbered delivery rows are
+  unaffected.
+- **This explicitly supersedes D036's "must be planned while Ready for Shipping" gate** —
+  `create_shipment()` now also accepts orders already at `shipped`, since the mixed
+  pickup+delivery use case requires adding shipments incrementally (e.g. 3 units picked up
+  today, the remaining 3 shipped by courier once arranged next week), not all planned
+  up front. Per-line quantity validation inside the RPC already prevents over-allocation,
+  so this introduces no new risk.
+- **Bug caught during verification, fixed same phase:** `recompute_shipping_status()` only
+  counted `order_shipments` rows, not whether the order's full line-item quantity had
+  actually been allocated into a shipment. On a mixed order with one pickup shipment
+  covering 3 of 6 units, marking that one shipment delivered rolled the *entire order* to
+  `delivered` even though 3 units had never been allocated to any shipment. Fixed by also
+  requiring zero remaining unshipped quantity (`sum(order_items.quantity) -
+  sum(shipment_items.quantity_shipped)`) before reaching `delivered`; otherwise the order
+  correctly stays `shipped`.
+
+## D040
+
+**Order-level receiver system retired in favor of per-shipment receiver (2026-07-08,
+PS-18); SSP shipment-number prefix retired.** Requested by Sinag directly, as an
+amendment to PS-17: fulfillment method should be an explicit dropdown (not an implicit
+toggle), receiver should be decided per shipment with three conditions (deliver to the
+registered customer / deliver to someone else / pick up — no receiver), and pickup should
+no longer get a distinct `SSP` number prefix.
+
+- `order_shipments` gains `ships_to_customer boolean` and `receiver_name/phone/
+  address_line1/barangay/city/province/postal_code text`, all nullable, forced null on
+  pickup shipments. `create_shipment()`/`update_shipment()` gained matching
+  `p_ships_to_customer`/`p_receiver_*` params (old 9-arg overloads dropped explicitly —
+  same orphaned-overload trap as D027/PS-17b).
+- The "Ship to Customer" `Toggle` that PS-17 used to double as the fulfillment-type
+  switch is replaced by an explicit `Select` ("Fulfillment Method": Delivery/Pick Up).
+  For `delivery`, a separate "Ships to Customer?" `Toggle` (default on) picks between: a
+  server-side snapshot of the order's registered customer (client input ignored; rejected
+  with an explicit error if the order has no `customer_id`), or a manually entered
+  receiver (name required). `pickup` shipments have no receiver UI at all.
+- **This retires the older order-level receiver system** from the Customer/Shipping
+  feature (`orders.same_as_customer`/`receiver_*`, shown on New/Edit Order and Order
+  Detail) — removed from both forms and from Order Detail's display. The columns are
+  **left in the schema, unused**, same precedent as `fulfillment_method` (D039) — not
+  dropped, since other code paths don't depend on them and dropping was out of scope.
+- **This reverses D039's "SSP is Sinag's explicit call"**: pickup shipments no longer get
+  a distinct prefix — `set_shipment_number()` now always generates `SSH<YY>-<MMDD>-####`
+  regardless of `fulfillment_type`. Existing `SSP`-numbered rows are left as historical
+  records, not renumbered or migrated.
+- Stock-out mechanics (`_deduct_shipment_stock`/`deduct_stock_out`, driven purely by
+  `shipment_items`/`shipment_packaging_items`) are untouched — verified unaffected for
+  all three receiver conditions (see PROGRESS-PRODUCTION-SHIPPING.md PS-18).
+
+**Depends on:** PS-17/D039 (the fulfillment-type-per-shipment model this refines).
+- **Also caught and fixed:** `create or replace function` with a widened parameter list
+  creates a second overload instead of replacing the original when the signature differs.
+  Dropped the orphaned 8-param `create_shipment`/`update_shipment` overloads (same class of
+  issue ORDER-2/D027 hit with `adjust_order_items`).
+- Verified live (browser, admin test account): a pickup-only shipment (`SSP26-0708-0001`,
+  correct stock deduction, single-step Picked Up), a delivery-only shipment (regression,
+  unchanged), and a mixed order (3 units picked up + 3 units delivered later once "Add
+  Shipment" reappeared at `shipped` status) all rolled up to `delivered` only once truly
+  complete, with stock deducted correctly for both fulfillment types. Editing a `preparing`
+  shipment and flipping its type preserves already-entered product-line quantities (no
+  lines lost on toggle).
