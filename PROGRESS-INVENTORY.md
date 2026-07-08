@@ -177,8 +177,55 @@ Source doc: `Inventory-Status-Phase1-Kickoff.md` (repo root).
 
 ---
 
+## INV-10 — Move Inventory Monitoring to `/dashboard/inventory/status` ✅ DONE (2026-07-08)
+
+**Status:** Complete 2026-07-08.
+
+**Found while scoping this phase:** the sidebar nav (`app-shell.tsx`) already pointed **"Inventory Status" → `/dashboard/inventory/status`**, which was a `"Coming soon"` stub — the real Inventory Monitoring table (built in INV-4) lived at `/dashboard/inventory` (root), a route nothing in the nav actually linked to. Orphaned since INV-4; not caught until this phase.
+
+**What was built:** moved `page.tsx` + `inventory-monitoring-table.tsx` from `app/dashboard/inventory/` into `app/dashboard/inventory/status/`, replacing the stub. Root `app/dashboard/inventory/page.tsx` is now a `redirect("/dashboard/inventory/status")` (kept alive rather than deleted, per Sinag's call, in case of old bookmarks/links).
+
+**Verified live:** browser preview — visiting `/dashboard/inventory` redirects to `/status`; the real table renders there.
+
+---
+
+## INV-11 — Removed manual Move Stock / Adjust Incoming actions ✅ DONE (2026-07-08)
+
+**Status:** Complete 2026-07-08.
+
+**Scope confirmed before building:** the ask marked both action buttons (not just Adjust Incoming) for removal. Checked whether removing "Move Stock" (generic `transfer_stock_status` between the 4 held buckets) would strand any bucket with no other path to reach it — it wouldn't: Reserved is order-driven, In Production is `start_production`/`complete_production_order`-driven, On Hold already has its own dedicated release flow (Items for Review → `release-form.tsx`, calls `transfer_stock_status` directly) and is populated by `hold_order`/`cancel_production_order`, and Available/Incoming become PO-driven per INV-12. No manual escape hatch was load-bearing.
+
+**What was built:** removed the actions column, `MoveStockDialog`/`AdjustIncomingDialog` usage, and `canAdjust` prop from `inventory-monitoring-table.tsx` (now at `status/`). Deleted the now-dead `app/dashboard/inventory/actions.ts` (`transferStockStatus`/`adjustIncomingQty` wrappers) and `stock-status-dialogs.tsx`. Per this project's additive-migrations convention (D036/PS-6/PS-8 precedent), the underlying `transfer_stock_status()`/`adjust_incoming_qty()` RPCs were left in the database untouched — only the UI callers were removed.
+
+**Verified live:** browser preview + direct DOM inspection — the Status table renders exactly the 10 spec'd columns with no trailing actions column.
+
+---
+
+## INV-12 — Incoming linked to Purchase Order lifecycle (Sent → Incoming, Received → Available) ✅ DONE (2026-07-08)
+
+**Status:** Complete 2026-07-08.
+
+**Bug found during scoping (fixed as part of this phase, not optional):** `incoming_qty` had zero connection to Purchase Orders before this — it was only ever written by the manual `adjust_incoming_qty` RPC removed in INV-11. Worse, tracing the actual receive path (`receive_purchase_order()` → inserts `incoming_items` → trigger `apply_incoming_item_inventory_movement()`) showed the trigger only incremented the legacy `in_stock` column — **never `available_qty`**. Since INV-1 made `available_qty` the sellable gate (order confirmation reads it, not `in_stock`), receiving a PO never actually made stock available for sale. Fixing this was required to make "received → available" mean anything.
+
+**Scope decision — Sinag's call required and given:** two designs were possible for the Incoming number: (a) live-compute it at read time as `SUM(quantity_ordered - quantity_received)` across `purchase_order_items` joined to `purchase_orders` where `status IN ('sent','partial')`, or (b) keep `inventory_levels.incoming_qty` as a stored column kept in sync via triggers on PO/line mutations. **Sinag picked (a)** — consistent with the "live rollup, not frozen snapshot" fix already made in INV-9, and avoiding another stored/derived-state drift class after INV-7/8/9 all turned out to be exactly that failure mode. Consequence: `inventory_levels.incoming_qty` (the stored column) is no longer read or written by the app anywhere — left in the schema untouched (additive-only convention), just inert going forward.
+
+**What was built:**
+- Migration `inv10_receive_po_bumps_available_qty`: `apply_incoming_item_inventory_movement()` now upserts `available_qty` alongside `in_stock` (same delta), mirroring `adjust_stock()`'s existing pattern. `quantity_before`/`quantity_after` on the movement row still track `in_stock` (unchanged), consistent with how `adjust_stock()` already does this even though both columns move together.
+- `app/dashboard/inventory/status/page.tsx`: added a second query aggregating outstanding PO quantity per `variant_id` (`purchase_orders!inner(status)` filtered to `sent`/`partial`), merged into each row's `incoming_qty` in place of the old `inventory_levels.incoming_qty` read.
+
+**Known limitation, not introduced by this change:** `purchase_orders.store_id` exists but is never set by `createPurchaseOrderWithItems` (always `NULL`), and the receiving trigger has always resolved store as "first active store" rather than the PO's own store. Incoming is attributed to a variant's existing `inventory_levels` row regardless of store, matching this pre-existing convention. Harmless today (exactly one store, `CPR-B13L82`, exists) but will need real wiring if a second store is ever added.
+
+**Verified live (real test-data PO, not synthetic):** `SPO-2026-07070001` (status `sent`, 25× `SUIV-0001` + 15× `SUIV-0003` ordered, 0 received) — Status page correctly showed Incoming=25 for `SUIV-0001` before touching anything, confirming the live query. Received 10 of the 25 `SUIV-0001` units through the real Receiving UI (`/dashboard/inventory/receiving/SPO-2026-07070001`):
+- PO status → `partial` (10/25 + 0/15 received), Receiving Log shows `SRI26-0708-0014`.
+- Status page: Available 209→219, Incoming 25→15, On Hand 209→219, **Projected stayed flat at 234** — confirms stock moved from Incoming to Available rather than being double-counted.
+- Direct Postgres: `in_stock=219`, `available_qty=219` (both moved together), `inventory_movements` row `movement_type='incoming', status='available', quantity_before=209, quantity_after=219`.
+- Left as real partial-receipt data rather than reversed — per `project_test_data_status` this is test data, and this was a real domain action (a genuine partial PO receipt) through the normal app pathway, not a synthetic RPC probe like INV-1/INV-6's tests.
+
+---
+
 ## Open / deferred (not blocking this phase)
 
 - Wiring the generated `Database` type into `lib/supabase/client.ts`/`server.ts` and the ~23 call sites (INV-2) — separate follow-up, not part of Phase 1.
 - The 7 pre-existing negative-`in_stock` rows (raw-material `Inv-` items) — flagged, clamped to `available_qty=0`, but the underlying `in_stock` data-quality issue itself is untouched. Needs a separate physical-count/adjustment pass.
-- All the Phase 1 non-goals from the kickoff doc remain out of scope: Sales Order auto-reservation, PO receiving (Incoming→Available), Production Order consumption, any automatic/trigger-driven status transitions, cross-store aggregation.
+- `purchase_orders.store_id` is never set on creation and the receive trigger ignores it (see INV-12) — needs real wiring (a store selector on the PO form) once this project has more than one active store.
+- Remaining Phase 1 non-goals from the kickoff doc still out of scope: Sales Order auto-reservation, Production Order consumption, any automatic/trigger-driven status transitions, cross-store aggregation.

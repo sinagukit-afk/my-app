@@ -1,11 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { MoveStockDialog, AdjustIncomingDialog } from "./stock-status-dialogs";
 
 export type InventoryMonitoringRow = {
   id: string;
@@ -30,13 +27,9 @@ function formatQty(value: number) {
 
 type Props = {
   data: InventoryMonitoringRow[];
-  canAdjust: boolean;
 };
 
-export function InventoryMonitoringTable({ data, canAdjust }: Props) {
-  const [moveStockRow, setMoveStockRow] = useState<InventoryMonitoringRow | null>(null);
-  const [adjustIncomingRow, setAdjustIncomingRow] = useState<InventoryMonitoringRow | null>(null);
-
+export function InventoryMonitoringTable({ data }: Props) {
   const columns: Column<InventoryMonitoringRow>[] = [
     {
       key: "item_name",
@@ -95,23 +88,6 @@ export function InventoryMonitoringTable({ data, canAdjust }: Props) {
     },
   ];
 
-  if (canAdjust) {
-    columns.push({
-      key: "variant_id",
-      header: "",
-      render: (_v, row) => (
-        <div className="flex items-center gap-3">
-          <Button variant="link" size="sm" onClick={() => setMoveStockRow(row)}>
-            Move Stock
-          </Button>
-          <Button variant="link" size="sm" onClick={() => setAdjustIncomingRow(row)}>
-            Adjust Incoming
-          </Button>
-        </div>
-      ),
-    });
-  }
-
   return (
     <div className="space-y-4">
       <PageHeader
@@ -125,17 +101,6 @@ export function InventoryMonitoringTable({ data, canAdjust }: Props) {
         searchPlaceholder="Search inventory…"
         emptyMessage="No tracked inventory found"
         emptyDescription="Items with stock tracking enabled will appear here."
-      />
-
-      <MoveStockDialog
-        open={moveStockRow !== null}
-        onOpenChange={(open) => !open && setMoveStockRow(null)}
-        row={moveStockRow}
-      />
-      <AdjustIncomingDialog
-        open={adjustIncomingRow !== null}
-        onOpenChange={(open) => !open && setAdjustIncomingRow(null)}
-        row={adjustIncomingRow}
       />
     </div>
   );
