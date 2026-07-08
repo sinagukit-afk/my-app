@@ -1926,6 +1926,7 @@ export type Database = {
           created_at: string
           email: string | null
           full_name: string | null
+          function_title: string
           id: string
           role: Database["public"]["Enums"]["user_role"]
         }
@@ -1935,6 +1936,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           full_name?: string | null
+          function_title?: string
           id: string
           role?: Database["public"]["Enums"]["user_role"]
         }
@@ -1944,6 +1946,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           full_name?: string | null
+          function_title?: string
           id?: string
           role?: Database["public"]["Enums"]["user_role"]
         }
@@ -2734,28 +2737,34 @@ export type Database = {
         Row: {
           address: string | null
           created_at: string
+          email: string | null
           id: string
           is_active: boolean
           loyverse_store_id: string | null
           name: string
+          phone: string | null
           updated_at: string
         }
         Insert: {
           address?: string | null
           created_at?: string
+          email?: string | null
           id?: string
           is_active?: boolean
           loyverse_store_id?: string | null
           name: string
+          phone?: string | null
           updated_at?: string
         }
         Update: {
           address?: string | null
           created_at?: string
+          email?: string | null
           id?: string
           is_active?: boolean
           loyverse_store_id?: string | null
           name?: string
+          phone?: string | null
           updated_at?: string
         }
         Relationships: []

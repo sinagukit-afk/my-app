@@ -13,6 +13,18 @@ function peso(n: number) {
   return `₱${n.toFixed(2)}`;
 }
 
+function modifierValue(nameSnapshot: string) {
+  const idx = nameSnapshot.indexOf(": ");
+  return idx === -1 ? nameSnapshot : nameSnapshot.slice(idx + 2);
+}
+
+function paymentStatus(totalPaid: number, totalMoney: number) {
+  if (totalPaid <= 0) return "Unpaid";
+  if (totalPaid < totalMoney) return "Partially Paid";
+  if (totalPaid > totalMoney) return "Overpaid";
+  return "Paid";
+}
+
 export default async function PaymentPreviewPage({ params }: { params: Promise<{ orderNumber: string }> }) {
   const { orderNumber } = await params;
   const supabase = await createClient();
@@ -20,16 +32,21 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, order_number, status, created_at, total_money, subtotal, total_discount, store_id, customers(name, phone_number, address_line1, barangay, city, province), order_items(id, item_name_snapshot, sku_snapshot, quantity, unit_price, line_discount, order_item_modifiers(name_snapshot, price_snapshot))"
+      "id, order_number, status, created_at, total_money, subtotal, total_discount, store_id, created_by, customers(name, phone_number, address_line1, barangay, city, province), order_items(id, item_name_snapshot, sku_snapshot, quantity, unit_price, line_discount, order_item_modifiers(name_snapshot, price_snapshot)), preparer:profiles!orders_created_by_fkey(full_name, function_title)"
     )
     .eq("order_number", orderNumber)
     .single();
 
   if (!order) notFound();
 
-  const { data: store } = order.store_id
-    ? await supabase.from("stores").select("name, address").eq("id", order.store_id).single()
-    : { data: null };
+  const { data: store } = await supabase
+    .from("stores")
+    .select("address, phone, email")
+    .eq("is_active", true)
+    .limit(1)
+    .maybeSingle();
+
+  const preparer = firstOf(order.preparer);
 
   const { data: paymentsData } = await supabase
     .from("order_payments")
@@ -47,6 +64,7 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
   const totalMoney = Number(order.total_money);
   const remainingBalance = Math.max(0, totalMoney - totalPaid);
   const overpaid = Math.max(0, totalPaid - totalMoney);
+  const paymentStatusLabel = paymentStatus(totalPaid, totalMoney);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -59,8 +77,10 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
       <Card>
         <CardContent className="space-y-6 p-8">
           <div>
-            <p className="text-lg font-semibold text-(--color-text)">{store?.name ?? "Sinag Ukit"}</p>
-            {store?.address && <p className="text-sm text-(--color-text-muted)">{store.address}</p>}
+            <p className="text-lg font-semibold text-(--color-text)">Sinag Ukit</p>
+            {store?.address && <p className="text-sm text-(--color-text-muted)">Address: {store.address}</p>}
+            {store?.phone && <p className="text-sm text-(--color-text-muted)">Phone: {store.phone}</p>}
+            {store?.email && <p className="text-sm text-(--color-text-muted)">Email: {store.email}</p>}
           </div>
 
           <div className="flex justify-between border-t border-(--color-border) pt-4">
@@ -73,8 +93,8 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
               <p className="text-sm text-(--color-text)">{order.created_at.slice(0, 10)}</p>
             </div>
             <div>
-              <p className="text-xs uppercase text-(--color-text-muted)">Status</p>
-              <p className="text-sm capitalize text-(--color-text)">{order.status.replace(/_/g, " ")}</p>
+              <p className="text-xs uppercase text-(--color-text-muted)">Payment Status</p>
+              <p className="text-sm text-(--color-text)">{paymentStatusLabel}</p>
             </div>
           </div>
 
@@ -86,15 +106,14 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
           </div>
 
           <div className="border-t border-(--color-border) pt-4">
-            <table className="w-full text-sm">
+            <table className="w-full table-fixed text-sm">
               <thead>
                 <tr className="border-b border-(--color-border) text-left text-xs uppercase text-(--color-text-muted)">
                   <th className="py-2">Item</th>
-                  <th className="py-2">Qty</th>
-                  <th className="py-2">Unit Price</th>
-                  <th className="py-2">Modifier</th>
-                  <th className="py-2">Discount</th>
-                  <th className="py-2 text-right">Line Total</th>
+                  <th className="w-[12%] py-2">Qty</th>
+                  <th className="w-[12%] py-2">Unit Price</th>
+                  <th className="w-[12%] py-2">Discount</th>
+                  <th className="w-[12%] py-2 text-right">Line Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -103,21 +122,23 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
                     (sum, m) => sum + Number(m.price_snapshot),
                     0
                   );
+                  const unitPriceWithModifier = Number(item.unit_price) + modifierTotal;
                   const total = Math.max(
                     0,
-                    Number(item.quantity) * (Number(item.unit_price) + modifierTotal) - Number(item.line_discount)
+                    Number(item.quantity) * unitPriceWithModifier - Number(item.line_discount)
                   );
                   return (
                     <tr key={item.id} className="border-b border-(--color-border) last:border-0">
                       <td className="py-2 text-(--color-text)">
                         {item.item_name_snapshot}
-                        {item.sku_snapshot ? ` (${item.sku_snapshot})` : ""}
+                        {(item.order_item_modifiers ?? []).length > 0 && (
+                          <p className="text-xs text-(--color-text-muted)">
+                            {(item.order_item_modifiers ?? []).map((m) => modifierValue(m.name_snapshot)).join(", ")}
+                          </p>
+                        )}
                       </td>
                       <td className="py-2 text-(--color-text)">{item.quantity}</td>
-                      <td className="py-2 text-(--color-text)">{peso(Number(item.unit_price))}</td>
-                      <td className="py-2 text-(--color-text-muted)">
-                        {(item.order_item_modifiers ?? []).map((m) => m.name_snapshot).join(", ") || "—"}
-                      </td>
+                      <td className="py-2 text-(--color-text)">{peso(unitPriceWithModifier)}</td>
                       <td className="py-2 text-(--color-text-muted)">
                         {Number(item.line_discount) > 0 ? peso(Number(item.line_discount)) : "—"}
                       </td>
@@ -182,7 +203,7 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
             </div>
             {overpaid > 0 ? (
               <div className="flex justify-between font-medium text-(--color-text)">
-                <span>Overpaid (tip)</span>
+                <span>Service Tip</span>
                 <span>{peso(overpaid)}</span>
               </div>
             ) : (
@@ -191,6 +212,20 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
                 <span>{peso(remainingBalance)}</span>
               </div>
             )}
+          </div>
+
+          <div className="border-t border-(--color-border) pt-4">
+            <p className="text-xs uppercase text-(--color-text-muted)">Prepared by</p>
+            <p className="text-sm font-medium text-(--color-text)">{preparer?.full_name ?? "—"}</p>
+            {preparer?.function_title && (
+              <p className="text-sm text-(--color-text-muted)">{preparer.function_title}</p>
+            )}
+          </div>
+
+          <div className="border-t border-(--color-border) pt-4">
+            <p className="text-xs text-(--color-text-muted)">
+              Note: No signature required, electronically prepared.
+            </p>
           </div>
         </CardContent>
       </Card>

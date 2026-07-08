@@ -97,3 +97,11 @@ to `app/dashboard/orders/quotation` as part of the Operations nav
 restructure (sidebar label also changed "Quotes" → "Quotation"). File
 names/contents unchanged, only the route + physical folder moved. See
 `DECISIONS.md` D031.
+
+**2026-07-08 — Quote Preview document redesign:** the customer-facing View
+page (QUOTE-4) was reworked alongside the Payment Preview page — SKU/modifier
+column removed, company header (name/address/phone/email) and a new
+"Prepared by" + footer note added. Full writeup lives in
+`PROGRESS-PRODUCTION-SHIPPING.md`'s PS-19 (that's where the matching Payment
+Preview change also landed, and where the new `stores.phone/email` +
+`profiles.function_title` migrations are documented).

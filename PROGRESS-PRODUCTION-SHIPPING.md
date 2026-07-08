@@ -4,7 +4,7 @@ Tracks the **Production Orders + Shipments + Packaging** build for Sinag Ukit BM
 
 Source doc: Orders Module Specification (handed over by Sinag in chat, 2026-07-07), assessed against the live app before any build — see the assessment in this session's transcript for the full comparison. This is the deferred inventory-consumption phase D025/D030 both pointed at ("Production consumption is out of scope for Inventory Phase 1... revisit in a future order page revision phase") — this plan **is** that phase, and building it means formally superseding D030's scope-out, not silently ignoring it.
 
-**Status: 🟩 DONE.** PS-1 through PS-10, plus PS-12, PS-13, PS-15, PS-16, PS-17, PS-18 (follow-on requests), complete.
+**Status: 🟩 DONE.** PS-1 through PS-10, plus PS-12, PS-13, PS-15, PS-16, PS-17, PS-18, PS-19 (follow-on requests), complete.
 
 ---
 
@@ -422,6 +422,35 @@ Detail with no console errors, confirming legacy data is unaffected.
 
 **Depends on:** PS-17/D039 (the per-shipment fulfillment-type model this refines).
 Independent of everything else in this doc.
+
+---
+
+## PS-19 — Quote Preview / Payment Preview document redesign ✅ DONE (2026-07-08)
+
+**Requested by Sinag directly (2026-07-08)**, iterative revisions against a screenshot of the live Quote Preview page, then extended to the Payment Preview page (which was already modeled directly on Quote Preview per PS-16) for consistency.
+
+**What changed, both pages** (`app/dashboard/orders/quotation/[quoteNumber]/view/page.tsx`, `app/dashboard/orders/payment/[orderNumber]/preview/page.tsx`):
+- SKU dropped from the item name cell.
+- Modifier column removed from the line-items table; modifier value now renders as a small muted line under the item name instead, and only the option value is shown (`modifierValue()` helper strips the `"Group: "` prefix off `name_snapshot`, e.g. `"Ref Magnet: Simple Text"` → `"Simple Text"`).
+- Unit Price column now shows unit price **plus** the summed modifier price (`unitPriceWithModifier`), not unit price alone — Line Total math unchanged, just no longer silently hiding the modifier's contribution.
+- Qty/Unit Price/Discount/Line Total columns given equal fixed widths (`table-fixed`, each `w-[12%]`) so they align as a clean grid instead of auto-sizing to content.
+- Company header now shows a literal "Sinag Ukit" name (not `stores.name`, which holds the Loyverse store code `CPR-B13L82`) plus Address/Phone/Email, sourced from the (single) active store row rather than gated on `quote.store_id`/`order.store_id` — both of which turned out to never be populated by their respective create flows, so the original `store_id ? fetch : null` conditional silently produced no company details at all. Fetches `stores` by `is_active = true` instead.
+- New "Prepared by" section: creator's `full_name` plus a new `function_title` field (see migration below), joined via `profiles!quotes_created_by_fkey` / `profiles!orders_created_by_fkey`.
+- New footer line: "Note: No signature required, electronically prepared."
+
+**Payment Preview only:**
+- The "Status" field (previously the order's fulfillment `status`, e.g. "Delivered") is now labeled "Payment Status" and shows the same computed Unpaid/Partially Paid/Paid/Overpaid bucket already used by the Payment list page (`paymentStatus()` in `payment/page.tsx`) — duplicated locally rather than shared across the two files (already the existing local-helper pattern here, e.g. `peso()`/`firstOf()`).
+- The old "Overpaid (tip)" summary label renamed to "Service Tip" per Sinag's direct correction.
+
+**Migrations** (`add_store_phone_and_profile_function_title`, `add_store_email`):
+- `stores.phone`, `stores.email` (new nullable columns) — data backfilled on the one live store row (`name = 'CPR-B13L82'`): address `"Brgy. Makiling, Calamba City, Laguna, PH"`, phone `"0923-430-0026"`, email `"sinagukit@gmail.com"`.
+- `profiles.function_title text not null default 'employee'` — a new **job-function** field, explicitly distinct from the `role` permission enum (admin/encoder/manager/cashier/viewer). No UI to edit it yet; defaults to `'employee'` for every existing profile. Sinag's own note when requesting this: "function is different from roles... for now default are employee."
+
+**Verified (browser preview, Claude admin test account):** both preview pages re-checked end-to-end via accessibility snapshot after each round of changes — SKU absent, modifier column absent, modifier value shows the stripped option text, Unit Price includes modifier price (confirmed against a case with a non-zero modifier price via the Payment Preview's ₱99.00-discount line), all four numeric columns measured at equal width via `preview_inspect` (84.23px each), company header shows Sinag Ukit/Address/Phone/Email on both pages, Prepared By shows the real creator (`profiles.full_name`) and `employee` function, footer note present, Payment Preview's Payment Status correctly computed "Overpaid" against real Total Paid vs Order Total, "Service Tip" label confirmed replacing "Overpaid (tip)".
+
+**Not built:** a settings/admin UI to edit `stores.address/phone/email` or `profiles.function_title` — both are DB-only for now, edited directly via migration/SQL since there's a single store and function_title has no assigned values yet beyond the default.
+
+**Depends on:** PS-16 (created the Payment Preview page this also touches). Independent of everything else in this doc.
 
 ---
 

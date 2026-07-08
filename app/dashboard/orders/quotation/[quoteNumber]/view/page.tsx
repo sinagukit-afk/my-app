@@ -13,6 +13,11 @@ function peso(n: number) {
   return `₱${n.toFixed(2)}`;
 }
 
+function modifierValue(nameSnapshot: string) {
+  const idx = nameSnapshot.indexOf(": ");
+  return idx === -1 ? nameSnapshot : nameSnapshot.slice(idx + 2);
+}
+
 export default async function QuoteViewPage({ params }: { params: Promise<{ quoteNumber: string }> }) {
   const { quoteNumber } = await params;
   const supabase = await createClient();
@@ -20,18 +25,22 @@ export default async function QuoteViewPage({ params }: { params: Promise<{ quot
   const { data: quote } = await supabase
     .from("quotes")
     .select(
-      "quote_number, status, quote_date, valid_until, note, subtotal, total_discount, total_money, store_id, customers(name, phone_number, email, address_line1, barangay, city, province), quote_items(id, item_name_snapshot, sku_snapshot, quantity, unit_price, discount_id, line_discount, quote_item_modifiers(name_snapshot, price_snapshot))"
+      "quote_number, status, quote_date, valid_until, note, subtotal, total_discount, total_money, store_id, created_by, customers(name, phone_number, email, address_line1, barangay, city, province), quote_items(id, item_name_snapshot, sku_snapshot, quantity, unit_price, discount_id, line_discount, quote_item_modifiers(name_snapshot, price_snapshot)), preparer:profiles!quotes_created_by_fkey(full_name, function_title)"
     )
     .eq("quote_number", quoteNumber)
     .single();
 
   if (!quote) notFound();
 
-  const { data: store } = quote.store_id
-    ? await supabase.from("stores").select("name, address").eq("id", quote.store_id).single()
-    : { data: null };
+  const { data: store } = await supabase
+    .from("stores")
+    .select("address, phone, email")
+    .eq("is_active", true)
+    .limit(1)
+    .maybeSingle();
 
   const customer = firstOf(quote.customers);
+  const preparer = firstOf(quote.preparer);
   const customerAddress = [customer?.address_line1, customer?.barangay, customer?.city, customer?.province]
     .filter(Boolean)
     .join(", ");
@@ -47,8 +56,10 @@ export default async function QuoteViewPage({ params }: { params: Promise<{ quot
       <Card>
         <CardContent className="space-y-6 p-8">
           <div>
-            <p className="text-lg font-semibold text-(--color-text)">{store?.name ?? "Sinag Ukit"}</p>
-            {store?.address && <p className="text-sm text-(--color-text-muted)">{store.address}</p>}
+            <p className="text-lg font-semibold text-(--color-text)">Sinag Ukit</p>
+            {store?.address && <p className="text-sm text-(--color-text-muted)">Address: {store.address}</p>}
+            {store?.phone && <p className="text-sm text-(--color-text-muted)">Phone: {store.phone}</p>}
+            {store?.email && <p className="text-sm text-(--color-text-muted)">Email: {store.email}</p>}
           </div>
 
           <div className="flex justify-between border-t border-(--color-border) pt-4">
@@ -78,15 +89,14 @@ export default async function QuoteViewPage({ params }: { params: Promise<{ quot
           </div>
 
           <div className="border-t border-(--color-border) pt-4">
-            <table className="w-full text-sm">
+            <table className="w-full table-fixed text-sm">
               <thead>
                 <tr className="border-b border-(--color-border) text-left text-xs uppercase text-(--color-text-muted)">
                   <th className="py-2">Item</th>
-                  <th className="py-2">Qty</th>
-                  <th className="py-2">Unit Price</th>
-                  <th className="py-2">Modifier</th>
-                  <th className="py-2">Discount</th>
-                  <th className="py-2 text-right">Line Total</th>
+                  <th className="w-[12%] py-2">Qty</th>
+                  <th className="w-[12%] py-2">Unit Price</th>
+                  <th className="w-[12%] py-2">Discount</th>
+                  <th className="w-[12%] py-2 text-right">Line Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -95,21 +105,23 @@ export default async function QuoteViewPage({ params }: { params: Promise<{ quot
                     (sum, m) => sum + Number(m.price_snapshot),
                     0
                   );
+                  const unitPriceWithModifier = Number(item.unit_price) + modifierTotal;
                   const total = Math.max(
                     0,
-                    Number(item.quantity) * (Number(item.unit_price) + modifierTotal) - Number(item.line_discount)
+                    Number(item.quantity) * unitPriceWithModifier - Number(item.line_discount)
                   );
                   return (
                     <tr key={item.id} className="border-b border-(--color-border) last:border-0">
                       <td className="py-2 text-(--color-text)">
                         {item.item_name_snapshot}
-                        {item.sku_snapshot ? ` (${item.sku_snapshot})` : ""}
+                        {(item.quote_item_modifiers ?? []).length > 0 && (
+                          <p className="text-xs text-(--color-text-muted)">
+                            {(item.quote_item_modifiers ?? []).map((m) => modifierValue(m.name_snapshot)).join(", ")}
+                          </p>
+                        )}
                       </td>
                       <td className="py-2 text-(--color-text)">{item.quantity}</td>
-                      <td className="py-2 text-(--color-text)">{peso(Number(item.unit_price))}</td>
-                      <td className="py-2 text-(--color-text-muted)">
-                        {(item.quote_item_modifiers ?? []).map((m) => m.name_snapshot).join(", ") || "—"}
-                      </td>
+                      <td className="py-2 text-(--color-text)">{peso(unitPriceWithModifier)}</td>
                       <td className="py-2 text-(--color-text-muted)">
                         {Number(item.line_discount) > 0 ? peso(Number(item.line_discount)) : "—"}
                       </td>
@@ -142,6 +154,20 @@ export default async function QuoteViewPage({ params }: { params: Promise<{ quot
               <p className="text-sm text-(--color-text)">{quote.note}</p>
             </div>
           )}
+
+          <div className="border-t border-(--color-border) pt-4">
+            <p className="text-xs uppercase text-(--color-text-muted)">Prepared by</p>
+            <p className="text-sm font-medium text-(--color-text)">{preparer?.full_name ?? "—"}</p>
+            {preparer?.function_title && (
+              <p className="text-sm text-(--color-text-muted)">{preparer.function_title}</p>
+            )}
+          </div>
+
+          <div className="border-t border-(--color-border) pt-4">
+            <p className="text-xs text-(--color-text-muted)">
+              Note: No signature required, electronically prepared.
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>
