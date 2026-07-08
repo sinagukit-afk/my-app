@@ -332,3 +332,12 @@ Composite item push (task 5) and modifier no-push (task 6) are handled as design
 - Bulk CSV import/export — deferred.
 - `discounts` table — pulled as a side effect of ITEM-0, unused. Decide later if/how it's used.
 - Production/Disassembly workflow (Loyverse Advanced Inventory) — explicitly out of scope, revisit only if the Advanced Inventory subscription is ever purchased.
+
+---
+
+**2026-07-06 — path update (D031):** `app/dashboard/inventory/items` moved
+to `app/dashboard/management/items` as part of the Operations nav
+restructure (new Management/Orders/Inventory sidebar groups; Item List now
+sits alongside Customer/Supplier/Couriers under Management). File names/
+contents unchanged, only the route + physical folder moved. See
+`DECISIONS.md` D031.
