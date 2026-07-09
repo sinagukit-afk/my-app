@@ -27,6 +27,6 @@ export async function receivePurchaseOrder(
   revalidatePath('/dashboard/inventory/receiving')
   revalidatePath(`/dashboard/inventory/purchase-orders/${reference}`)
   revalidatePath('/dashboard/inventory/purchase-orders')
-  revalidatePath('/dashboard/inventory/stock-movement')
+  revalidatePath('/dashboard/inventory/monitoring')
   return { success: true }
 }

@@ -7,11 +7,14 @@ import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 
 /* ── Nav config ─────────────────────────────────────────────── */
+type NavCountKey = "purchaseOrders" | "receiving" | "itemsForReview";
+
 type NavLeaf = {
   kind: "item";
   label: string;
   href: string;
   icon: React.FC<{ className?: string }>;
+  countKey?: NavCountKey;
 };
 
 type NavSubGroup = {
@@ -68,12 +71,11 @@ const NAV: NavEntry[] = [
         kind: "subgroup",
         label: "Inventory",
         children: [
-          { kind: "item", label: "Inventory Status", href: "/dashboard/inventory/status", icon: LayersIcon },
-          { kind: "item", label: "Items for Review", href: "/dashboard/inventory/items-for-review", icon: LayersIcon },
+          { kind: "item", label: "Inventory Monitoring", href: "/dashboard/inventory/monitoring", icon: LayersIcon },
+          { kind: "item", label: "Purchase Order", href: "/dashboard/inventory/purchase-orders", icon: LayersIcon, countKey: "purchaseOrders" },
+          { kind: "item", label: "Inventory Receiving", href: "/dashboard/inventory/receiving", icon: LayersIcon, countKey: "receiving" },
+          { kind: "item", label: "Items for Review", href: "/dashboard/inventory/items-for-review", icon: LayersIcon, countKey: "itemsForReview" },
           { kind: "item", label: "Item Adjustment", href: "/dashboard/inventory/adjustment", icon: LayersIcon },
-          { kind: "item", label: "Stock Movement", href: "/dashboard/inventory/stock-movement", icon: LayersIcon },
-          { kind: "item", label: "Purchase Orders", href: "/dashboard/inventory/purchase-orders", icon: LayersIcon },
-          { kind: "item", label: "Receiving", href: "/dashboard/inventory/receiving", icon: LayersIcon },
         ],
       },
     ],
@@ -312,11 +314,13 @@ function NavItemRow({
   active,
   collapsed,
   indent,
+  count,
 }: {
   leaf: NavLeaf;
   active: boolean;
   collapsed: boolean;
   indent?: boolean;
+  count?: number;
 }) {
   const Icon = leaf.icon;
   return (
@@ -333,7 +337,23 @@ function NavItemRow({
       )}
     >
       <Icon className={cn("h-4 w-4 shrink-0", active ? "text-(--color-primary)" : "text-(--color-text-subtle)")} />
-      {!collapsed && <span>{leaf.label}</span>}
+      {!collapsed && (
+        <>
+          <span className="flex-1 truncate">{leaf.label}</span>
+          {!!count && (
+            <span
+              className={cn(
+                "inline-flex h-4.5 min-w-4.5 shrink-0 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums",
+                active
+                  ? "bg-(--color-primary) text-(--color-primary-fg)"
+                  : "bg-(--color-border-strong) text-(--color-text-muted)"
+              )}
+            >
+              {count > 99 ? "99+" : count}
+            </span>
+          )}
+        </>
+      )}
     </Link>
   );
 }
@@ -344,9 +364,10 @@ interface AppShellProps {
   userEmail: string;
   userRole?: string;
   signOutAction: () => Promise<void>;
+  navCounts?: Partial<Record<NavCountKey, number>>;
 }
 
-export function AppShell({ children, userEmail, userRole, signOutAction }: AppShellProps) {
+export function AppShell({ children, userEmail, userRole, signOutAction, navCounts }: AppShellProps) {
   const [collapsed, setCollapsed] = React.useState(false);
   const pathname = usePathname();
 
@@ -496,6 +517,7 @@ export function AppShell({ children, userEmail, userRole, signOutAction }: AppSh
                                         active={isLeafActive(leaf, pathname)}
                                         collapsed={collapsed}
                                         indent
+                                        count={leaf.countKey ? navCounts?.[leaf.countKey] : undefined}
                                       />
                                     </li>
                                   ))}
@@ -511,6 +533,7 @@ export function AppShell({ children, userEmail, userRole, signOutAction }: AppSh
                               active={isLeafActive(child, pathname)}
                               collapsed={collapsed}
                               indent
+                              count={child.countKey ? navCounts?.[child.countKey] : undefined}
                             />
                           </li>
                         );

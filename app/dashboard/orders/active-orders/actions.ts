@@ -73,7 +73,7 @@ export async function createOrder(formData: FormData): Promise<ActionResult> {
   if (error) return { success: false, error: error.message }
 
   revalidatePath(LIST_PATH)
-  revalidatePath('/dashboard/inventory/stock-movement')
+  revalidatePath('/dashboard/inventory/monitoring')
   return { success: true, orderId: data.id, orderNumber: data.order_number }
 }
 
@@ -124,7 +124,7 @@ export async function adjustOrderItems(orderId: string, formData: FormData): Pro
   if (error) return { success: false, error: error.message }
 
   revalidatePath(LIST_PATH)
-  revalidatePath('/dashboard/inventory/stock-movement')
+  revalidatePath('/dashboard/inventory/monitoring')
   return { success: true }
 }
 
@@ -138,7 +138,7 @@ export async function startProduction(orderId: string): Promise<ActionResult> {
   revalidatePath(`${LIST_PATH}/${orderId}`)
   revalidatePath('/dashboard/orders/production')
   revalidatePath('/dashboard/orders/confirmed')
-  revalidatePath('/dashboard/inventory/stock-movement')
+  revalidatePath('/dashboard/inventory/monitoring')
   return { success: true }
 }
 
@@ -155,7 +155,7 @@ export async function overrideReservedQty(
   if (error) return { success: false, error: error.message }
 
   revalidatePath(`${LIST_PATH}/${orderId}`)
-  revalidatePath('/dashboard/inventory/stock-movement')
+  revalidatePath('/dashboard/inventory/monitoring')
   return { success: true }
 }
 
@@ -218,7 +218,7 @@ async function callOrderStatusRpc(orderId: string, rpc: string, args: Record<str
 
   revalidatePath(LIST_PATH)
   revalidatePath(`${LIST_PATH}/${orderId}`)
-  revalidatePath('/dashboard/inventory/stock-movement')
+  revalidatePath('/dashboard/inventory/monitoring')
   return { success: true }
 }
 
@@ -280,7 +280,7 @@ export async function createShipment(orderId: string, input: CreateShipmentInput
   revalidatePath(LIST_PATH)
   revalidatePath(`${LIST_PATH}/${orderId}`)
   revalidatePath('/dashboard/orders/shipping')
-  revalidatePath('/dashboard/inventory/stock-movement')
+  revalidatePath('/dashboard/inventory/monitoring')
   return { success: true }
 }
 
@@ -315,7 +315,7 @@ export async function updateShipment(
   revalidatePath(LIST_PATH)
   revalidatePath(`${LIST_PATH}/${orderId}`)
   revalidatePath('/dashboard/orders/shipping')
-  revalidatePath('/dashboard/inventory/stock-movement')
+  revalidatePath('/dashboard/inventory/monitoring')
   return { success: true }
 }
 
@@ -328,7 +328,7 @@ export async function markShipmentShipped(orderId: string, shipmentId: string): 
   revalidatePath(LIST_PATH)
   revalidatePath(`${LIST_PATH}/${orderId}`)
   revalidatePath('/dashboard/orders/shipping')
-  revalidatePath('/dashboard/inventory/stock-movement')
+  revalidatePath('/dashboard/inventory/monitoring')
   return { success: true }
 }
 
@@ -353,6 +353,6 @@ export async function markShipmentPickedUp(orderId: string, shipmentId: string):
   revalidatePath(LIST_PATH)
   revalidatePath(`${LIST_PATH}/${orderId}`)
   revalidatePath('/dashboard/orders/shipping')
-  revalidatePath('/dashboard/inventory/stock-movement')
+  revalidatePath('/dashboard/inventory/monitoring')
   return { success: true }
 }

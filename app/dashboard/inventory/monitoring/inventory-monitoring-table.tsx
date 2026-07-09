@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
@@ -39,6 +40,13 @@ type Props = {
 };
 
 export function InventoryMonitoringTable({ data }: Props) {
+  const router = useRouter();
+
+  function openMovements(row: InventoryMonitoringRow) {
+    const slug = row.sku ?? row.variant_id;
+    router.push(`/dashboard/inventory/monitoring/${encodeURIComponent(slug)}?store=${encodeURIComponent(row.store_id)}`);
+  }
+
   const columns: Column<InventoryMonitoringRow>[] = [
     {
       key: "item_name",
@@ -116,7 +124,7 @@ export function InventoryMonitoringTable({ data }: Props) {
     <div className="space-y-4">
       <PageHeader
         title="Inventory Monitoring"
-        description="Available, Reserved, In Production, On Hold, and Incoming stock per item."
+        description="Available, Reserved, In Production, On Hold, and Incoming stock per item. Click a row to open its full movement history."
       />
 
       <DataTable
@@ -125,6 +133,7 @@ export function InventoryMonitoringTable({ data }: Props) {
         searchPlaceholder="Search inventory…"
         emptyMessage="No tracked inventory found"
         emptyDescription="Items with stock tracking enabled will appear here."
+        onRowClick={openMovements}
       />
     </div>
   );

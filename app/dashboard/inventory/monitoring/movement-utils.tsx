@@ -1,10 +1,10 @@
-"use client";
-
-import { useMemo, useState } from "react";
-import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
-import { PageHeader } from "@/components/ui/page-header";
-import { Select } from "@/components/ui/select";
+import type { Column } from "@/components/ui/data-table";
+
+export function firstOf<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
 
 export type MovementRow = {
   id: string;
@@ -21,6 +21,31 @@ export type MovementRow = {
   store_name: string;
 };
 
+export const MOVEMENT_SELECT =
+  `id, movement_type, status, quantity_change, quantity_before, quantity_after, counterpart_status, note, occurred_at,
+   item_variants(sku, option1_value, items(name)), stores(name)`;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function mapMovementRow(m: any): MovementRow {
+  const variant = firstOf(m.item_variants);
+  const item = variant ? firstOf(variant.items) : null;
+  const store = firstOf(m.stores);
+  return {
+    id: m.id,
+    movement_type: m.movement_type,
+    status: m.status,
+    quantity_change: m.quantity_change,
+    quantity_before: m.quantity_before,
+    quantity_after: m.quantity_after,
+    counterpart_status: m.counterpart_status,
+    note: m.note,
+    occurred_at: m.occurred_at,
+    item_name: item?.name ?? "Unknown item",
+    variant_label: variant?.option1_value ?? variant?.sku ?? null,
+    store_name: store?.name ?? "—",
+  };
+}
+
 const TYPE_BADGE: Record<string, "default" | "success" | "warning" | "danger" | "neutral" | "info"> = {
   initial_sync: "neutral",
   incoming: "success",
@@ -32,7 +57,7 @@ const TYPE_BADGE: Record<string, "default" | "success" | "warning" | "danger" | 
   status_adjustment: "neutral",
 };
 
-const TYPE_LABEL: Record<string, string> = {
+export const TYPE_LABEL: Record<string, string> = {
   initial_sync: "Initial Sync",
   incoming: "Incoming",
   sale: "Sale",
@@ -59,24 +84,8 @@ const STATUS_LABEL: Record<string, string> = {
   incoming: "Incoming",
 };
 
-type Props = {
-  data: MovementRow[];
-};
-
-export function MovementsTable({ data }: Props) {
-  const [typeFilter, setTypeFilter] = useState("");
-
-  const types = useMemo(
-    () => Array.from(new Set(data.map((r) => r.movement_type))).sort(),
-    [data]
-  );
-
-  const filtered = useMemo(
-    () => (typeFilter ? data.filter((r) => r.movement_type === typeFilter) : data),
-    [data, typeFilter]
-  );
-
-  const columns: Column<MovementRow>[] = [
+export function movementColumns(): Column<MovementRow>[] {
+  return [
     {
       key: "occurred_at",
       header: "Date",
@@ -166,32 +175,4 @@ export function MovementsTable({ data }: Props) {
       render: (value) => (value as string) || <span className="text-(--color-text-subtle)">—</span>,
     },
   ];
-
-  return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Stock Movement"
-        description="A chronological log of every stock movement across all locations."
-        actions={
-          <Select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            options={[
-              { value: "", label: "All types" },
-              ...types.map((t) => ({ value: t, label: TYPE_LABEL[t] ?? t })),
-            ]}
-            className="w-48"
-          />
-        }
-      />
-
-      <DataTable
-        columns={columns}
-        data={filtered}
-        searchPlaceholder="Search movements…"
-        emptyMessage="No stock movements found"
-        emptyDescription="Movements will appear here once items are received, adjusted, or sold."
-      />
-    </div>
-  );
 }

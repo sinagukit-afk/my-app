@@ -222,7 +222,7 @@ export async function convertQuote(quoteId: string, targetDate: string): Promise
   revalidatePath(LIST_PATH)
   revalidatePath(LIST_PATH, 'layout')
   revalidatePath(ORDER_LIST_PATH)
-  revalidatePath('/dashboard/inventory/stock-movement')
+  revalidatePath('/dashboard/inventory/monitoring')
   return { success: true }
 }
 

@@ -43,7 +43,6 @@ export async function releaseOnHoldStock(formData: FormData): Promise<ActionResu
   if (error) return { success: false, error: error.message }
 
   revalidatePath('/dashboard/inventory/items-for-review')
-  revalidatePath('/dashboard/inventory/stock-movement')
-  revalidatePath('/dashboard/inventory/status')
+  revalidatePath('/dashboard/inventory/monitoring')
   return { success: true }
 }
