@@ -57,6 +57,7 @@ const NAV: NavEntry[] = [
           { kind: "item", label: "Active Orders", href: "/dashboard/orders/active-orders", icon: ShoppingCartIcon },
           { kind: "item", label: "Quotation", href: "/dashboard/orders/quotation", icon: ShoppingCartIcon },
           { kind: "item", label: "Confirmed", href: "/dashboard/orders/confirmed", icon: ShoppingCartIcon },
+          { kind: "item", label: "On Hold", href: "/dashboard/orders/on-hold", icon: ShoppingCartIcon },
           { kind: "item", label: "Production", href: "/dashboard/orders/production", icon: ShoppingCartIcon },
           { kind: "item", label: "Shipping", href: "/dashboard/orders/shipping", icon: ShoppingCartIcon },
           { kind: "item", label: "Payment", href: "/dashboard/orders/payment", icon: ShoppingCartIcon },

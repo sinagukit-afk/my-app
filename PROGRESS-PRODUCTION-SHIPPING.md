@@ -454,6 +454,38 @@ Independent of everything else in this doc.
 
 ---
 
+## PS-20 — On Hold status-scoped Orders list page ✅ DONE (2026-07-09)
+
+**Requested by Sinag directly (2026-07-09)**, extending PS-10's status-scoped list pattern to the `on_hold` status, which existed since ORDER-9 (`PROGRESS-ORDERS.md`) but had no dedicated list page — only reachable via a filter dropdown on Active Orders.
+
+**What was built:**
+- New `app/dashboard/orders/on-hold/page.tsx` + `on-hold-table.tsx`: same shape as Confirmed's list (Order No./Customer/Order Date/Created/Modified/Items/Last Activity, `DateRangeFilter`, no status column since the set is fixed), querying `orders` where `status='on_hold'` instead of `'confirmed'`.
+- Row click routes to Active Orders' full Order Detail page (`/dashboard/orders/active-orders/[orderNumber]`), **not** a new bespoke detail page — that page already has status-aware `canResume`/`canHold`/`canCancel` gating (ORDER-9) and is the only place Resume Order lives. This follows the Shipping/Payment "front door only" pattern from PS-10, not Confirmed's own bespoke `confirmed-order-detail.tsx` (which 404s any non-`confirmed` order and would have needed Resume Order duplicated into it for no benefit).
+- New "On Hold" sidebar entry in `components/layout/app-shell.tsx`'s Orders subgroup, placed between Confirmed and Production.
+- No schema/RPC changes — `on_hold` status and `hold_order()`/`resume_order()` already existed (ORDER-9).
+
+**Note found, not fixed:** `MODULE_STATUS.md`'s existing Confirmed bullet claims "Row click navigates to Active Orders' Order Detail page, same as every other status-scoped Orders list" — but the actual `confirmed-table.tsx` routes to its own `confirmed/[orderNumber]` bespoke detail page, not Active Orders' Order Detail. Doc/code mismatch, predates this phase, left alone (out of scope for this ask).
+
+**Verification:** `npx tsc --noEmit` clean. Browser-verified end-to-end (Claude admin test account): page rendered correctly empty (no live order was `on_hold` at the time). Held the one live `in_production` order (`SOD26-0708-0020`) via its existing Put On Hold action, confirmed it appeared on the new On Hold list with correct columns/items, clicked the row and landed on Active Orders' Order Detail with a working "Resume Order" button, resumed it, and confirmed via direct Postgres it landed back on `in_production` (its pre-test status) — no residual test-data mutation left behind. On Hold list confirmed empty again afterward. Sidebar "On Hold" link confirmed present with the correct href.
+
+**Depends on:** ORDER-9 (`on_hold` status, `hold_order`/`resume_order`) and PS-10 (the list-page pattern this reuses). Independent of everything else in this doc.
+
+### PS-20 amendment — dedicated On Hold detail page, no Payments/Activity Log (2026-07-09)
+
+**Requested by Sinag directly**, immediately superseding the "front door to Active Orders" routing decision above:
+1. On Hold orders need their own URL, `/dashboard/orders/on-hold/<orderNumber>`, not a redirect to Active Orders' Order Detail.
+2. That page must not show the Payments card or the Activity Log — those stay exclusive to Active Orders' Order Detail.
+
+**What changed:**
+- New `app/dashboard/orders/on-hold/[orderNumber]/page.tsx` + `on-hold-order-detail.tsx` — a bespoke detail page in the Confirmed-page style (404s any order whose status isn't `on_hold`), not the Shipping/Payment front-door style this phase originally used. Reuses `resumeOrder()` from Active Orders' `actions.ts` (no new server actions) and the existing `OrderShipments` component for the Shipments card (shown only if the order already has shipments — carried over from a `ready_for_shipping`/`shipped` order being held — rendered with `canAddShipment` hardcoded `false` since `on_hold` never qualifies to add one).
+- Shows Order Summary + Line Items + Shipments (if any). **Omits** the Payments card and Activity Log entirely — not hidden behind a flag, just not rendered, matching the codebase's existing pattern of separate per-status detail components (e.g. `confirmed-order-detail.tsx`) rather than a shared component with visibility toggles.
+- `on-hold-table.tsx`'s row click updated to `/dashboard/orders/on-hold/${orderNumber}` instead of the Active Orders path.
+- Not changed: `isShippingRole`-gated Mark Shipped/Mark Delivered/Mark Picked Up/Edit actions inside the carried-over Shipments card remain available exactly as they were on Active Orders' Order Detail (gated by shipment status, not order status) — this is pre-existing behavior for any `on_hold` order with an in-flight shipment, not something this change introduces or was asked to restrict.
+
+**Verified (browser preview, Claude admin test account):** `npx tsc --noEmit` clean. Put the same live order (`SOD26-0708-0020`) on hold, confirmed the new URL renders Order Summary + Line Items + Resume Order with no Payments card and no Activity Log present (DOM query), confirmed the On Hold list's row click lands on `/dashboard/orders/on-hold/<orderNumber>` (not Active Orders), clicked Resume Order and confirmed via direct Postgres it restored to `in_production` (its prior status, `on_hold_previous_status` correctly read and cleared) with the redirect landing back on the now-empty On Hold list.
+
+---
+
 ## Sequencing summary
 
 ```
