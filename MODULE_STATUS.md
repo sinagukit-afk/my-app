@@ -76,11 +76,12 @@ status-scoped Orders list.
 list of orders with `status='on_hold'`, same columns as Confirmed. Row
 click navigates to its own dedicated detail page
 (`/dashboard/orders/on-hold/<orderNumber>`), not Active Orders' Order
-Detail — Order Summary, Line Items, and Shipments (if any) only, with a
-Resume Order action (ORDER-9's `canResume` gating); the Payments card
-and Activity Log are deliberately omitted, staying exclusive to Active
-Orders' Order Detail. See `PROGRESS-PRODUCTION-SHIPPING.md` PS-20 and
-its amendment.
+Detail — Order Summary, Line Items, and Shipments (if any) only, with
+Resume Order and Cancel Order actions (both admin-only). The Payments
+card and Activity Log are deliberately omitted, staying exclusive to
+Active Orders' Order Detail. See `PROGRESS-PRODUCTION-SHIPPING.md`
+PS-20/its amendment and PS-21 (Cancel Order, `cancel_order()`
+bucket-resolution rewrite, D042).
 🟩 Production (`/dashboard/orders/production`, formerly "Production
 Queue") — now a real per-product Production Orders list + detail
 screen (`production_orders` table), not an order-level filtered list.

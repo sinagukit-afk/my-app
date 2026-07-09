@@ -486,6 +486,25 @@ Independent of everything else in this doc.
 
 ---
 
+## PS-21 — Cancel Order enabled for On Hold, cancel_order() bucket-resolution rewrite ✅ DONE (2026-07-09)
+
+**Requested by Sinag directly**: add a Cancel button to the On Hold detail page (PS-20). Assessed first — On Hold orders don't have a single stock state, so a naive status-guard change would misbehave; see [[D042]] for the full design decision.
+
+**What was built:**
+- `cancel_order()` rewritten (migration `fix_cancel_order_on_hold_and_bucket_resolution`): allowed-status list gains `on_hold`; the function no longer assumes stock sits in the `reserved` bucket. It now walks every non-cancelled `production_orders` row linked to the order first — `not_started`/`wip`/`partially_completed` ones go through the existing `cancel_production_order()` (uncompleted → available, completed portion → `on_hold` bucket, `order_items` unlinked/zeroed), and `completed` ones (a case `cancel_production_order()` itself refuses) get an inline branch that parks the full quantity in the `on_hold` bucket directly, since `complete_production_order()` never moves stock out of `in_production` on completion. Only after that does it release any order_items still purely in Reserved (never entered production), then flips `orders.status = 'cancelled'` and clears `on_hold_previous_status`.
+- Same rewrite also fixes a latent bug that predated On Hold entirely: `cancel_order()` already claimed to support cancelling `in_production`/`partially_completed` orders, but its old hardcoded `reserved`-bucket release would raise "Insufficient reserved quantity" (or worse, silently drain an unrelated order's reserved stock of the same variant) the moment any linked Production Order had actually started, since `start_production()` (PS-2) moves stock `reserved → in_production` for real. The new production-orders-first reconciliation fixes this for all four cancellable statuses uniformly, not just On Hold.
+- On Hold detail page (`on-hold-order-detail.tsx`/`page.tsx`): added `canCancel` (admin-only, mirrors `canResume`), a "Cancel Order" button next to Resume Order, reusing the existing `cancelOrder()` action from Active Orders (no new server action needed).
+- **Not touched, flagged only:** `order_shipments` rows aren't reconciled by cancel (no `'cancelled'` value exists in that table's status CHECK constraint) — an On Hold order held from `ready_for_shipping` with a shipment already in `preparing` status will leave that shipment dangling after cancel. Same pre-existing gap as `order_payments` (cancelling never reverses a payment either). Out of scope for this ask; flagged for Sinag.
+
+**Verified (browser preview + direct Postgres, Claude admin test account), three scenarios:**
+1. `SOD26-0709-0023` (held from `confirmed`, stock purely Reserved): cancelled via the new button — `available_qty` 217→222, `reserved_qty` 5→0, `order_items.reserved_qty` zeroed, order → `cancelled`.
+2. `SOD26-0708-0020` (held from `in_production`, two linked Production Orders — one `not_started`, one `partially_completed` 5/15): cancelled — both POs correctly reconciled via `cancel_production_order()` (remaining released to Available, completed portion parked On Hold), all 6 component variants matched hand-computed expected values exactly, both `order_items` unlinked and zeroed, both POs → `cancelled`.
+3. Fresh order `SOD26-0709-0024` built end-to-end (create → Start Production → Mark as Complete → Put On Hold from `ready_for_shipping`) to reach the previously-untested case — a **fully `completed`** linked Production Order: cancelled — the new inline branch moved the full qty from `in_production` to the `on_hold` bucket (`available_qty` unchanged at 203, `in_production_qty` 3→0, `on_hold_qty` 0→3), PO → `cancelled`, `order_items` unlinked/zeroed, activity log chain correct (`production_order_cancelled` → `order_production_order_cancelled` → `order_cancelled`).
+
+**Depends on:** PS-20 (On Hold detail page this adds the button to), PS-2/PS-12 (`start_production`/`cancel_production_order` this now reuses), ORDER-7 (`cancel_order` itself). Independent of everything else in this doc.
+
+---
+
 ## Sequencing summary
 
 ```

@@ -60,6 +60,7 @@ export default async function OnHoldOrderDetailPage({
   }
 
   const canResume = role === "admin" && order.status === "on_hold";
+  const canCancel = role === "admin" && order.status === "on_hold";
   const isShippingRole = ["admin", "encoder"].includes(role);
 
   const data: OnHoldOrderData = {
@@ -157,6 +158,7 @@ export default async function OnHoldOrderDetailPage({
     packagingOptions: [],
     courierOptions: [],
     canResume,
+    canCancel,
     isShippingRole,
   };
 

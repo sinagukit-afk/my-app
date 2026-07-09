@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { resumeOrder } from "../../active-orders/actions";
+import { resumeOrder, cancelOrder } from "../../active-orders/actions";
 import {
   OrderShipments,
   type OrderShipmentRow,
@@ -50,6 +50,7 @@ export type OnHoldOrderData = {
   packagingOptions: PackagingVariantOption[];
   courierOptions: { id: string; name: string }[];
   canResume: boolean;
+  canCancel: boolean;
   isShippingRole: boolean;
 };
 
@@ -80,17 +81,37 @@ export function OnHoldOrderDetail({ data }: { data: OnHoldOrderData }) {
     });
   }
 
+  function handleCancelOrder() {
+    if (!confirm("Cancel this order? Reserved and in-production inventory will be released.")) return;
+    startTransition(async () => {
+      const res = await cancelOrder(data.id);
+      if (!res.success) {
+        alert(res.error);
+      } else {
+        alert("Order cancelled.");
+        router.push(LIST_PATH);
+      }
+    });
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         title={data.orderNumber}
         description={`Order Date ${data.createdAt.slice(0, 10)} · Target Date ${data.targetDate}`}
         actions={
-          data.canResume && (
-            <Button disabled={isPending} onClick={handleResumeOrder}>
-              Resume Order
-            </Button>
-          )
+          <div className="flex flex-wrap items-center gap-2">
+            {data.canResume && (
+              <Button disabled={isPending} onClick={handleResumeOrder}>
+                Resume Order
+              </Button>
+            )}
+            {data.canCancel && (
+              <Button variant="secondary" className="text-(--color-danger)" disabled={isPending} onClick={handleCancelOrder}>
+                Cancel Order
+              </Button>
+            )}
+          </div>
         }
       />
 

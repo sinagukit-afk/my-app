@@ -903,3 +903,53 @@ order's life. Found as a flagged-but-deferred item at the bottom of INV-7.
   completed_qty` again — the exact assertion that silently failed before this fix. Cleaned
   up via `cancel_production_order()`/`transfer_stock_status()`; `inventory_levels` for all
   4 touched variants matched their pre-test values exactly afterward.
+
+## D042
+
+**`cancel_order()` rewritten to resolve stock by actual current bucket instead of an
+assumed one, and extended to `on_hold` (2026-07-09, PS-21).** Sinag asked to add a Cancel
+button to the On Hold detail page (PS-20). Assessed first rather than just adding the
+button: `hold_order()` is a pure status flip (D030) that never moves inventory, so an
+On Hold order's stock sits wherever it was before the hold — still `reserved` if held from
+`confirmed`, or already moved to `in_production` (via `start_production()`, PS-2) if held
+from any later status, possibly split across several linked `production_orders` in
+different states including fully `completed`. `cancel_order()`'s old logic hardcoded the
+release source to `reserved`, which would either hard-fail ("Insufficient reserved
+quantity") or — worse — silently drain an unrelated order's reserved stock of the same
+variant, for any order that had actually entered production. This bug predates On Hold
+entirely: it already affected the `in_production`/`partially_completed` statuses
+`cancel_order()` claimed to support.
+
+- **Sinag's calls, given three options laid out**: (1) support cancel from all five
+  holdable prior-statuses vs. only `confirmed`-held orders — chose **all**; (2) reconcile
+  linked `production_orders` by reusing `cancel_production_order()`'s existing split
+  (uncompleted → available, completed portion → the `on_hold` stock bucket) vs. releasing
+  everything straight to available — chose **reuse the existing split**; (3) fix the
+  latent `in_production`/`partially_completed` bucket bug in the same pass vs. deferring
+  it — chose **fix now**, same root cause and same function.
+- New `cancel_order()` order of operations: walk every non-cancelled `production_orders`
+  row for the order first. `not_started`/`wip`/`partially_completed` ones go through
+  `cancel_production_order()` unchanged (safe to call even though the parent order's own
+  status may still be `on_hold` — that function's tail-end order-status update and
+  `recompute_order_status()` both only touch `orders.status` when it's in the
+  in-production family, and `cancel_order()` overwrites `orders.status` to `cancelled`
+  itself afterward regardless). `completed` production orders — a status
+  `cancel_production_order()` itself refuses, since `complete_production_order()` never
+  moves stock out of `in_production` on completion — get a new inline branch that parks
+  the full quantity in the `on_hold` bucket, mirroring the existing "completed portion"
+  rule rather than inventing a new one. Only after that does it release any `order_items`
+  still purely in Reserved (never entered production), then flips `orders.status` and
+  clears `on_hold_previous_status`.
+- **Not touched, flagged only:** `order_shipments` isn't reconciled on cancel (its status
+  CHECK constraint has no `'cancelled'` value) — an On Hold order held from
+  `ready_for_shipping` with a shipment already `preparing` will leave it dangling after
+  cancel. Same class of pre-existing gap as `order_payments` (cancelling never reverses a
+  payment either); out of scope for this pass.
+- Verified live (browser preview + direct Postgres, admin test account), three scenarios:
+  held-from-`confirmed` (pure Reserved release), held-from-`in_production` with two linked
+  POs in `not_started`/`partially_completed` (existing live orders `SOD26-0709-0023` /
+  `SOD26-0708-0020`), and a freshly built order taken through Start Production → Mark
+  Complete → Put On Hold from `ready_for_shipping` specifically to exercise the new
+  `completed`-PO inline branch (`SOD26-0709-0024`) — all three matched hand-computed
+  expected `inventory_levels` values exactly, with `production_orders`/`order_items`
+  cleanup and the `activity_logs` chain all correct.
