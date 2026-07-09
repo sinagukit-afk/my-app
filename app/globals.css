@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 /* ─── Tailwind v4 color utilities (replaces tailwind.config.ts theme.extend.colors) ── */
 @theme inline {
