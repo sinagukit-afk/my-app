@@ -32,7 +32,7 @@ export default async function OnHoldOrderDetailPage({
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, order_number, status, note, target_date, created_at, total_discount, total_money, customers(id, name, phone_number, email, address_line1, barangay, city, province), order_items(id, item_name_snapshot, sku_snapshot, quantity, unit_price, line_discount, reserved_qty, completed_qty, order_item_modifiers(name_snapshot, price_snapshot), production_orders(production_order_number, status))"
+      "id, order_number, status, note, target_date, created_at, total_discount, total_money, customers(id, name, phone_number, email, address_line1, barangay, city, province), order_items(id, item_name_snapshot, sku_snapshot, quantity, unit_price, line_discount, reserved_qty, completed_qty, order_item_modifiers(name_snapshot, price_snapshot), production_orders(production_order_number, status, quantity, completed_qty))"
     )
     .eq("order_number", orderNumber)
     .single();
@@ -89,6 +89,11 @@ export default async function OnHoldOrderDetailPage({
       : null,
     items: (order.order_items ?? []).map((it): OnHoldOrderItem => {
       const productionOrder = firstOf(it.production_orders);
+      const poQuantity = productionOrder ? Number(productionOrder.quantity) : 0;
+      const completedQty =
+        productionOrder && poQuantity > 0
+          ? Math.round((Number(productionOrder.completed_qty) * Number(it.quantity)) / poQuantity)
+          : Number(it.completed_qty);
       return {
         id: it.id,
         name: it.item_name_snapshot ?? "",
@@ -97,7 +102,7 @@ export default async function OnHoldOrderDetailPage({
         unitPrice: Number(it.unit_price),
         discount: Number(it.line_discount),
         reservedQty: Number(it.reserved_qty),
-        completedQty: Number(it.completed_qty),
+        completedQty,
         modifiers: (it.order_item_modifiers ?? []).map((m) => ({
           name: m.name_snapshot ?? "",
           price: Number(m.price_snapshot),

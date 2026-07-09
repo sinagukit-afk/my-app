@@ -4,7 +4,7 @@ Tracks the **Production Orders + Shipments + Packaging** build for Sinag Ukit BM
 
 Source doc: Orders Module Specification (handed over by Sinag in chat, 2026-07-07), assessed against the live app before any build — see the assessment in this session's transcript for the full comparison. This is the deferred inventory-consumption phase D025/D030 both pointed at ("Production consumption is out of scope for Inventory Phase 1... revisit in a future order page revision phase") — this plan **is** that phase, and building it means formally superseding D030's scope-out, not silently ignoring it.
 
-**Status: 🟩 DONE.** PS-1 through PS-10, plus PS-12, PS-13, PS-15, PS-16, PS-17, PS-18, PS-19 (follow-on requests), complete.
+**Status: 🟩 DONE.** PS-1 through PS-10, plus PS-12, PS-13, PS-15 through PS-22 (follow-on requests), complete.
 
 ---
 
@@ -502,6 +502,22 @@ Independent of everything else in this doc.
 3. Fresh order `SOD26-0709-0024` built end-to-end (create → Start Production → Mark as Complete → Put On Hold from `ready_for_shipping`) to reach the previously-untested case — a **fully `completed`** linked Production Order: cancelled — the new inline branch moved the full qty from `in_production` to the `on_hold` bucket (`available_qty` unchanged at 203, `in_production_qty` 3→0, `on_hold_qty` 0→3), PO → `cancelled`, `order_items` unlinked/zeroed, activity log chain correct (`production_order_cancelled` → `order_production_order_cancelled` → `order_cancelled`).
 
 **Depends on:** PS-20 (On Hold detail page this adds the button to), PS-2/PS-12 (`start_production`/`cancel_production_order` this now reuses), ORDER-7 (`cancel_order` itself). Independent of everything else in this doc.
+
+---
+
+## PS-22 — Order Detail "Completed" column stale during partial production ✅ DONE (2026-07-09)
+
+**Reported by Sinag directly**, via screenshots: On Hold order `SOD26-0709-0025`'s Line Items table showed `Completed: 0` for a line whose linked Production Order (`SPR26-0709-0032`) already showed `10 of 15` completed.
+
+**Root cause:** `order_items.completed_qty` and `production_orders.completed_qty` are two separate columns for the same real quantity, and only one write path keeps them in sync. `complete_production_order()` (the admin-only "Mark as Complete" RPC) writes both. `add_production_completed_qty()` (PS-12b's incremental "Add completed" RPC — the everyday partial-progress path) only ever wrote `production_orders.completed_qty`; it has no `order_items` write and never called `recompute_order_status()`. The Order Detail Line Items table (`on-hold/[orderNumber]/page.tsx` and `active-orders/[orderNumber]/page.tsx`, which also backs the Confirmed/Shipping/Payment detail views per PS-10) reads `order_items.completed_qty` for its "Completed" column, so it stayed at 0 for a line's entire `wip`/`partially_completed` lifecycle and only ever jumped straight to the full quantity once someone eventually hit "Mark as Complete". This gap existed since PS-12b introduced `add_production_completed_qty()` — not a regression from PS-20/PS-21.
+
+Confirmed by reading the live RPC definitions directly (Supabase MCP): `add_production_completed_qty` genuinely has no `order_items` write; `complete_production_order` has both. Also checked whether `orders.status` should be advancing on partial progress — it shouldn't and isn't a separate bug: `recompute_order_status()` only counts Production Orders with `status = 'completed'`, so order-level `partially_completed` means "some Production Orders are fully done, others aren't," a different concept from a single Production Order's own running `completed_qty`.
+
+**Fix — read-side derivation, no RPC/migration change:** both `page.tsx` files now also select `quantity, completed_qty` from the joined `production_orders`, and derive the displayed "Completed" as `round(production_order.completed_qty × order_item.quantity / production_order.quantity)`, falling back to `order_items.completed_qty` when there's no linked Production Order (cancelled/unlinked lines). Mirrors the existing derived-ratio pattern PS-12 already established for composite BOM component progress (`ratio × completed_qty`) rather than introducing a new write path. Correct for the schema's supported (if currently unused) case of multiple `order_items` merged into one Production Order, since `production_order.quantity` is their summed total.
+
+**Verified:** `npx tsc --noEmit` clean. Browser preview blocked — another session's `next dev` process held the workspace's port 3000 lock (same symptom as PS-6/7/8/12's own notes), and this project allows only one dev server per directory. Verified instead via direct SQL against the exact reported order: `SOD26-0709-0025`'s two lines have `(po_completed_qty=10, po_quantity=15, oi_quantity=15)` and `(po_completed_qty=1, po_quantity=1, oi_quantity=1)` — the new formula evaluates to `10` and `1` respectively, matching each Production Order's real progress instead of the stale `0` both lines showed before.
+
+**Depends on:** PS-3 (Order Detail reading `order_items.completed_qty`/production order link), PS-12b (`add_production_completed_qty`, the RPC that introduced the gap). Independent of everything else in this doc.
 
 ---
 
