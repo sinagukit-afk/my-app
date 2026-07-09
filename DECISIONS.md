@@ -953,3 +953,33 @@ entirely: it already affected the `in_production`/`partially_completed` statuses
   `completed`-PO inline branch (`SOD26-0709-0024`) — all three matched hand-computed
   expected `inventory_levels` values exactly, with `production_orders`/`order_items`
   cleanup and the `activity_logs` chain all correct.
+
+## D043
+
+**`main` fast-forwarded past a 6-day merge gap; Management module (MGMT-2/3/4) WIP
+reconciled onto the merged nav instead of merging its own branch (2026-07-09).** A "Post-
+INV-16 view regression assessment" session, spun up to investigate why a fresh
+worktree/session showed a stale sidebar, found the root cause was a merge gap rather than a
+code bug: `main` (local and `origin`) had been stuck at `cb9b408` (CUST-1..4, 2026-07-03)
+for six days while all real work — `INV-1..16`, the Order module rebuild, `QUOTE-1..7`,
+`PS-18..22` — had been happening on `docs/inventory-status-phase1-kickoff`, never merged
+back. Separately, a "Management pages population" session had built full CRUD for Item
+Categories/Product Modifiers/Stores (`MGMT-0..5`, see `PROGRESS-MANAGEMENT.md`) against
+that same stale `main`, at its own route names (`categories/`, `modifiers/`) and with its
+own new top-level "Management" nav group.
+
+- Local `main` fast-forwarded to the INV-16 tip (`0e23874`); pushed to `origin/main`
+  (`cb9b408..8d0c4f9`).
+- Cherry-picked an isolated Dialog-centering fix (`44d412e`, from sibling worktree
+  `affectionate-gould-3f7f1d`) — landed as `ada1778`.
+- **Sinag's call**: rather than merging the Management WIP branch as-is (which would have
+  reintroduced its own top-level nav group and stale route names, conflicting with INV-16's
+  merge — which had already restructured Management as a subgroup nested under Operations,
+  with stub pages at `item-categories/` and `product-modifiers/`), the WIP implementations
+  were ported onto the already-merged paths/exports instead. No functional changes — same
+  CRUD, same RLS, same bugs-fixed — just re-homed onto current route/file names. Landed as
+  `8d0c4f9`. The WIP session's own nav-group commit was left stashed (not merged, not
+  deleted) in the `management-pages-populate-aa74ac` worktree.
+- **Not touched, flagged only:** `docs/inventory-status-phase1-kickoff` (still ahead of its
+  own `origin` copy) and sibling worktree `laughing-kilby-845118` (still based on the old
+  `cb9b408`) were left as-is — out of scope for this pass, no unique work at risk.

@@ -1,6 +1,17 @@
 # Sinag Ukit BMS — Accounting Module (Option A)
 ## Claude Code Instructions: ACCT-1 through ACCT-6
 
+> **ARCHIVED (2026-07-09).** ACCT-1 through ACCT-6 are all built and live.
+> **The ACCT-6 opening-balance figures below (₱142,532.17 Retained Earnings,
+> ₱332.40 credit for account 2010) are superseded and wrong** — they were
+> disproven mid-session after Sinag supplied an updated source workbook; the
+> real posted figures (₱413,896.16 Retained Earnings, no 2010 line) are in
+> `PROGRESS-ACCOUNTING.md`'s ACCT-6 session log. Durable conventions (RLS
+> pattern, `numeric(12,2)` rationale, nav gating, category mappings) were
+> moved to `PROGRESS-ACCOUNTING.md`'s "Module conventions" section. Kept
+> here for historical reference (original SQL bodies, seed data) only —
+> the module itself is paused, see `PROGRESS-ACCOUNTING.md`.
+
 **Context for Claude Code:** This extends the existing Sinag Ukit BMS (Supabase project `glwskmtworldifydsihc`, Next.js frontend). These phases are self-contained — they do not touch `orders`, `purchase_orders`, or any confirm/receive RPC. Run one phase per session. Update `PROGRESS-ACCOUNTING.md` after each phase — **not** the core BMS `PROGRESS.md`. This module uses its own `ACCT-1`...`ACCT-8` phase labels specifically to avoid colliding with the core BMS's own phase numbering in `PROGRESS.md`. Migration file numbers (`0013_...` onward) remain a single shared sequence across both workstreams — only the phase *labels* are namespaced. Do not commit to git automatically — stop at the Definition of Done for manual review, per standing project rules. No new dependencies without approval.
 
 ---

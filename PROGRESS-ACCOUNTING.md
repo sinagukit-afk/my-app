@@ -15,12 +15,65 @@
 
 Tracking file for the Accounting Module workstream only. Kept separate from the
 core BMS `PROGRESS.md` so phase numbers don't collide between the two build
-threads. Full spec/instructions for each phase: see
-`Accounting-Module-Phase1-5-ClaudeCode-Instructions.md`.
+threads.
 
 Migration files share one global sequence with core BMS migrations
 (`0013_...` onward) — only the phase *labels* below are namespaced to this
 workstream.
+
+## Module conventions
+
+**Retired 2026-07-09** — this section replaces `Accounting-Module-Phase1-5-ClaudeCode-Instructions.md`
+(moved to `docs/archive/`), which specified ACCT-1 through ACCT-6 and was fully
+realized by the sessions logged below. Its per-phase SQL bodies are no longer
+needed as a reference (they're live in the database — see `list_migrations`/
+`pg_get_functiondef` for the real, current definitions); the durable
+conventions worth keeping are:
+
+- **Money columns use `numeric(12,2)`**, not bare `numeric` like the rest of
+  the schema (`income.amount`, `orders.total_money`, etc.) — a deliberate,
+  scoped deviation. Double-entry bookkeeping is precision-sensitive, and
+  ACCT-6 hit a real rounding-drift imbalance in the source ledger, so a
+  DB-level scale constraint was judged worth the inconsistency. Applies to
+  `journal_entry_lines.debit`/`credit`, `fixed_assets.cost`,
+  `depreciation_entries.amount`.
+- **RLS pattern:** `accounts`/`fixed_assets` — select admin+manager, insert/
+  update admin-only, **no delete policy** (soft-delete-only convention, D003;
+  deactivate via `is_active = false`). `journal_entries`/`journal_entry_lines`/
+  `depreciation_entries` — **select-only** RLS for admin+manager, zero direct
+  insert/update/delete policies; all writes go exclusively through
+  `post_journal_entry()`/`run_monthly_depreciation()` (`SECURITY DEFINER`,
+  explicit role check as the first statement, same pattern as
+  `confirm_order()`/`adjust_stock()`). Encoder is excluded from every
+  Accounting table (tighter than the general Suppliers/POs/Inventory
+  convention — financial data is treated as more sensitive, see D016).
+- **Nav/gating:** top-level `Accounting` `NavGroup` in `app-shell.tsx`,
+  `roles: ["admin","manager"]`, mirroring Finance's three-layer D016 pattern
+  (sidebar filter + page-level `hasAccess` check on every route).
+- **Chart of Accounts (95 seed accounts, ACCT-1):** corrected from the source
+  spreadsheet before seeding — excluded 6 section-header rows (`1`/`2`/`3`/
+  `4`/`5`/`6`, not real accounts) and fixed account `4014` from a duplicate
+  "Paddle Hair Brush-Large" to "Sales Revenue - Phone Stand" (cross-checked
+  against the matching expense account `5014`). Full current list: query the
+  live `accounts` table, not this doc.
+- **Income/Expense category → account mapping (ACCT-3):** `Rent` had no
+  matching account — Sinag chose to add a new one (`6015 Rent Expense`, which
+  is why migration numbers `0015`→`0019` each shifted up by one from the
+  original doc's plan). `Transportation` had no clean match either — mapped
+  to `6080 Other Expenses`. Both confirmed with Sinag before the ACCT-3
+  conversion ran.
+- **ACCT-5 depreciation rounding caveat (still open):** `round(cost/24, 2)`
+  rounds up for all 3 seeded assets, so 24 consecutive monthly runs actually
+  post only 23 periods — each asset stops one month short of its true cost,
+  never reaching exactly ₱0.00 book value (Canon ₱139.01 short, RK Royal
+  Kludge ₱85.34 short, Sculpfan ₱954.09 short, confirmed via a 25-month
+  simulation). No resolution decided (e.g. a final-period "plug to zero"
+  rule) — flag before relying on Fixed Assets → Book Value hitting exactly
+  zero at end of useful life.
+- **ACCT-5 open question, still unanswered:** whether Furniture (1500),
+  Tools & Equipment (1540), or Room Improvement (1550) have real unlisted
+  assets to seed beyond the 3 assets already seeded (Canon Printer, Sculpfan
+  S30 Pro Max, RK Royal Kludge) — asked once, no answer received.
 
 ## Status
 

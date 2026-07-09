@@ -24,18 +24,26 @@ Add/Edit (variant matrix, composite components, modifier assignment,
 minimum stock threshold), archive, activity logging, BMS→Loyverse
 push-sync via n8n. See `PROGRESS-ITEMS.md` (ITEM-0..7) and D020/D021 in
 `DECISIONS.md`.
-🟨 Item Category (`/dashboard/management/item-categories`) — read-only
-list with a `category_type` (Product/Packaging) toggle, admin-only;
-categories themselves still sync in from Loyverse (no create/edit here).
-Lets Master Items be tagged Packaging for the shipment packaging picker.
-See `PROGRESS-PRODUCTION-SHIPPING.md` PS-1.
-⬜ Product Modifier (`/dashboard/management/product-modifiers`) — blank
-placeholder, not yet built.
+🟩 Item Category (`/dashboard/management/item-categories`) — full CRUD
+(name, `category_type` Product/Packaging, color), admin/manager/encoder
+write, admin/manager delete; archive not hard-delete. Source badge shows
+Loyverse-synced vs. BMS-only; Loyverse pull-sync can still overwrite a
+BMS edit on that category's next sync (accepted risk). Lets Master Items
+be tagged Packaging for the shipment packaging picker. See
+`PROGRESS-PRODUCTION-SHIPPING.md` PS-1 and `PROGRESS-MANAGEMENT.md`
+MGMT-2.
+🟩 Product Modifier (`/dashboard/management/product-modifiers`) — full
+CRUD, options edited as inline repeatable rows (name + price) matching
+the Items variant-matrix UX; same write/delete roles and archive
+convention as Item Category. See `PROGRESS-MANAGEMENT.md` MGMT-3.
 🟩 Couriers (`/dashboard/management/couriers`) — admin-only CRUD,
 populates the courier picker in Order Detail's Ship Order dialog. See
 `PROGRESS-ORDERS.md` ORDER-7/D030.
-⬜ Stores (`/dashboard/management/stores`) — blank placeholder, not yet
-built.
+🟩 Stores (`/dashboard/management/stores`) — full CRUD (name, address,
+phone, email), `is_active` toggle, hard delete guarded against FK use
+(matches Suppliers). No Loyverse sync path exists for stores at all
+(API has no create/update endpoint) — BMS-local by necessity. See
+`PROGRESS-MANAGEMENT.md` MGMT-4.
 
 ## Orders
 
@@ -167,10 +175,29 @@ Orders")
 
 ## Inventory
 
-⬜ Inventory Status (`/dashboard/inventory/status`) — blank placeholder,
-not yet built.
+*Nav order/labels as of INV-16 (2026-07-09): Inventory Monitoring →
+Purchase Order(N) → Inventory Receiving(N) → Items for Review(N) → Item
+Adjustment, where `(N)` is a live count of in-progress rows per section.*
+
+🟩 Inventory Monitoring (`/dashboard/inventory/monitoring`, renamed from
+"Inventory Status", merged with the former "Stock Movement" screen,
+INV-16) — five-bucket stock model per `(variant, store)`: Available,
+Reserved, In Production, On Hold, Incoming, plus derived On Hand/
+Projected/Threshold/Status columns. Below it, "Inventory Movement
+History" lists the latest 500 `inventory_movements` rows on the same
+page. Row click on a Monitoring row opens a dedicated detail page
+(`/monitoring/<sku>`) with that SKU/store's snapshot + most recent 50
+movements — not a modal. `/dashboard/inventory`,
+`/dashboard/inventory/status`, and `/dashboard/inventory/stock-movement`
+are now thin redirects here (old bookmarks still work). See
+`PROGRESS-INVENTORY.md` (INV-1..16).
+🟩 Items for Review (`/dashboard/inventory/items-for-review`) — flat
+table of on-hold stock, one row per `(variant, store, source)`, Source
+column attributes each row's on-hold quantity back to the Order/
+Production Order that produced it (label-only, not a real per-source
+ledger). Row click opens Release directly (destinations: Available or
+Scrap). See `PROGRESS-INVENTORY.md` INV-15.
 🟩 Item Adjustment
-🟩 Stock Movement
 🟩 Purchase Orders (`/dashboard/inventory/purchase-orders`, moved from
 the retired Purchasing group)
 🟩 Receiving (`/dashboard/inventory/receiving`, moved from the retired
@@ -179,8 +206,9 @@ manual (non-PO) receipts now logged from Receiving itself via "Log
 Manual Incoming". Every receiving event (manual or PO-sourced) gets its
 own numbered receiving reference (`SRIYY-MMDD-0001`, yearly reset) and
 `status='received'`, shown in a combined Receiving Log alongside the
-existing Open Purchase Orders list. See `PROGRESS-PURCHASING.md`
-(RECV-1).
+existing Open Purchase Orders list. PO receipt now also bumps
+`available_qty`, not just legacy `in_stock` (INV-12). See
+`PROGRESS-PURCHASING.md` (RECV-1) and `PROGRESS-INVENTORY.md` (INV-12).
 
 ## Finance
 

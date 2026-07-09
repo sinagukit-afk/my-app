@@ -1,5 +1,9 @@
 # Inventory Reservation Lifecycle Fixes — Kickoff
 
+> **ARCHIVED (2026-07-09).** Both gaps below (INV-7, INV-8) are fully
+> resolved — see `PROGRESS-INVENTORY.md` for the current, authoritative
+> build log and live state. Kept here for historical reference only.
+
 Two code-level gaps were found during a full inventory audit on 2026-07-08 (see `PROGRESS-INVENTORY.md` INV-1..6 for the Phase 1 background, and the chat session that produced this doc for the full forensic trace). Both gaps let `reserved_qty` / `in_production_qty` drift away from reality with nothing to catch it. The drift itself was already cleaned up by hand in that session (12 `transfer_stock_status` releases + one `start_production` replay for order `SOD26-0706-0005`) — **this doc is only about closing the two code paths that caused it**, so it doesn't happen again.
 
 Continue numbering under `PROGRESS-INVENTORY.md` as `INV-7` (Gap 1) and `INV-8` (Gap 2), same convention as `INV-1..6`.

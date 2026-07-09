@@ -26,6 +26,8 @@ Tracks the **Purchasing module** for Sinag Ukit BMS. Follows the same convention
 
 **Known gap surfaced, not fixed (out of scope, flagged for follow-up):** `apply_incoming_item_inventory_movement()` only updates `in_stock`, never `available_qty` — confirmed live: after the verification receipt, `in_stock` moved 69→76 but `available_qty` stayed at 68, a real divergence. This matches the Inventory Status Phase 1 non-goal ("PO receiving (Incoming→Available)" — see `PROGRESS-INVENTORY.md`), so left alone per that existing decision, but worth a dedicated follow-up phase since it now visibly affects the Receiving screen's own numbers, not just an abstract future concern.
 
+**Closed 2026-07-08 by `PROGRESS-INVENTORY.md` INV-12** (migration `inv10_receive_po_bumps_available_qty`): `apply_incoming_item_inventory_movement()` now upserts `available_qty` alongside `in_stock` on every PO receipt, same pattern as `adjust_stock()`. No longer an open gap.
+
 **Verification (browser preview, Claude admin test account):**
 - Confirmed "Incoming Inventory" no longer appears in the sidebar; `/dashboard/inventory/incoming` routes are gone.
 - Confirmed Receiving page renders "Log Manual Incoming" button, Open Purchase Orders table (unchanged), and the new Receiving Log table populated with all 10 pre-existing entries correctly numbered/badged (`Manual` vs `PO: SPO-...`).

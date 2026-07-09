@@ -58,8 +58,20 @@ Supabase Auth → middleware.ts → Role Check → RLS
 
 ## Inventory Flow
 
-Incoming Inventory → Inventory Levels → Inventory Movements → Sales /
-Adjustments
+Five-bucket status model per `(variant, store)` on `inventory_levels`:
+Available ⇄ Reserved ⇄ In Production ⇄ On Hold → Out, plus Incoming
+(fed by Purchase Order receipt, drains to Available). Stock moves
+between buckets only via `transfer_stock_status()`/`deduct_stock_out()`/
+`adjust_incoming_qty()`/`adjust_stock()` — every transition also writes
+an `inventory_movements` row (`status`, `quantity_before`,
+`transfer_group_id` for paired transfers). Order confirmation reserves
+(Available→Reserved); `start_production()` moves Reserved→In Production;
+shipping/pickup is the only step that actually removes stock (In
+Production/Available→Out via `deduct_stock_out()`); On Hold is reached
+via order cancellation/hold mid-production and released back to
+Available or scrapped from Items for Review. See `BUSINESS_RULES.md`
+(Inventory/Orders/Production Orders/Shipments) and
+`PROGRESS-INVENTORY.md` for the full build history (INV-1..16).
 
 ## Future
 

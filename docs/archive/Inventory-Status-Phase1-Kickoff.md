@@ -1,5 +1,10 @@
 # Inventory Status — Phase 1 Kickoff (Movement-Based)
 
+> **ARCHIVED (2026-07-09).** All 9 deliverables below shipped as `INV-1`
+> through `INV-6` and were substantially extended further by `INV-7..16` —
+> see `PROGRESS-INVENTORY.md` for the current, authoritative build log and
+> live state. Kept here for historical reference only.
+
 ## Preflight (mandatory — do this before writing any migration)
 
 1. Read the full SQL body of `confirm_order()` and `adjust_stock()` (via `Supabase:execute_sql` against `pg_get_functiondef`). Both write to `inventory_levels.in_stock` and `inventory_movements` today, and this phase extends both. Do not guess their current logic.

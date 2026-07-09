@@ -82,12 +82,9 @@ Status Flow: Confirmed → In Production → (Partially Completed | Production C
 -   Manual customer creation (walk-ins/leads) is BMS-only — no push back to Loyverse.
 -   Facebook/Instagram matching and sync are not built. `customer_sources.source` accepts those values but nothing writes them yet.
 
-## Orders — Shipping Receiver
+## Orders — Shipping Receiver (retired, PS-18/D040)
 
--   `same_as_customer` (default `true`) + `receiver_*` fields on `orders` capture who an order actually ships to, snapshotted per-order (same pattern as `order_items.item_name_snapshot`) since the receiver can differ from the paying customer and can change order to order.
--   Check constraint: `receiver_name` is required whenever `same_as_customer = false`.
--   `same_as_customer`, `receiver_*`, and `fulfillment_method` are excluded from any Loyverse push payload — these fields are BMS-only, never synced.
--   Confirmed/In Production orders can only change these fields through the `adjust_order_items` RPC (same path as line-item edits) — a plain table UPDATE on `orders` past `quote` status is admin-only, so encoder/manager edits must go through the RPC.
+-   The order-level `same_as_customer`/`receiver_*`/`fulfillment_method` fields described in earlier revisions of this doc are **defunct** — replaced by the per-shipment receiver on `order_shipments` (see `## Shipments` above). The columns still exist on `orders` (kept per this project's additive-migrations convention) but are no longer read or written by the app; whether to repurpose or drop them is an open decision (`DECISIONS.md` D039/D040).
 
 ## Security
 
