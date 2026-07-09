@@ -14,12 +14,12 @@ export default async function ItemCategoriesPage() {
     : { data: null };
 
   const role = profile?.role ?? "";
-  const canWrite = role === "admin";
+  const canWrite = ["admin", "manager", "encoder"].includes(role);
+  const canDelete = ["admin", "manager"].includes(role);
 
   const { data, error } = await supabase
     .from("categories")
-    .select("id, name, category_type")
-    .is("deleted_at", null)
+    .select("id, name, category_type, color, loyverse_category_id, deleted_at")
     .order("name");
 
   const rows: CategoryRow[] = data ?? [];
@@ -34,7 +34,7 @@ export default async function ItemCategoriesPage() {
         </Card>
       )}
 
-      <ItemCategoriesTable data={rows} canWrite={canWrite} />
+      <ItemCategoriesTable data={rows} canWrite={canWrite} canDelete={canDelete} />
     </div>
   );
 }
