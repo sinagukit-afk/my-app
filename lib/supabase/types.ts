@@ -3367,6 +3367,7 @@ export type Database = {
       }
       deduct_stock_out: {
         Args: {
+          p_from_status?: string
           p_note?: string
           p_quantity: number
           p_store_id: string

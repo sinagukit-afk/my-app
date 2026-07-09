@@ -265,6 +265,42 @@ With a clean server: confirmed logged in as the Claude admin account, navigated 
 
 ---
 
+## INV-15 — Items for Review page rework ✅ DONE (2026-07-09)
+
+**Requested by Sinag (2026-07-09)**, via an annotated screenshot of the live `/dashboard/inventory/items-for-review` page. Four asks, all built in one pass: remove the In Production/Actions columns; make Release a row-click action instead of a persistent column; replace the "In Production" release destination with "Scrap"; group on-hold rows by the cancelled order/production order that produced them. Sinag explicitly picked option (a) (cheap, display-only note-parsing) over (b) (real per-source parcel tracking) for the grouping ask — see the tradeoff writeup this replaces, kept in git history.
+
+**What was built:**
+- Migration `inv15_deduct_stock_out_explicit_from_status`: `deduct_stock_out()` gained an optional trailing `p_from_status` param (default `null` → unchanged inferred available/in_production behavior). Done as `DROP FUNCTION` + `CREATE` rather than `CREATE OR REPLACE`, since adding a parameter changes the argument-type signature and `OR REPLACE` would have silently created a second overload instead of replacing the original — the exact bug class this project already hit once (`ps17b_fix_shipping_rollup_and_drop_orphan_overloads`). Re-granted `EXECUTE` to `PUBLIC`/`anon`/`authenticated`/`service_role` after the drop+create. Confirmed live afterward: exactly one `deduct_stock_out` overload exists, `_deduct_shipment_stock()`'s existing 4-positional-arg calls still resolve to it unambiguously.
+- `app/dashboard/inventory/items-for-review/actions.ts`: `releaseOnHoldStock()` now accepts `available`/`scrap` (not `in_production`); `scrap` calls `deduct_stock_out(..., p_from_status: 'on_hold')`, `available` still calls `transfer_stock_status()` as before.
+- `release-form.tsx`: `DESTINATIONS` is now `available`/`scrap`; dialog copy updated ("Move some or all of it back to Available, or scrap it out of stock entirely").
+- `page.tsx`: dropped `in_production_qty` from the query entirely. Added a second query against `inventory_movements` (`status='on_hold'`, `movement_type='status_transfer'`, `quantity_change > 0`, newest first) for the on-hold variants on the page, then regex-matches an `SPR\d{2}-\d{4}-\d{4}` or `SOD\d{2}-\d{4}-\d{4}` reference out of each inflow's `note` to label it with the Production Order Detail or Order Detail it came from (no match → `"Unattributed"`).
+- `items-for-review-table.tsx`: columns are Item/On Hold/Available/**Source**, back to one flat, searchable/sortable `DataTable` (Sinag reviewed the first cut — separate Card-per-group sections — and asked for a single clean table with the grouping as a column instead, see the amendment below). Clicking any row still opens `ReleaseForm` directly — no Actions column.
+- `lib/supabase/types.ts` regenerated (`generate_typescript_types`) to pick up `deduct_stock_out`'s new `p_from_status` arg.
+
+**Verified live (Supabase MCP + browser, Claude admin test account):**
+- Direct RPC: `deduct_stock_out(variant, store, 1, note, p_from_status='on_hold')` on a real on-hold row (`SUIV-0002`, 10 on hold) correctly moved `on_hold_qty` 10→9 and `in_stock` 162→161, available/in_production untouched; reverted immediately after.
+- Browser: signed in, navigated to Items for Review — table rendered with the `Item / On Hold / Available / Source` header (confirmed via DOM query — no In Production or Actions column), Source values linking to the right Production Order/Order Detail page. Clicked a row (`Itm-Men Comb, Straight`) — Release dialog opened directly from the row click, "Release To" offered exactly `Available`/`Scrap (remove from stock)`.
+- Exercised both real destinations through the UI end-to-end: released 1 unit to Scrap (`Itm-Men Comb, Straight`) — confirmed a `stock_out` movement, `on_hold_qty` 3→2, `in_stock` 206→205; released 1 unit to Available (`Itm-Bottle Opener-Long 14cm`) — confirmed the linked `status_transfer` pair, `on_hold_qty` 5→4, `available_qty` 210→211. No console errors either time. Both test mutations reverted afterward (levels restored, test movement rows deleted) since this is otherwise-real seed/test data other sessions rely on.
+- `npx tsc --noEmit` clean.
+
+**Known limitation, by design (Sinag's explicit choice of option (a)):** attribution is a display label derived from on-hold-creating movements' free-text notes, not a real ledger — Release still draws from the flat per-variant `on_hold_qty` pool regardless of which row/source was clicked. Real per-source tracking (option (b): a proper `production_order_id`/`order_id` column plus parcel-level remaining-qty tracking) was scoped but not built — revisit only if this label-only attribution turns out to matter in practice.
+
+### INV-15 amendment — flat table with a Source column instead of grouped sections (2026-07-09)
+
+Sinag reviewed the first cut (one `Card` + `DataTable` per cancelled-order group) and asked for one clean flat table instead, with the grouping as its own column — explicitly accepting that the same SKU can now appear on more than one row if its On Hold balance came from more than one cancelled order.
+
+**Also fixed a real correctness gap while making this change, not just a layout swap:** the first cut attributed a variant's *entire* current `on_hold_qty` to whichever inflow movement was most recent — accurate only when a single source ever fed that variant's pool. Naively summing *all* historical inflows per source (the obvious alternative for "list every source as its own row") would have been worse: it never subtracts anything a Release already sent back out, so the displayed total would drift upward past the real `on_hold_qty` over time as releases happened.
+
+**What was built instead (`splitOnHoldBySource()` in `page.tsx`):** for each variant/store, walk its on-hold inflow movements **newest-first** and greedily attribute quantity to each inflow's source until the *live* `on_hold_qty` is fully accounted for (any older inflows beyond that point are assumed already released, and are dropped rather than counted). Any shortfall neither reachable by inflow history is attributed to `Unattributed`. This guarantees the split across a SKU's rows always sums exactly to its true current `on_hold_qty` — it still can't guarantee *which* physical units are whose once more than one source has fed the same pool, but it can no longer show more stock on hold than actually exists.
+
+**What was built (files):**
+- `page.tsx`: `groupFromNote()` kept as-is; added `splitOnHoldBySource(inflows, onHoldQty)` (the newest-first greedy fill above) and switched the row builder to `flatMap` — one `ReviewRow` per `(variant, store, source)` instead of one per `(variant, store)`.
+- `items-for-review-table.tsx`: reverted to a single `DataTable` (no `Card`/grouping loop), added a **Source** column (linked to the Production Order/Order Detail page where resolvable, plain text for `Unattributed`) with `stopPropagation` on its link so clicking it doesn't also open the row's Release dialog.
+
+**Verified live (browser, Claude admin test account):** reloaded Items for Review — `Itm-Paper A4 Sticker` (`SUIV-0019`) now correctly renders as **two** rows, `0.25` sourced from `Production Order SPR26-0709-0031` and `0.501` from `Production Order SPR26-0707-0006`, summing to its known `on_hold_qty = 0.751`. Every other (single-source) SKU still renders as exactly one row. Clicking a row still opens `ReleaseForm` correctly (`Itm-Hairbrush Small`, max 1, `Available`/`Scrap` offered). `npx tsc --noEmit` clean, no console errors.
+
+---
+
 ## Open / deferred (not blocking this phase)
 
 - Wiring the generated `Database` type into `lib/supabase/client.ts`/`server.ts` and the ~23 call sites (INV-2) — separate follow-up, not part of Phase 1.

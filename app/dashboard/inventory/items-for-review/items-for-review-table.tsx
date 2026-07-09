@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { ReleaseForm } from "./release-form";
 
@@ -16,7 +16,8 @@ export type ReviewRow = {
   sku: string | null;
   on_hold_qty: number;
   available_qty: number;
-  in_production_qty: number;
+  group_label: string;
+  group_href: string | null;
 };
 
 type Props = {
@@ -61,25 +62,25 @@ export function ItemsForReviewTable({ data, canRelease }: Props) {
       render: (value) => <Badge variant="warning">{String(value)}</Badge>,
     },
     {
-      key: "in_production_qty",
-      header: "In Production",
-      sortable: true,
-    },
-    {
       key: "available_qty",
       header: "Available",
       sortable: true,
     },
     {
-      key: "variant_id",
-      header: "Actions",
-      render: (_value, row) =>
-        canRelease ? (
-          <Button variant="ghost" size="sm" onClick={() => openRelease(row)}>
-            Release
-          </Button>
+      key: "group_label",
+      header: "Source",
+      sortable: true,
+      render: (value, row) =>
+        row.group_href ? (
+          <Link
+            href={row.group_href}
+            className="hover:underline"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {String(value)}
+          </Link>
         ) : (
-          <span className="text-(--color-text-subtle)">—</span>
+          <span className="text-(--color-text-muted)">{String(value)}</span>
         ),
     },
   ];
@@ -88,13 +89,14 @@ export function ItemsForReviewTable({ data, canRelease }: Props) {
     <div className="space-y-4">
       <PageHeader
         title="Items for Review"
-        description="Stock parked On Hold — typically the already-completed portion of a cancelled Production Order — with no automatic path back into circulation. Review and release it to Available or In Production."
+        description="Stock parked On Hold — typically the already-completed portion of a cancelled Production Order — with no automatic path back into circulation. Click a row to review and release it to Available or Scrap. A SKU may appear more than once if its On Hold stock came from more than one cancelled order."
       />
 
       <DataTable
         columns={columns}
         data={data}
         searchPlaceholder="Search items…"
+        onRowClick={canRelease ? openRelease : undefined}
         emptyMessage="Nothing to review"
         emptyDescription="No items currently have stock parked On Hold."
       />

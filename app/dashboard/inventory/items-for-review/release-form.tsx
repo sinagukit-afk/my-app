@@ -18,8 +18,8 @@ import { releaseOnHoldStock } from "./actions";
 import type { ReviewRow } from "./items-for-review-table";
 
 const DESTINATIONS = [
-  { value: "in_production", label: "In Production (ready to ship)" },
   { value: "available", label: "Available" },
+  { value: "scrap", label: "Scrap (remove from stock)" },
 ];
 
 type Props = {
@@ -58,8 +58,8 @@ export function ReleaseForm({ open, onOpenChange, row, onReleased }: Props) {
               {row.item_name}
               {row.variant_label ? ` — ${row.variant_label}` : ""} has{" "}
               <span className="font-medium text-(--color-text)">{row.on_hold_qty}</span> unit(s) parked
-              On Hold (e.g. from a cancelled Production Order). Move some or all of it back into
-              circulation.
+              On Hold (e.g. from a cancelled Production Order). Move some or all of it back to
+              Available, or scrap it out of stock entirely.
             </DialogDescription>
           </DialogHeader>
 

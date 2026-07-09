@@ -13,7 +13,7 @@ export async function releaseOnHoldStock(formData: FormData): Promise<ActionResu
   const note = (formData.get('note') as string)?.trim() || null
 
   if (!variantId || !storeId) return { success: false, error: 'Missing item/store reference.' }
-  if (destination !== 'available' && destination !== 'in_production') {
+  if (destination !== 'available' && destination !== 'scrap') {
     return { success: false, error: 'Select where the stock should be released to.' }
   }
   if (!quantity || Number.isNaN(quantity) || quantity <= 0) {
@@ -21,14 +21,24 @@ export async function releaseOnHoldStock(formData: FormData): Promise<ActionResu
   }
 
   const supabase = await createClient()
-  const { error } = await supabase.rpc('transfer_stock_status', {
-    p_variant_id: variantId,
-    p_store_id: storeId,
-    p_from_status: 'on_hold',
-    p_to_status: destination,
-    p_quantity: quantity,
-    p_note: note,
-  })
+
+  const { error } =
+    destination === 'scrap'
+      ? await supabase.rpc('deduct_stock_out', {
+          p_variant_id: variantId,
+          p_store_id: storeId,
+          p_quantity: quantity,
+          p_note: note,
+          p_from_status: 'on_hold',
+        })
+      : await supabase.rpc('transfer_stock_status', {
+          p_variant_id: variantId,
+          p_store_id: storeId,
+          p_from_status: 'on_hold',
+          p_to_status: destination,
+          p_quantity: quantity,
+          p_note: note,
+        })
 
   if (error) return { success: false, error: error.message }
 
