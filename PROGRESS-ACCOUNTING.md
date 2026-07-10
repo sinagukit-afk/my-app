@@ -672,3 +672,71 @@ table + wiring), the latter now unblocked by 7.2's payment-method
 prerequisite.
 
 ---
+
+### 2026-07-10 — Chart of Accounts consistency audit + cleanup
+
+Sinag asked for an audit of the live 107-account Chart of Accounts
+("easy to understand and consistent") ahead of his still-pending ACCT-7.3
+item→account mapping pass. Queried the live `accounts` table directly
+(not this doc, which was already stale) and cross-checked against
+`docs/ACCT-7-v2-Business-Events-Kickoff.md`'s documented account additions
+and `get_income_statement()`'s grouping logic.
+
+**Findings:** a real duplicate account (`SCA-1205`/`SCA-1211`, both
+"Inventory - Magnetic Sheet", 0 items mapped to either); every account had
+`description = null`, hurting clarity on ambiguous catch-alls (`Other
+Expenses`/`Other IT Expenses`/`Other Marketing Expenses`/`Other Income`,
+plus undefined `MRR` abbreviation on `6010`-`6013`); the Inventory (`12xx`)
+numbering series doesn't mirror the Revenue/Material-Expense (`40xx`/`50xx`)
+same-suffix convention; the same fixed asset had inconsistent naming
+across its asset/accum.-depreciation/depreciation-expense trio (e.g. `Room
+Improvement` → `Accumulated depreciation-Room` → `Depreciation
+expense-Room improvements`); a typo (`Electricty`), a sentence used as an
+account name (`Paid expenses for the following year`), and a grammar
+error (`Small tools and furnitures and fixtures`); `SCA-4032 "Commission
+to third parties"` filed under revenue with no description to say whether
+it's a contra-revenue deduction or should be an expense. A bigger
+structural note (flat `category` enum, no COGS/Opex/Tax subcategory, so
+`get_income_statement()` can't stage Gross Profit/Operating Income) was
+raised but explicitly deferred — Sinag said skip it for now.
+
+**Fixes applied directly via SQL** (data-only, no schema change, no
+migration needed — same as prior ad-hoc `accounts` edits like the
+`SCA-9999` test row):
+- Deactivated `SCA-1211` (kept `SCA-1205` as canonical), description
+  cross-references it.
+- Renamed for accuracy/clarity: `SCA-6020` → "Electricity"; `SCA-1300` →
+  "Prepaid Expenses" (old name preserved in its new description);
+  `SCA-6014` → "Small Tools, Furniture and Fixtures"; `SCA-6052` → "Other
+  Marketing Expenses" (casing).
+- Made naming consistent across each fixed asset's 3 related accounts:
+  `SCA-1521`, `SCA-1551`, `SCA-6001`, `SCA-6003`, `SCA-6004`.
+- Added descriptions to the catch-alls that could be described without
+  guessing business intent: `SCA-4040`, `SCA-6041`, `SCA-6052`,
+  `SCA-6080` (the last one documents that Transportation lives here, per
+  the ACCT-3 mapping decision above).
+- `SCA-4032 "Commission to third parties"` — confirmed 0 references in
+  `journal_entry_lines` or `item_accounting_mappings`, then deactivated
+  per Sinag's explicit call ("deactivate for now"), description flags it
+  as pending his decision on contra-revenue vs. expense.
+- `MRR` (`6010`-`6013`) left as-is — Sinag confirmed the abbreviation is
+  fine, no description added since none was supplied.
+
+**Anomaly noted, not caused by this session:** `SCA-1205`'s name changed
+(casing: "Magnetic sheet" → "Magnetic Sheet") mid-audit, timestamped
+before this session's own edits — something else touched `accounts`
+concurrently. Didn't affect the outcome (1205 stayed canonical either
+way) but flagged to Sinag as a possible other-session/other-tab edit,
+matching this workstream's recurring concurrent-dev-server issue (see
+the SCA-prefix and ACCT-7.2 session entries above).
+
+Post-fix counts verified: 107 accounts total, 28 asset (26 active/2
+inactive), 3 liability, 3 equity, 22 revenue (13 active/9 inactive), 51
+expense (41 active/10 inactive) — arithmetic checked against the pre-fix
+baseline, only the two new deactivations changed the active/inactive
+split.
+
+No code or schema changes, so nothing to rebuild/typecheck. Committed to
+git this session (Sinag's explicit request).
+
+---
