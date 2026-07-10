@@ -80,7 +80,7 @@ export function CategoryForm({ open, onOpenChange, category, onSaved }: Props) {
             required
             autoFocus
           />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Select
               label="Type"
               name="category_type"

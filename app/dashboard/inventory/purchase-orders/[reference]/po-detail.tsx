@@ -268,7 +268,7 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
                 options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
                 required
               />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <DatePicker label="Order Date" name="order_date" defaultValue={po.order_date} required />
                 <DatePicker label="Expected Date" name="expected_date" defaultValue={po.expected_date ?? ""} />
               </div>

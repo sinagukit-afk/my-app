@@ -211,22 +211,35 @@ export function ProductionOrderDetail({ data, logs }: { data: ProductionOrderDet
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="grid grid-cols-[2fr_1fr_1fr] gap-2 text-xs font-medium text-(--color-text-muted)">
+                <div className="hidden gap-2 text-xs font-medium text-(--color-text-muted) lg:grid lg:grid-cols-[2fr_1fr_1fr]">
                   <span>Item</span>
                   <span className="text-right">Reserved</span>
                   <span className="text-right">Completed</span>
                 </div>
                 {data.components.map((c) => (
-                  <div
-                    key={c.id}
-                    className="grid grid-cols-[2fr_1fr_1fr] items-center gap-2 border-b border-(--color-border) pb-2 text-sm last:border-0"
-                  >
-                    <span className="text-(--color-text)">
-                      {c.name}
-                      {c.sku ? ` (${c.sku})` : ""}
-                    </span>
-                    <span className="text-right text-(--color-text)">{c.reservedQty}</span>
-                    <span className="text-right text-(--color-text)">{c.completedQty}</span>
+                  <div key={c.id} className="border-b border-(--color-border) pb-2 text-sm last:border-0">
+                    <div className="hidden items-center gap-2 lg:grid lg:grid-cols-[2fr_1fr_1fr]">
+                      <span className="text-(--color-text)">
+                        {c.name}
+                        {c.sku ? ` (${c.sku})` : ""}
+                      </span>
+                      <span className="text-right text-(--color-text)">{c.reservedQty}</span>
+                      <span className="text-right text-(--color-text)">{c.completedQty}</span>
+                    </div>
+                    <div className="space-y-1 lg:hidden">
+                      <span className="text-(--color-text)">
+                        {c.name}
+                        {c.sku ? ` (${c.sku})` : ""}
+                      </span>
+                      <div className="flex justify-between">
+                        <span className="text-(--color-text-muted)">Reserved</span>
+                        <span className="text-(--color-text)">{c.reservedQty}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-(--color-text-muted)">Completed</span>
+                        <span className="text-(--color-text)">{c.completedQty}</span>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </CardContent>

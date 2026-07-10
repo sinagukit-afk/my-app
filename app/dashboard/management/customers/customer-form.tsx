@@ -81,7 +81,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSaved }: Props) {
           </DialogHeader>
 
           <Input label="Full Name" name="name" defaultValue={customer?.name ?? ""} required autoFocus />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input label="Phone" name="phone_number" defaultValue={customer?.phone_number ?? ""} />
             <Input label="Email" name="email" type="email" defaultValue={customer?.email ?? ""} />
           </div>
@@ -91,7 +91,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSaved }: Props) {
             placeholder="Building no., street, house no."
             defaultValue={customer?.address_line1 ?? ""}
           />
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Input label="Barangay" name="barangay" defaultValue={customer?.barangay ?? ""} />
             <Input label="City / Municipality" name="city" defaultValue={customer?.city ?? ""} />
             <Input label="Province" name="province" defaultValue={customer?.province ?? ""} />

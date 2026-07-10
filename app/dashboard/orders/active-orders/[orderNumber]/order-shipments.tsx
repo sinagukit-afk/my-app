@@ -483,7 +483,7 @@ export function OrderShipments({
                   </div>
                 ) : (
                   <div className="space-y-4 border-t border-(--color-border) pt-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <Input
                         label="Receiver Name"
                         value={receiverName}
@@ -502,7 +502,7 @@ export function OrderShipments({
                       value={receiverAddressLine1}
                       onChange={(e) => setReceiverAddressLine1(e.target.value)}
                     />
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                       <Input label="Barangay" value={receiverBarangay} onChange={(e) => setReceiverBarangay(e.target.value)} />
                       <Input
                         label="City / Municipality"
@@ -534,7 +534,7 @@ export function OrderShipments({
                   value={trackingNumber}
                   onChange={(e) => setTrackingNumber(e.target.value)}
                 />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <CurrencyInput
                     label="Shipping Cost (paid to courier)"
                     value={shippingCost}
@@ -556,7 +556,7 @@ export function OrderShipments({
                 <p className="text-xs text-(--color-text-muted)">Nothing left to ship on this order.</p>
               )}
               {activeItems.map((si) => (
-                <div key={si.orderItemId} className="grid grid-cols-[2fr_1fr] items-end gap-3">
+                <div key={si.orderItemId} className="grid grid-cols-1 gap-3 sm:grid-cols-[2fr_1fr] sm:items-end">
                   <span className="text-sm text-(--color-text)">
                     {si.name}
                     {si.sku ? ` (${si.sku})` : ""}
@@ -575,7 +575,7 @@ export function OrderShipments({
             <div className="space-y-3 border-t border-(--color-border) pt-3">
               <p className="text-sm font-medium text-(--color-text)">Packaging Materials</p>
               {packagingRows.map((row) => (
-                <div key={row.rowId} className="grid grid-cols-[2fr_1fr_auto] items-end gap-3">
+                <div key={row.rowId} className="grid grid-cols-1 gap-3 sm:grid-cols-[2fr_1fr_auto] sm:items-end">
                   <Select
                     placeholder="Select packaging item…"
                     value={row.variantId}

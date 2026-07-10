@@ -246,9 +246,9 @@ export default async function DashboardPage() {
             ) : (
               <ul className="divide-y divide-(--color-border)">
                 {activity.map((item) => (
-                  <li key={item.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
+                  <li key={item.id} className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0 lg:items-center">
                     <span className="text-sm text-(--color-text)">{item.description ?? formatAction(item.action)}</span>
-                    <div className="flex items-center gap-3 ml-4 shrink-0">
+                    <div className="flex items-center gap-3 shrink-0">
                       <Badge variant={ACTION_BADGE[item.action] ?? "default"}>{formatAction(item.action)}</Badge>
                       <span className="text-xs text-(--color-text-subtle) w-14 text-right">{timeAgo(item.created_at)}</span>
                     </div>

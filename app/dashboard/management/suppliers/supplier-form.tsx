@@ -69,7 +69,7 @@ export function SupplierForm({ open, onOpenChange, supplier, onSaved }: Props) {
             name="contact_name"
             defaultValue={supplier?.contact_name ?? ""}
           />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input label="Phone" name="phone" defaultValue={supplier?.phone ?? ""} />
             <Input
               label="Email"

@@ -91,7 +91,7 @@ export function NewOrderForm({ customers, variantOptions, discounts, modifierGro
             placeholder="Walk-in customer"
             options={customers.map((c) => ({ value: c.id, label: c.name }))}
           />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <DatePicker label="Order Date" value={orderDate} onChange={(e) => handleOrderDateChange(e.target.value)} />
             <DatePicker label="Target Date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
           </div>

@@ -89,7 +89,7 @@ export function NewQuoteForm({ customers, variantOptions, discounts, modifierGro
             placeholder="Walk-in customer"
             options={customers.map((c) => ({ value: c.id, label: c.name }))}
           />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <DatePicker
               label="Quote Date"
               value={quoteDate}

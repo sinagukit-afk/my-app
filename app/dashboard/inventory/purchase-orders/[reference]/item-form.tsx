@@ -82,7 +82,7 @@ export function ItemForm({ open, onOpenChange, purchaseOrderId, reference, varia
             autoFocus
           />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <NumberInput label="Quantity" name="quantity_ordered" min={0.01} step="any" required />
             <CurrencyInput
               label="Unit Cost"

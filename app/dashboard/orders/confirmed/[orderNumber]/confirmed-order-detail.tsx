@@ -179,49 +179,92 @@ export function ConfirmedOrderDetail({ data }: { data: ConfirmedOrderData }) {
           <CardDescription>Ordered and Reserved quantities per line.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-2 text-xs font-medium text-(--color-text-muted)">
+          <div className="hidden gap-2 text-xs font-medium text-(--color-text-muted) lg:grid lg:grid-cols-[2fr_1fr_1fr_1fr]">
             <span>Item</span>
             <span className="text-right">Ordered</span>
             <span className="text-right">Reserved</span>
             <span className="text-right">Line Total</span>
           </div>
           {data.items.map((item) => (
-            <div
-              key={item.id}
-              className="grid grid-cols-[2fr_1fr_1fr_1fr] items-center gap-2 border-b border-(--color-border) pb-3 text-sm last:border-0"
-            >
-              <div>
-                <span className="text-(--color-text)">
-                  {item.name}
-                  {item.sku ? ` (${item.sku})` : ""}
-                </span>
-                {item.modifiers.length > 0 && (
-                  <p className="text-xs text-(--color-text-muted)">
-                    {item.modifiers.map((m) => `${m.name} (+${peso(m.price)})`).join(", ")}
-                  </p>
+            <div key={item.id} className="border-b border-(--color-border) pb-3 text-sm last:border-0">
+              <div className="hidden items-center gap-2 lg:grid lg:grid-cols-[2fr_1fr_1fr_1fr]">
+                <div>
+                  <span className="text-(--color-text)">
+                    {item.name}
+                    {item.sku ? ` (${item.sku})` : ""}
+                  </span>
+                  {item.modifiers.length > 0 && (
+                    <p className="text-xs text-(--color-text-muted)">
+                      {item.modifiers.map((m) => `${m.name} (+${peso(m.price)})`).join(", ")}
+                    </p>
+                  )}
+                  {item.discount > 0 && (
+                    <p className="text-xs text-(--color-text-muted)">Discount: -{peso(item.discount)}</p>
+                  )}
+                </div>
+                <span className="text-right text-(--color-text)">{item.quantity}</span>
+                {data.canOverrideReservedQty ? (
+                  <NumberInput
+                    className="h-8 text-right"
+                    min={0}
+                    max={item.quantity}
+                    value={reservedQty[item.id]}
+                    onChange={(e) =>
+                      setReservedQty((prev) => ({
+                        ...prev,
+                        [item.id]: Math.max(0, Math.min(item.quantity, Number(e.target.value) || 0)),
+                      }))
+                    }
+                  />
+                ) : (
+                  <span className="text-right text-(--color-text)">{item.reservedQty}</span>
                 )}
-                {item.discount > 0 && (
-                  <p className="text-xs text-(--color-text-muted)">Discount: -{peso(item.discount)}</p>
-                )}
+                <span className="text-right font-medium text-(--color-text)">{peso(lineTotal(item))}</span>
               </div>
-              <span className="text-right text-(--color-text)">{item.quantity}</span>
-              {data.canOverrideReservedQty ? (
-                <NumberInput
-                  className="h-8 text-right"
-                  min={0}
-                  max={item.quantity}
-                  value={reservedQty[item.id]}
-                  onChange={(e) =>
-                    setReservedQty((prev) => ({
-                      ...prev,
-                      [item.id]: Math.max(0, Math.min(item.quantity, Number(e.target.value) || 0)),
-                    }))
-                  }
-                />
-              ) : (
-                <span className="text-right text-(--color-text)">{item.reservedQty}</span>
-              )}
-              <span className="text-right font-medium text-(--color-text)">{peso(lineTotal(item))}</span>
+
+              <div className="space-y-2 lg:hidden">
+                <div>
+                  <span className="text-(--color-text)">
+                    {item.name}
+                    {item.sku ? ` (${item.sku})` : ""}
+                  </span>
+                  {item.modifiers.length > 0 && (
+                    <p className="text-xs text-(--color-text-muted)">
+                      {item.modifiers.map((m) => `${m.name} (+${peso(m.price)})`).join(", ")}
+                    </p>
+                  )}
+                  {item.discount > 0 && (
+                    <p className="text-xs text-(--color-text-muted)">Discount: -{peso(item.discount)}</p>
+                  )}
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-(--color-text-muted)">Ordered</span>
+                  <span className="text-(--color-text)">{item.quantity}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-(--color-text-muted)">Reserved</span>
+                  {data.canOverrideReservedQty ? (
+                    <NumberInput
+                      className="h-8 w-24 text-right"
+                      min={0}
+                      max={item.quantity}
+                      value={reservedQty[item.id]}
+                      onChange={(e) =>
+                        setReservedQty((prev) => ({
+                          ...prev,
+                          [item.id]: Math.max(0, Math.min(item.quantity, Number(e.target.value) || 0)),
+                        }))
+                      }
+                    />
+                  ) : (
+                    <span className="text-(--color-text)">{item.reservedQty}</span>
+                  )}
+                </div>
+                <div className="flex justify-between font-medium">
+                  <span className="text-(--color-text-muted)">Line Total</span>
+                  <span className="text-(--color-text)">{peso(lineTotal(item))}</span>
+                </div>
+              </div>
             </div>
           ))}
           <div className="space-y-1 border-t border-(--color-border) pt-3 text-sm">

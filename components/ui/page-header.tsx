@@ -20,7 +20,7 @@ function PageHeader({ title, description, actions, className, ...props }: PageHe
         )}
       </div>
       {actions && (
-        <div className="flex flex-wrap shrink-0 items-center gap-2 lg:flex-nowrap">{actions}</div>
+        <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:shrink-0 lg:flex-nowrap">{actions}</div>
       )}
     </div>
   );

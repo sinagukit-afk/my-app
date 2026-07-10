@@ -77,7 +77,7 @@ export default async function JournalEntryDetailPage({
       />
 
       <Card className="max-w-xl">
-        <CardContent className="grid grid-cols-2 gap-4 p-6 text-sm">
+        <CardContent className="grid grid-cols-1 gap-4 p-6 text-sm sm:grid-cols-2">
           <div>
             <p className="text-(--color-text-muted)">Date</p>
             <p className="font-medium text-(--color-text)">

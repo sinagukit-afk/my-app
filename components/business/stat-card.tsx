@@ -32,7 +32,7 @@ export function StatCard({ label, value, delta, trend = "neutral", icon, classNa
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-sm text-(--color-text-muted) truncate">{label}</p>
+            <p className="text-sm text-(--color-text-muted) sm:truncate">{label}</p>
             <p className="mt-1 text-2xl font-semibold text-(--color-text) tabular-nums">{value}</p>
             {delta && (
               <p className={cn("mt-1 text-xs font-medium", trendColor[trend])}>

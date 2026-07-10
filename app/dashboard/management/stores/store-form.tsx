@@ -57,7 +57,7 @@ export function StoreForm({ open, onOpenChange, store, onSaved }: Props) {
           </DialogHeader>
 
           <Input label="Store Name" name="name" defaultValue={store?.name ?? ""} required autoFocus />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input label="Phone" name="phone" defaultValue={store?.phone ?? ""} />
             <Input label="Email" name="email" type="email" defaultValue={store?.email ?? ""} />
           </div>

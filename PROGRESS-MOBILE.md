@@ -111,15 +111,138 @@ for a B2B admin UI — only revisit if real usage surfaces mis-taps, not proacti
 | MOBILE-0 | Confirm breakpoint convention + viewport meta live-check | ✅ Done 2026-07-10 | Drawer breakpoint = `lg` (1024px); viewport meta confirmed live |
 | MOBILE-1 | App shell & navigation — off-canvas sidebar drawer, header, breadcrumb, content padding | ✅ Done 2026-07-10 | Off-canvas drawer below `lg`, verified at 375/768/1280px + desktop regression check |
 | MOBILE-2 | Shared primitives — `DataTable`, `PageHeader`, `Dialog` | ✅ Done 2026-07-10 | Card/stacked-row fallback for tables, header wrap, dialog scroll cap — all at `lg` cutoff |
-| MOBILE-3 | Form & grid audit — the fixed `grid-cols-N` sweep + create/edit screens | Not started | Re-run the grep from the findings section first; list will have drifted |
-| MOBILE-4 | Complex detail & line-item pages (order/quote/PO/customer/production detail, line-item editors) | Not started | Needs manual testing at 375/390/768px, not just class edits |
-| MOBILE-5 | Auth pages (login, forgot-password, update-password) | Not started | Expected low-risk, still needs an explicit pass |
-| MOBILE-6 | QA sweep — cross-module verification + desktop regression check | Not started | Walk one representative page per sidebar module at phone/tablet widths |
+| MOBILE-3 | Form & grid audit — the fixed `grid-cols-N` sweep + create/edit screens | ✅ Done 2026-07-10 | 15 bare `grid-cols-2`/`3` divs fixed with `grid-cols-1 sm:grid-cols-N`; found bracket-template grids (`grid-cols-[2fr_1fr_...]`) in detail pages, deferred to MOBILE-4 |
+| MOBILE-4 | Complex detail & line-item pages (order/quote/PO/customer/production detail, line-item editors) | ✅ Done 2026-07-10 | Card fallback for 4 read-only line-item grids; found + fixed a real `PageHeader` wrap bug (`shrink-0`) during manual testing |
+| MOBILE-5 | Auth pages (login, forgot-password, update-password) | ✅ Done 2026-07-10 | Confirmed already mobile-safe by construction, zero code changes |
+| MOBILE-6 | QA sweep — cross-module verification + desktop regression check | ✅ Done 2026-07-10 | Found + fixed 2 more real bugs (dashboard activity feed, `StatCard` label truncation) not caught by the earlier static audits |
 
 ## Session log
 
 *(Claude Code: append a dated entry here after each session — what was done, what was decided,
 anything left open.)*
+
+### 2026-07-10 — MOBILE-6
+
+Walked one representative page per sidebar module not yet visually covered by MOBILE-1..5, at
+375×812, 768×1024, and 1280×800, checking console errors and page-level horizontal overflow at
+each: Dashboard home, Management/Items (list + the "Add Item" create form — the app's most complex
+form), Inventory/Monitoring, Inventory/Purchase Orders (list + "New Purchase Order"), Finance/
+Profit & Loss, Accounting/Balance Sheet + a Journal Entry detail page, Analytics/Sales Report,
+Administration/Users, Administration/Roles, Administration/Activity Logs. Re-tested the off-canvas
+drawer at 768px tablet width as part of this pass too (still correct).
+
+**Two more real bugs found and fixed, neither caught by the earlier static `grep`-based audits
+because both only manifest at runtime with real data/content, not from reading the JSX in
+isolation:**
+
+1. **[app/dashboard/page.tsx:249](app/dashboard/page.tsx:249) — Recent Activity feed.** Each `<li>` was `flex items-center justify-between` with no wrap-awareness. Once a description string is long enough to wrap to 2+ lines on a narrow screen (e.g. "Production Order SPR26-0709-0034 created from order SOD26-0709-0026 — qty 15"), `items-center` centers the badge+timestamp block against the *whole wrapped block's* height, so it visually floats mid-paragraph instead of sitting next to the first line — reads as broken/disconnected. Fixed with `items-start ... lg:items-center` (`gap-4` added to replace the redundant `ml-4` on the badge block) — below `lg` the meta block aligns to the top of the entry; at `lg:` and up the original center-alignment is restored exactly (verified no visible difference at 1280px, since real activity descriptions are short enough to stay single-line at that width anyway).
+
+2. **[components/business/stat-card.tsx:35](components/business/stat-card.tsx:35) — `StatCard` label truncation.** The label `<p>` had an unconditional `truncate`, and the optional icon slot is a fixed 40×40px block that doesn't shrink. Only 3 pages pass an `icon` (Users, Roles, Activity Logs, all in Administration), and only Activity Logs' "Total Events" (the longest of the three icon-paired labels) actually hit the crowding at 375px in a 2-column stat grid, truncating to "Total Eve…". Fixed by changing to `sm:truncate` (i.e. no truncation below the `sm` breakpoint, restored at `sm:` and up) — the label now wraps to 2 lines on the narrowest phones instead of clipping mid-word. Verified Users and Roles (same icon + 2-col-grid shape) still render correctly post-fix, and confirmed desktop (1280px) is pixel-identical to before (all current labels are short enough to stay single-line there regardless).
+
+**Confirmed acceptable as-is, not fixed:** [accounting/journal/[id]/page.tsx:101](app/dashboard/accounting/journal/[id]/page.tsx:101) — the Journal Entry "Lines" ledger is a one-off plain `<table>` (not the shared `DataTable`), already wrapped in its own `overflow-x-auto` div. At 375px it scrolls horizontally within its own card instead of breaking page layout (`document.documentElement.scrollWidth` confirmed still 375, no page-level overflow) — same contained-scroll tradeoff the assessment originally accepted for `DataTable` before MOBILE-2's card fallback. Didn't build a bespoke card fallback for this single low-traffic Accounting display page — disproportionate effort for a paused module ([[project_accounting_module_paused]]), and a debit/credit ledger scrolling horizontally is a normal, expected pattern in financial software.
+
+**Verified in browser preview** (Claude Code test account, real data throughout): all pages listed
+above at 375/768/1280px, no console errors on any page, `tsc --noEmit` clean after all fixes.
+
+This closes out the full MOBILE-0 through MOBILE-6 plan. Total real bugs found across the whole
+workstream that a pure static-analysis pass would have missed: the MOBILE-1 sidebar drawer
+(planned, not a "found" bug), the MOBILE-4 `PageHeader` `shrink-0` wrap failure, and these two
+MOBILE-6 findings — all three of the *found* bugs turned up only when actually clicking through the
+app at real widths, not from reading class names. Worth remembering for any future mobile/responsive
+work in this codebase: static grep sweeps catch the "obviously missing a breakpoint" cases, but
+shared-component interaction bugs (flex-shrink fighting flex-wrap, text-wrap changing block height
+and breaking sibling alignment) need actual runtime verification to surface.
+
+---
+
+### 2026-07-10 — MOBILE-5
+
+Reviewed all three auth pages: [login/page.tsx](app/login/page.tsx), [forgot-password/page.tsx](app/forgot-password/page.tsx), [auth/update-password/page.tsx](app/auth/update-password/page.tsx). All three already use the same pattern — a `flex min-h-screen items-center justify-center ... px-4` outer wrapper around a `w-full max-w-sm` card, single-column stacked fields, no fixed pixel widths or multi-column grids anywhere. This is inherently mobile-safe by construction (matches the assessment's "expected low-risk" prediction) — **zero code changes made**.
+
+**Verified in browser preview** at 375×812 and 768×1024: signed out to reach `/login` (screenshots
+confirmed centered card, no overflow, "Forgot password?" link stays inline), `/forgot-password`
+(same layout, clean), `/auth/update-password` (tested the "invalid/expired link" state, since a
+real recovery-token session wasn't available in this session — the password-entry form beneath it
+uses the identical single-column field pattern already proven on the other two pages, so didn't
+chase a token for a structurally-identical form). No console errors either width.
+
+**Aside, not a code issue:** the update-password screenshot at 768px showed what looked like a
+narrow mis-tinted strip along the right edge. Checked `getBoundingClientRect()`/computed styles on
+`html`, `body`, and the page's own wrapper div — all reported exactly 768px wide with no
+`scrollWidth` overflow and the correct background color filling the full width. Treating this as a
+screenshot-capture rendering artifact (DOM/computed-style evidence is authoritative over the
+screenshot pixels here), not a real layout bug — noting it in case it resurfaces.
+
+Next step: MOBILE-6 (final QA sweep — walk one representative page per sidebar module at
+phone/tablet widths, plus a full desktop regression pass across everything touched in MOBILE-1
+through MOBILE-5).
+
+---
+
+### 2026-07-10 — MOBILE-4
+
+Fixed the bracket-template grids flagged as out-of-scope at the end of MOBILE-3 — all read-only
+"Line Items"/"Components" summary displays on order/production detail pages that had zero
+responsive variant on a fixed multi-column template (`grid-cols-[2fr_1fr_1fr_1fr_1fr]` etc.):
+[order-detail.tsx:224](app/dashboard/orders/active-orders/[orderNumber]/order-detail.tsx:224) (5 cols, includes an editable Reserved-qty `NumberInput` when `canOverrideReservedQty`), [confirmed-order-detail.tsx:182](app/dashboard/orders/confirmed/[orderNumber]/confirmed-order-detail.tsx:182) (4 cols, same editable field), [on-hold-order-detail.tsx:145](app/dashboard/orders/on-hold/[orderNumber]/on-hold-order-detail.tsx:145) (5 cols, read-only Reserved), and [production-order-detail.tsx:214](app/dashboard/orders/production/[productionOrderNumber]/production-order-detail.tsx:214) (Components sub-table, 3 cols, fully read-only).
+
+**Pattern used (matches MOBILE-2's `DataTable` card-fallback convention exactly):** each row is
+now two sibling blocks sharing one `key`-ed wrapper — `hidden lg:grid lg:grid-cols-[...]` (the
+original grid, byte-for-byte unchanged content, just wrapped) and a new `lg:hidden` block that
+stacks the same fields as inline-labeled `flex justify-between` rows (Ordered/Reserved/Completed/
+Line Total each get their own labeled row instead of being unreadable bare numbers in a 5-up
+mobile grid). The one editable field (`NumberInput` for Reserved qty override) is duplicated
+between both blocks bound to the same state — CSS-only visibility toggle, not two independent
+inputs — same double-render approach `DataTable`'s card mode already uses for row actions, so this
+isn't a new pattern for the codebase.
+
+Also fixed the two form-input grids in [order-shipments.tsx:559,578](app/dashboard/orders/active-orders/[orderNumber]/order-shipments.tsx:559) (shippable-item qty row, packaging-material row) with the simpler `grid-cols-1 sm:grid-cols-[...] sm:items-end` stacking — these already have contextual labels (item name inline, or their own field labels), so no card treatment was needed, just the same stacking convention as `order-line-items.tsx`.
+
+**Left alone, confirmed fine as-is:** `receive-form.tsx:61`'s `grid-cols-[1fr_auto]` (label absorbs remaining width, no overflow risk at any size); `production-order-detail.tsx:61`'s `InfoRow` `grid-cols-[140px_1fr]` (short labels, 140px never crowds out the value column even at 375px); `quote-detail.tsx`'s Line Items block (already a `flex justify-between` per row, not a rigid grid, so inherently responsive); `po-detail.tsx`'s line items (already uses the shared `DataTable`, which got its own card fallback in MOBILE-2).
+
+**Bug found and fixed during manual testing, not part of the original audit:** [page-header.tsx:23](components/ui/page-header.tsx:23) — the actions wrapper had `shrink-0` applied unconditionally. A `flex-shrink: 0` flex item pins to its unwrapped max-content width and never shrinks, so its own `flex-wrap` never actually gets triggered — any page with 3 buttons whose combined width exceeds the viewport (e.g. Production Order Detail's "Start Production" / "Mark as Complete" / "Cancel Order") overflowed off the right edge at 375px instead of wrapping, even though MOBILE-2 believed this was already handled. Confirmed via `getBoundingClientRect()` that the button was rendered ~57px past the 375px viewport edge with no page-level scroll (i.e. actually clipped, not just off-canvas-scrollable). Fixed by changing to `w-full flex-wrap ... lg:w-auto lg:shrink-0 lg:flex-nowrap` — below `lg` the actions row now claims the full width to wrap its buttons within; at `lg:` and up, `shrink-0`+`flex-nowrap` are restored exactly as before (confirmed pixel-identical at 1280px). This is a shared component, so this fix applies to every page using `PageHeader` actions, not just Production Order Detail — worth remembering that MOBILE-2's "verified" note for this file was based on a button set that happened to fit by coincidence, not on an actual wrap-trigger test.
+
+**Verified in browser preview** (Claude Code test account, real data — `SOD26-0709-0026` active
+order, `SPR26-0709-0034` production order, `SOD26-0708-0022` shipment form): 375×812/900 (all four
+card-fallback grids read cleanly with labels; PageHeader action buttons wrap onto their own lines
+and fit within viewport with zero clipping), 768×1024 (production order detail: 3 buttons fit one
+row within the full-width action area, Components card renders correctly), 1280×800/900 (all four
+grids and the PageHeader actions row are byte-for-byte the same layout as before this session's
+changes — confirmed via screenshot comparison, not just class inspection). `tsc --noEmit` clean, no
+console errors.
+
+Next step: MOBILE-5 (auth pages — login, forgot-password, update-password). Expected low-risk per
+the original scoping, but give it an explicit pass rather than assuming.
+
+---
+
+### 2026-07-10 — MOBILE-3
+
+Re-ran the `grep -rn "grid-cols-[2-9]"` sweep from the assessment (excluding lines that already
+carry a responsive prefix) across `app/`. Found 15 bare offenders — same count as the assessment
+estimated, though the exact file list had drifted since other workstreams touched some of these
+files in between: [manual-incoming-form.tsx:127](app/dashboard/inventory/receiving/manual-incoming-form.tsx:127), [po-detail.tsx:271](app/dashboard/inventory/purchase-orders/[reference]/po-detail.tsx:271), [item-form.tsx:85](app/dashboard/inventory/purchase-orders/[reference]/item-form.tsx:85) (PO line-item add dialog), three spots in [order-shipments.tsx](app/dashboard/orders/active-orders/[orderNumber]/order-shipments.tsx:486) (receiver name/phone, barangay/city/province, shipping cost/fee), [new-order-form.tsx:94](app/dashboard/orders/active-orders/new/new-order-form.tsx:94), [edit-quote-form.tsx:94](app/dashboard/orders/quotation/[quoteNumber]/edit/edit-quote-form.tsx:94), [new-quote-form.tsx:92](app/dashboard/orders/quotation/new/new-quote-form.tsx:92), [supplier-form.tsx:72](app/dashboard/management/suppliers/supplier-form.tsx:72), two spots in [customer-form.tsx](app/dashboard/management/customers/customer-form.tsx:84) (phone/email, barangay/city/province), [store-form.tsx:60](app/dashboard/management/stores/store-form.tsx:60), [category-form.tsx:83](app/dashboard/management/item-categories/category-form.tsx:83), and [journal/[id]/page.tsx:80](app/dashboard/accounting/journal/[id]/page.tsx:80) (Accounting — UI-only class change, no schema/logic touched, so left alone by the [[project_accounting_module_paused]] freeze).
+
+Fix pattern (matches the existing `item-form.tsx` reference convention): bare `grid-cols-2` →
+`grid-cols-1 sm:grid-cols-2`, bare `grid-cols-3` → `grid-cols-1 sm:grid-cols-3`. Every field
+already stacked correctly in DOM order (label above input) so no reordering was needed, just the
+column-count fix.
+
+**New finding, out of this phase's grep pattern:** a second grep for `grid-cols-\[` (bracket
+template columns like `grid-cols-[2fr_1fr_1fr]`) turned up several *detail* pages with hardcoded
+multi-column templates and zero responsive variant: [on-hold-order-detail.tsx:145,155](app/dashboard/orders/on-hold/[orderNumber]/on-hold-order-detail.tsx:145) (5 cols), [confirmed-order-detail.tsx:182,191](app/dashboard/orders/confirmed/[orderNumber]/confirmed-order-detail.tsx:182) (4 cols), [order-detail.tsx:224,234](app/dashboard/orders/active-orders/[orderNumber]/order-detail.tsx:224) (5 cols), [production-order-detail.tsx:214,222](app/dashboard/orders/production/[productionOrderNumber]/production-order-detail.tsx:214) (3 cols), and [order-shipments.tsx:559,578](app/dashboard/orders/active-orders/[orderNumber]/order-shipments.tsx:559) (2-3 cols). These are exactly the "line-item editors" MOBILE-4 is scoped for, so left untouched here — noting them now so MOBILE-4 doesn't have to rediscover them via its own audit. (Checked `receive-form.tsx:61`'s `grid-cols-[1fr_auto]` too — that one's fine as-is at any width since `1fr` absorbs the space and `auto` is a fixed 128px input, no fix needed.)
+
+**Verified in browser preview** (Claude Code test account; had to stop another chat session's dev
+server on PID 16764 first — Next.js only allows one instance per directory, confirmed with Sinag
+before killing it): supplier-create dialog and customer-create dialog at 375×812 (Phone/Email and
+Barangay/City/Province each stack to one column, full width) and 1280×800 (byte-for-byte same
+side-by-side layout as before — desktop regression check passed). `tsc --noEmit` clean.
+
+Next step: MOBILE-4 (complex detail & line-item pages) — start with the bracket-template grids
+found above, then the line-item editors (`order-line-items.tsx`, `quote-line-items.tsx` already
+have `sm:` variants per the assessment, so focus manual testing there rather than class edits).
+
+---
 
 ### 2026-07-10 — MOBILE-2
 
