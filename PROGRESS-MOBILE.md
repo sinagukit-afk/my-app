@@ -109,8 +109,8 @@ for a B2B admin UI — only revisit if real usage surfaces mis-taps, not proacti
 | Phase | Description | Status | Notes |
 |---|---|---|---|
 | MOBILE-0 | Confirm breakpoint convention + viewport meta live-check | ✅ Done 2026-07-10 | Drawer breakpoint = `lg` (1024px); viewport meta confirmed live |
-| MOBILE-1 | App shell & navigation — off-canvas sidebar drawer, header, breadcrumb, content padding | Not started | Blocking — nothing else is testable on a phone until this lands. Build to the `lg` cutoff locked in MOBILE-0 |
-| MOBILE-2 | Shared primitives — `DataTable`, `PageHeader`, `Dialog` | Not started | Cascades to ~35+ pages automatically; do this before per-page audits |
+| MOBILE-1 | App shell & navigation — off-canvas sidebar drawer, header, breadcrumb, content padding | ✅ Done 2026-07-10 | Off-canvas drawer below `lg`, verified at 375/768/1280px + desktop regression check |
+| MOBILE-2 | Shared primitives — `DataTable`, `PageHeader`, `Dialog` | ✅ Done 2026-07-10 | Card/stacked-row fallback for tables, header wrap, dialog scroll cap — all at `lg` cutoff |
 | MOBILE-3 | Form & grid audit — the fixed `grid-cols-N` sweep + create/edit screens | Not started | Re-run the grep from the findings section first; list will have drifted |
 | MOBILE-4 | Complex detail & line-item pages (order/quote/PO/customer/production detail, line-item editors) | Not started | Needs manual testing at 375/390/768px, not just class edits |
 | MOBILE-5 | Auth pages (login, forgot-password, update-password) | Not started | Expected low-risk, still needs an explicit pass |
@@ -121,6 +121,26 @@ for a B2B admin UI — only revisit if real usage surfaces mis-taps, not proacti
 *(Claude Code: append a dated entry here after each session — what was done, what was decided,
 anything left open.)*
 
+### 2026-07-10 — MOBILE-2
+
+Fixed the three shared-primitive gaps identified in the assessment, all cascading to every page that uses them.
+
+**[components/ui/data-table.tsx](components/ui/data-table.tsx):** added a stacked-row/card fallback below `lg` — the existing `<table>` is now wrapped in `hidden lg:block`, and a new sibling block (`lg:hidden`) renders each row as a card instead: the first column becomes the card's title (no label), remaining columns with a non-empty `header` render as label/value rows (label left, value right, `items-start` so multi-line values like the sync-error text don't clip), and any column with an empty `header` (the `id`/actions column convention already used by every `*-table.tsx` wrapper, e.g. [items-table.tsx:203-226](app/dashboard/management/items/items-table.tsx:203)) renders bottom-right below a divider, matching how it reads in the desktop table. `col.className` (mostly `max-w-xs truncate` / `min-w-[…]` table-cell sizing) is intentionally **not** applied in card mode — those are table-cell concerns that would wrongly truncate values when the card has the full row width to itself. Loading skeletons and the empty state got mobile equivalents too; extracted the empty-state markup into a local `EmptyState` component shared by both the table and card paths instead of duplicating the SVG. Search bar and pagination footer are unchanged/shared — already worked fine at all widths.
+
+**[components/ui/page-header.tsx](components/ui/page-header.tsx):** title/description row and the actions row both got `flex-wrap` + `lg:flex-nowrap`, so a title plus 3+ action buttons wraps onto its own line below `lg` instead of overflowing horizontally, with zero change at `lg:` and up (verified — desktop stays single-row).
+
+**[components/ui/dialog.tsx](components/ui/dialog.tsx):** `DialogContent` now caps at `max-h-[85vh] overflow-y-auto` below `lg`, reverting to `lg:max-h-none lg:overflow-visible` (i.e. today's uncapped behavior) at `lg:` and up. Tall forms (tested with the 8-field customer-create dialog) now scroll internally on a short phone viewport instead of overflowing top/bottom off-screen; desktop dialogs are byte-for-byte unchanged (confirmed `overflow-y: visible`, `max-height: none` computed at 1280px).
+
+**Verified in browser preview** (Claude Code test account): 375×812/700 (item list cards, active-orders cards with filters/date-pickers, customer-create dialog internal scroll + reaching Save/Cancel), 768×1024 (cards still apply, per the locked `lg` cutoff — no attempt made to fit tables at tablet width since horizontal scroll there was already acceptable per the assessment, but stacking is strictly better and free at no extra cost since the component doesn't special-case `md`), 1280×800 (table view returns, pagination/header/dialog all pixel-identical to pre-change — spot-checked via computed styles, not just eyeballing). No console errors. `tsc --noEmit` clean.
+
+**Aside, unrelated to this phase's changes:** hit a transient dev-server issue mid-session where every nested `/dashboard/**` route 404'd (both authenticated and not) while `/dashboard` itself worked — root-level `app-paths-manifest.json` had the routes registered but the running process wasn't serving them. A plain stop/restart of the dev server resolved it immediately and it didn't recur. Noting it here only in case it resurfaces in a future session — not a code bug, nothing was changed to fix it.
+
+**Left alone / out of scope for this phase:** the fixed `grid-cols-N` sweep (MOBILE-3) and dense line-item editors (MOBILE-4) still need their own passes.
+
+Next step: MOBILE-3 (form & grid audit — re-run the `grid-cols-[2-9]` grep first, since other workstreams have likely touched these files since the assessment).
+
+---
+
 ### 2026-07-10 — Assessment (no code)
 
 Read-only audit of the codebase's current responsive posture, at Sinag's request, before any
@@ -128,6 +148,27 @@ implementation. No files were changed. Findings written up above and presented t
 per-phase plan; this file was created afterward, at Sinag's request, so the plan can be resumed
 from a fresh session via `MOBILE-N` phase codes instead of re-deriving it from conversation
 history. Next step: MOBILE-0, whenever Sinag starts the next session on this workstream.
+
+---
+
+### 2026-07-10 — MOBILE-1
+
+Built the off-canvas sidebar drawer in [components/layout/app-shell.tsx](components/layout/app-shell.tsx), the blocking fix identified in the assessment.
+
+**What changed:**
+- New `mobileOpen` state (separate from the existing desktop `collapsed` icon-rail state). The hamburger button (`lg:hidden`, was `md:hidden`) now toggles `mobileOpen` instead of `collapsed`.
+- `<aside>` is `fixed` + `-translate-x-full` (off-canvas) below `lg`, `translate-x-0` when `mobileOpen`; reverts to the original `static` in-flow sidebar at `lg:` via `lg:static lg:translate-x-0`. Width is a fixed `w-64` on mobile (always full nav, never the icon rail) and keeps the original `lg:w-14`/`lg:w-56` collapsed-driven width at desktop.
+- Added a click-to-dismiss backdrop (`fixed inset-0 z-30 bg-black/50 lg:hidden`), auto-close on route change, Escape-key dismiss, and body-scroll lock while open.
+- **Correctness fix worth flagging for future phases:** the sidebar's desktop `collapsed` (icon-only rail) state is plain React state, so it persists independent of viewport width — if a user collapses the sidebar on desktop then later opens the mobile drawer, the drawer must NOT render icon-only (it's always full-width on mobile). Fixed by deriving `effectiveCollapsed = collapsed && !mobileOpen` and using that (not raw `collapsed`) for every JS-conditional in the nav tree that decides whether to render labels/chevrons/badges vs. icon-only. The `lg:`-prefixed width/position classes still key off raw `collapsed` since those only ever apply at `≥1024px`, where `mobileOpen` is always false anyway. This pattern (a derived boolean combining two pieces of existing client state, no `matchMedia`) is the template if a later phase needs similar mobile/desktop-state disambiguation.
+- Desktop-only collapse-toggle button at the bottom of the sidebar is now `hidden` below `lg` (it drove a state that had no visible effect on the mobile drawer anyway).
+- Breadcrumb bar: `px-6` → `px-4 lg:px-6`, added `overflow-x-auto` so deep paths scroll horizontally instead of breaking layout (the parent's `overflow-x-auto` + child `nav`'s default `min-width:auto` means it scrolls rather than squishes — verified, not just assumed).
+- Main content: `p-6` → `p-4 lg:p-6`.
+
+**Verified in browser preview** (logged in as the Claude Code test account): 375px (drawer opens/closes via hamburger, backdrop click, and route navigation; nested group/subgroup expand-collapse works; labels render even after toggling `collapsed` from a prior desktop session), 768px tablet (drawer treatment applies here too, per the locked `lg` cutoff — no header crowding between the hamburger and the "Sinag Ukit BMS" title), 1280px desktop (persistent sidebar, icon-rail collapse toggle, byte-for-byte the same layout as before this change). No console errors, no page-level horizontal scroll on mobile, `tsc --noEmit` clean.
+
+**Left alone / out of scope for this phase:** `DataTable` still has no card/stacked fallback (tables scroll horizontally inside their own container on mobile — that's MOBILE-2). The "Sinag Ukit BMS" header title block's `hidden md:block` was left as-is (not flagged as broken in the assessment; still looked fine at 768px in testing).
+
+Next step: MOBILE-2 (shared primitives — `DataTable`, `PageHeader`, `Dialog`).
 
 ---
 

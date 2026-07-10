@@ -369,7 +369,32 @@ interface AppShellProps {
 
 export function AppShell({ children, userEmail, userRole, signOutAction, navCounts }: AppShellProps) {
   const [collapsed, setCollapsed] = React.useState(false);
+  const [mobileOpen, setMobileOpen] = React.useState(false);
   const pathname = usePathname();
+
+  // Close the mobile drawer on route change (tapping a nav link should dismiss it)
+  React.useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  // Lock body scroll and allow Escape to dismiss while the mobile drawer is open
+  React.useEffect(() => {
+    if (!mobileOpen) return;
+    document.body.style.overflow = "hidden";
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setMobileOpen(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [mobileOpen]);
+
+  // Icon-rail "collapsed" mode only makes visual sense when the aside is in-flow on
+  // desktop. Inside the mobile drawer overlay the aside is always full width, so force
+  // the expanded rendering there regardless of the desktop collapsed state.
+  const effectiveCollapsed = collapsed && !mobileOpen;
 
   const nav = React.useMemo(
     () => NAV.filter((entry) => entry.kind !== "group" || !entry.roles || entry.roles.includes(userRole ?? "")),
@@ -421,24 +446,37 @@ export function AppShell({ children, userEmail, userRole, signOutAction, navCoun
 
   return (
     <div className="flex h-screen overflow-hidden bg-(--color-bg)">
+      {/* ── Mobile drawer backdrop ──────────────────────────── */}
+      <div
+        onClick={() => setMobileOpen(false)}
+        aria-hidden="true"
+        className={cn(
+          "fixed inset-0 z-30 bg-black/50 transition-opacity duration-200 lg:hidden",
+          mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        )}
+      />
+
       {/* ── Sidebar ─────────────────────────────────────────── */}
       <aside
         className={cn(
-          "flex flex-col shrink-0 border-r border-(--color-border) bg-(--color-surface) transition-all duration-200 ease-in-out",
-          collapsed ? "w-14" : "w-56"
+          "flex flex-col border-r border-(--color-border) bg-(--color-surface) transition-all duration-200 ease-in-out",
+          "fixed inset-y-0 left-0 z-40 w-64 -translate-x-full",
+          mobileOpen && "translate-x-0",
+          "lg:static lg:z-auto lg:translate-x-0 lg:shrink-0",
+          collapsed ? "lg:w-14" : "lg:w-56"
         )}
       >
         {/* Logo */}
         <div className={cn(
-          "flex items-center border-b border-(--color-border)",
-          collapsed ? "h-14 justify-center px-3" : "h-14 gap-3 px-4"
+          "flex h-14 items-center gap-3 border-b border-(--color-border) px-4",
+          collapsed && "lg:justify-center lg:px-3"
         )}>
           <img
             src="/sinag-ukit-logo.jpg"
             alt="Sinag Ukit"
             className="h-8 w-8 shrink-0 rounded-(--radius-md) object-contain"
           />
-          {!collapsed && (
+          {!effectiveCollapsed && (
             <div className="min-w-0 overflow-hidden">
               <p className="truncate text-base font-bold text-(--color-text) leading-tight">Sinag Ukit</p>
             </div>
@@ -452,7 +490,7 @@ export function AppShell({ children, userEmail, userRole, signOutAction, navCoun
               if (entry.kind === "item") {
                 return (
                   <li key={entry.href}>
-                    <NavItemRow leaf={entry} active={isLeafActive(entry, pathname)} collapsed={collapsed} />
+                    <NavItemRow leaf={entry} active={isLeafActive(entry, pathname)} collapsed={effectiveCollapsed} />
                   </li>
                 );
               }
@@ -465,18 +503,18 @@ export function AppShell({ children, userEmail, userRole, signOutAction, navCoun
               return (
                 <li key={entry.label}>
                   <button
-                    onClick={() => !collapsed && toggleGroup(entry.label)}
-                    title={collapsed ? entry.label : undefined}
+                    onClick={() => !effectiveCollapsed && toggleGroup(entry.label)}
+                    title={effectiveCollapsed ? entry.label : undefined}
                     className={cn(
                       "flex w-full items-center gap-2.5 rounded-(--radius-md) px-2 py-2 text-sm font-medium transition-colors",
                       hasActive
                         ? "text-(--color-primary)"
                         : "text-(--color-text-muted) hover:bg-(--color-bg) hover:text-(--color-text)",
-                      collapsed && "justify-center px-0"
+                      effectiveCollapsed && "justify-center px-0"
                     )}
                   >
                     <Icon className={cn("h-4 w-4 shrink-0", hasActive ? "text-(--color-primary)" : "text-(--color-text-subtle)")} />
-                    {!collapsed && (
+                    {!effectiveCollapsed && (
                       <>
                         <span className="flex-1 text-left">{entry.label}</span>
                         <ChevronDownIcon
@@ -490,14 +528,14 @@ export function AppShell({ children, userEmail, userRole, signOutAction, navCoun
                   </button>
 
                   {/* Children — always rendered in collapsed mode (tooltips via title); hidden when group closed */}
-                  {(isOpen || collapsed) && (
-                    <ul className={cn("flex flex-col gap-0.5", !collapsed && "mt-0.5")}>
+                  {(isOpen || effectiveCollapsed) && (
+                    <ul className={cn("flex flex-col gap-0.5", !effectiveCollapsed && "mt-0.5")}>
                       {entry.children.map((child) => {
                         if (child.kind === "subgroup") {
                           const isSubOpen = openSubgroups.has(child.label);
                           return (
                             <li key={child.label}>
-                              {!collapsed && (
+                              {!effectiveCollapsed && (
                                 <button
                                   onClick={() => toggleSubgroup(child.label)}
                                   className="flex w-full items-center gap-1 px-2 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-widest text-(--color-text-subtle) hover:text-(--color-text-muted) transition-colors"
@@ -508,14 +546,14 @@ export function AppShell({ children, userEmail, userRole, signOutAction, navCoun
                                   />
                                 </button>
                               )}
-                              {(isSubOpen || collapsed) && (
+                              {(isSubOpen || effectiveCollapsed) && (
                                 <ul className="flex flex-col gap-0.5">
                                   {child.children.map((leaf) => (
                                     <li key={leaf.href}>
                                       <NavItemRow
                                         leaf={leaf}
                                         active={isLeafActive(leaf, pathname)}
-                                        collapsed={collapsed}
+                                        collapsed={effectiveCollapsed}
                                         indent
                                         count={leaf.countKey ? navCounts?.[leaf.countKey] : undefined}
                                       />
@@ -531,7 +569,7 @@ export function AppShell({ children, userEmail, userRole, signOutAction, navCoun
                             <NavItemRow
                               leaf={child}
                               active={isLeafActive(child, pathname)}
-                              collapsed={collapsed}
+                              collapsed={effectiveCollapsed}
                               indent
                               count={child.countKey ? navCounts?.[child.countKey] : undefined}
                             />
@@ -546,8 +584,8 @@ export function AppShell({ children, userEmail, userRole, signOutAction, navCoun
           </ul>
         </nav>
 
-        {/* Collapse toggle */}
-        <div className={cn("border-t border-(--color-border) p-2", collapsed && "flex justify-center")}>
+        {/* Collapse toggle — desktop-only; mobile drawer is always full width */}
+        <div className={cn("hidden border-t border-(--color-border) p-2", collapsed ? "lg:flex lg:justify-center" : "lg:block")}>
           <button
             onClick={() => setCollapsed((c) => !c)}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -567,9 +605,10 @@ export function AppShell({ children, userEmail, userRole, signOutAction, navCoun
         {/* Top header */}
         <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-(--color-border) bg-(--color-surface) px-4 shadow-(--shadow-sm)">
           <button
-            onClick={() => setCollapsed((c) => !c)}
-            className="flex md:hidden items-center justify-center h-8 w-8 rounded-(--radius-md) text-(--color-text-muted) hover:bg-(--color-bg) transition-colors"
-            aria-label="Toggle sidebar"
+            onClick={() => setMobileOpen((o) => !o)}
+            className="flex lg:hidden items-center justify-center h-8 w-8 rounded-(--radius-md) text-(--color-text-muted) hover:bg-(--color-bg) transition-colors"
+            aria-label="Toggle navigation menu"
+            aria-expanded={mobileOpen}
           >
             <MenuIcon />
           </button>
@@ -595,12 +634,12 @@ export function AppShell({ children, userEmail, userRole, signOutAction, navCoun
         </header>
 
         {/* Breadcrumb bar */}
-        <div className="flex h-10 shrink-0 items-center border-b border-(--color-border) bg-(--color-bg) px-6">
+        <div className="flex h-10 shrink-0 items-center overflow-x-auto border-b border-(--color-border) bg-(--color-bg) px-4 lg:px-6">
           <Breadcrumb pathname={pathname} />
         </div>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
           {children}
         </main>
       </div>
