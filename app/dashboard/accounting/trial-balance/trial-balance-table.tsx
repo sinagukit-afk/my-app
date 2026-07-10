@@ -4,7 +4,7 @@ import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 
 export type TrialBalanceRow = {
-  account_number: number;
+  account_number: string;
   account_name: string;
   category: string;
   debit_balance: number;

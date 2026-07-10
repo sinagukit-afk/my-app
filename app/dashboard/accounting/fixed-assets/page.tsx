@@ -51,7 +51,7 @@ export default async function FixedAssetsPage() {
   for (const e of entries ?? []) {
     accumByAsset.set(e.fixed_asset_id, (accumByAsset.get(e.fixed_asset_id) ?? 0) + Number(e.amount));
   }
-  const accountNumberById = new Map((accounts ?? []).map((a) => [a.id, a.account_number]));
+  const accountNumberById = new Map<string, string>((accounts ?? []).map((a) => [a.id, a.account_number]));
 
   const rows: AssetRow[] = (assets ?? []).map((a) => {
     const cost = Number(a.cost);
@@ -62,7 +62,7 @@ export default async function FixedAssetsPage() {
     return {
       id: a.id,
       name: a.name,
-      account_number: accountNumberById.get(a.asset_account_id) ?? 0,
+      account_number: accountNumberById.get(a.asset_account_id) ?? "",
       purchased_date: a.purchased_date,
       cost,
       useful_life_months: a.useful_life_months,

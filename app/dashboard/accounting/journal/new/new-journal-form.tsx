@@ -12,14 +12,14 @@ import { cn } from "@/lib/utils/cn";
 import { postJournalEntry, type JournalLineInput } from "../actions";
 
 export type AccountOption = {
-  account_number: number;
+  account_number: string;
   name: string;
   category: string;
 };
 
 type LineRow = {
   rowId: string;
-  accountNumber: string; // account_number as string (select value)
+  accountNumber: string; // account_number, e.g. "SCA-1000"
   debit: string;
   credit: string;
   memo: string;
@@ -48,7 +48,7 @@ export function NewJournalForm({ accounts }: Props) {
   const [rows, setRows] = useState<LineRow[]>([emptyRow(), emptyRow()]);
 
   const accountOptions = useMemo(
-    () => accounts.map((a) => ({ value: String(a.account_number), label: `${a.account_number} — ${a.name}` })),
+    () => accounts.map((a) => ({ value: a.account_number, label: `${a.account_number} — ${a.name}` })),
     [accounts]
   );
 
@@ -79,7 +79,7 @@ export function NewJournalForm({ accounts }: Props) {
     e.preventDefault();
 
     const lines: JournalLineInput[] = filledLines.map((r) => ({
-      account_number: Number(r.accountNumber),
+      account_number: r.accountNumber,
       debit: Number(r.debit) || 0,
       credit: Number(r.credit) || 0,
       memo: r.memo.trim() || null,

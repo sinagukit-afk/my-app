@@ -178,7 +178,7 @@ rewrite.
 
 | Phase | Description | Depends on |
 |---|---|---|
-| ACCT-7.1 | ~~Re-seed original 95 + 7 new accounts~~ **done 2026-07-10** (103 accounts live). Chart of Accounts edit UI (admin-only) still **not built** — accounts only editable via migration/SQL for now | Sinag confirms account numbers/names — done |
+| ACCT-7.1 | ~~Re-seed original 95 + 7 new accounts~~ **done 2026-07-10** (103 accounts live). ~~Chart of Accounts edit UI (admin-only)~~ **done 2026-07-10** — `/dashboard/accounting/chart-of-accounts` (add/edit/deactivate, admin-only writes) | Sinag confirms account numbers/names — done |
 | ACCT-7.2 | Purchasing payment-method capture at receiving (new field + credit-card flag) | — |
 | ACCT-7.3 | ~~Mapping table + page~~ **built 2026-07-10** (`item_accounting_mappings` + `/dashboard/accounting/product-mapping`). Sinag's confirmation pass (filling in all 62 items) still **not done** | ACCT-7.1 (reseed) — done |
 | ACCT-7.4 | `business_events` table + wire the 6 existing trigger RPCs to write into it | ACCT-7.2, ACCT-7.3 |

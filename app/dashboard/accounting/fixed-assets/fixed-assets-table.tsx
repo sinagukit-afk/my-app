@@ -8,7 +8,7 @@ export type AssetStatus = "active" | "fully_depreciated" | "disposed";
 export type AssetRow = {
   id: string;
   name: string;
-  account_number: number;
+  account_number: string;
   purchased_date: string;
   cost: number;
   useful_life_months: number;

@@ -84,7 +84,7 @@ conventions worth keeping are:
 | ACCT-4 | Financial reports (trial balance, income statement, balance sheet) | Done | `0016_accounting_reports` | Runs before ACCT-5 — hence the lower migration number |
 | ACCT-5 | Fixed assets & depreciation | Done | `0017_accounting_fixed_assets` | Rounding caveat found — see session log |
 | ACCT-6 | Historical import / opening balance | Done | — (no plug account needed) | Posted 2026-07-02 as `journal_entries.id = 61d13de0-99a0-4c90-9296-1ded0b2ca823`. The doc's own Resolution section (₱142,532.17 Retained Earnings, ₱332.40 credit for 2010) did not actually balance — recomputed from an updated source workbook Sinag supplied mid-session; see session log for the corrected figures actually posted. `0018_accounting_opening_balance_adjustment` migration and 3099 plug account confirmed still not needed. |
-| ACCT-7 | Event-driven auto-posting (rewritten — see `docs/ACCT-7-v2-Business-Events-Kickoff.md`) | In progress | `acct7_reseed_chart_of_accounts`, `acct7_item_accounting_mappings` | Original scope assumed `confirm_order()`, retired by D027 — full rescope done 2026-07-10, split into ACCT-7.1..7.8. 7.1 partial (COA re-seeded, edit UI not built yet); 7.3 tooling built (mapping page live, Sinag's confirmation pass not done yet) |
+| ACCT-7 | Event-driven auto-posting (rewritten — see `docs/ACCT-7-v2-Business-Events-Kickoff.md`) | In progress | `acct7_reseed_chart_of_accounts`, `acct7_item_accounting_mappings` | Original scope assumed `confirm_order()`, retired by D027 — full rescope done 2026-07-10, split into ACCT-7.1..7.8. 7.1 done (COA re-seeded + admin-only edit UI); 7.3 tooling built (mapping page live, Sinag's confirmation pass not done yet) |
 
 > **Migration renumber (2026-07-02, ACCT-3):** ACCT-3 wasn't originally assigned a migration, but the Rent/Transportation decision added account `6015 Rent Expense`, which needed one. Created during ACCT-3 (chronologically before ACCT-4..7, none of which exist yet), it correctly takes the next free label `0015` — so the reserved labels for ACCT-4 (`0015→0016`), ACCT-5 (`0016→0017`), ACCT-6 (`0017→0018`), and ACCT-7 (`0018→0019`) each shift up by one, preserving the "lower label = created earlier" invariant the earlier amendments established.
 | ACCT-8 | BIR tax estimate calculator | Not started | — | Lowest priority, optional |
@@ -397,5 +397,143 @@ for now. The actual item→account mapping pass (filling in all 62 rows)
 is Sinag's to do using the new page, not done by Claude per the
 established "flows first, Sinag enters the real data" convention from
 the 2026-07-10 restart.
+
+---
+
+### 2026-07-10 — ACCT-7.1 completed (Chart of Accounts edit UI)
+
+Closed out the one remaining ACCT-7.1 gap from the previous session: a
+real add/edit UI for the Chart of Accounts, replacing migration/SQL as
+the only way to add or change an account. No schema or RLS changes
+needed — `accounts_insert`/`accounts_update` were already admin-only and
+`accounts_select` already admin+manager (from ACCT-1), so the page only
+had to respect the existing policies, not add new ones.
+
+**New page `/dashboard/accounting/chart-of-accounts`** (added to the
+Accounting nav group, as the first child — before Journal, since Journal's
+account picker depends on this list): follows the same `page.tsx` /
+`*-table.tsx` / `*-form.tsx` / `actions.ts` split as Item Categories
+(`app/dashboard/management/item-categories/`), the closest existing
+precedent for a simple single-entity CRUD screen with a dialog form.
+
+- Table: Account #, Name, Category (color-coded badge), Description,
+  Status (Active/Inactive), Actions. Search/sort/pagination for free via
+  the shared `DataTable`.
+- Admin sees "Add Account" + per-row Edit + Deactivate/Reactivate; manager
+  sees the same table read-only (no action buttons); other roles get the
+  standard restricted-access card — mirrors Product Mapping's `canEdit`
+  pattern.
+- `account-form.tsx`: dialog with Account # (integer), Name, Category
+  (select: asset/liability/equity/revenue/expense, matches the DB CHECK
+  constraint), Description (optional textarea).
+- **Deactivate, not delete** — accounts have no `deleted_at`/delete RLS
+  policy (D003 soft-delete convention, but this table uses `is_active`
+  instead of `deleted_at` as its deactivation flag, per the ACCT-1
+  original design). `setAccountActive()` just flips the boolean; no new
+  RPC needed since `accounts_update` already covers it for admin.
+- Friendly error mapping in `actions.ts`: Postgres `23505` (unique
+  violation on `account_number`) → "That account number is already in
+  use."; `42501` (RLS denial) → permission message — same pattern as
+  Product Mapping's `friendlyError()`.
+
+**Verification:** `npm run build` passes zero errors, new route
+`/dashboard/accounting/chart-of-accounts` registered. **Browser preview
+verification not performed this session** — blocked by another active
+session's `next dev` server holding this project's single-instance dev
+lock (same limitation hit during ACCT-5's fixed-assets UI build; see that
+session's log entry). Compensated with the build/typecheck pass above and
+by matching the Item Categories/Product Mapping pattern byte-for-byte
+where the logic overlaps (role gating, soft-toggle actions, error
+mapping) rather than writing new untested logic. Sinag should smoke-test
+add/edit/deactivate in-browser before relying on this page for real data
+entry.
+
+ACCT-7.1 is now fully done (both the re-seed and the edit UI). Updated
+this doc's Status table, `MODULE_STATUS.md`'s Accounting section, and
+`docs/ACCT-7-v2-Business-Events-Kickoff.md`'s phase table to reflect it.
+No git commit (standing project rule — stopped for manual review). Next
+up per the phase breakdown: ACCT-7.2 (Purchasing payment-method capture)
+or Sinag's still-pending item→account mapping confirmation pass (ACCT-7.3).
+
+---
+
+### 2026-07-10 — Account number "SCA-" prefix + category filter + verified in browser
+
+Sinag asked for two follow-ups on the Chart of Accounts page just built,
+plus asked to actually verify it in-browser (the previous entry only had
+build/typecheck, blocked by another session's dev lock).
+
+**Migration `acct_account_number_sca_prefix`:** `accounts.account_number`
+changed from `integer` to `text`, all 103 existing values reformatted
+`1000` → `'SCA-1000'` etc. (`alter ... using ('SCA-' || account_number::text)`
+— unique constraint carries over automatically). Every account number in
+the current seed is 4 digits, so text sort order still matches numeric
+order; a future account number with a different digit count would sort
+oddly — worth a zero-padding rule if that ever comes up, not needed today.
+
+This is a real schema change with a real blast radius — traced every
+`account_number` reference before touching anything:
+- **4 RPCs recreated:** `get_trial_balance`/`get_income_statement`/
+  `get_balance_sheet` needed `drop function` + recreate (Postgres won't
+  let `CREATE OR REPLACE` change a `RETURNS TABLE` column's type) with
+  `account_number text` in the return signature. `post_journal_entry`
+  only needed its body edited (return type is `journal_entries`,
+  unaffected) — dropped the two `::integer` casts on
+  `(l->>'account_number')`, comparisons are plain text now.
+  `run_monthly_depreciation` needed **no changes** — it passes
+  `account_number` through an untyped `record` and `jsonb_build_object`,
+  both dynamically typed.
+- **9 app files updated** from `account_number: number` to `string`
+  (journal actions/new-form/detail page, all three report tables,
+  fixed-assets table/page, product-mapping table) — all were either
+  passthrough display or string-keyed lookups already, so this was a type
+  change with no logic change, confirmed by a clean `npm run build`.
+- Regenerated `lib/supabase/types.ts` (the MCP tool's response exceeded
+  the read limit — worked around by pulling the raw JSON dump the tool
+  saved to a file and unescaping it with a one-off Node script rather
+  than truncating the type file).
+- `get_advisors(security)` after the migration: same pre-existing
+  baseline WARN as before (anon/authenticated can execute the 4
+  `SECURITY DEFINER` functions) — no new advisories introduced.
+
+**Chart of Accounts add/edit form UX:** rather than making Sinag type
+`SCA-` every time, the Account # field shows a fixed `SCA-` adornment
+box next to a plain numeric input — admin types just the digits, the
+server action (`readAccountFields()` in `actions.ts`) prepends the
+prefix before insert/update. Edit mode strips the prefix back off
+(`stripPrefix()` in `account-form.tsx`) so the input shows `1000`, not
+`SCA-1000`, when editing an existing row.
+
+**Category filter:** added to `chart-of-accounts-table.tsx`, same
+pattern as `management/items/items-table.tsx` (local `useState` +
+`useMemo` filter feeding a plain `<Select>` ahead of `DataTable`, since
+the 5 categories are a fixed enum, not derived from data like Items'
+category filter is). Filters client-side; `DataTable`'s own search still
+applies on top of whatever the category filter leaves.
+
+**Killed the other session's dev server** (PID 3604, per Sinag's direct
+instruction this turn) and started this session's own `next dev` to
+actually verify in-browser, closing the gap flagged in the previous
+entry:
+- Chart of Accounts list renders all 103 accounts as `SCA-XXXX`.
+- Category filter to "Liability" correctly narrows to exactly the 3
+  liability accounts (`SCA-2000`, `SCA-2010`, `SCA-2020`).
+- Add Account: created `SCA-9999 — Test Verification Account`, confirmed
+  by direct DB query it stored as `SCA-9999` (not `9999`).
+- Edit: opening the just-created row shows `9999` in the input (prefix
+  correctly stripped back off for editing).
+- Deactivate: toggled the test row to `is_active = false`, confirmed in
+  DB and in the UI (badge flips to "Inactive", action flips to
+  "Reactivate").
+- Journal → New Entry's account picker shows `SCA-1000 — Cash on hand`
+  etc., and correctly excludes the deactivated test row (still filters
+  `is_active = true`).
+- Trial Balance loads with no console errors (₱0.00 — expected, ledger
+  is still empty since the 2026-07-10 restart).
+- Test account (`SCA-9999`) deleted afterward via direct SQL — back to
+  the clean 103 rows.
+- `npm run build` passes zero errors after all the type changes.
+
+No git commit (standing project rule — stopped for manual review).
 
 ---

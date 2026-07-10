@@ -8,7 +8,7 @@ import { saveItemAccountMappings, type MappingInput } from "./actions";
 
 export type AccountOption = {
   id: string;
-  account_number: number;
+  account_number: string;
   name: string;
   category: string;
 };

@@ -10,7 +10,7 @@ const LIST_PATH = '/dashboard/accounting/journal'
 // One line of a journal entry as assembled by the posting form. Amounts are
 // plain numbers here; post_journal_entry() enforces the one-side + balance rules.
 export type JournalLineInput = {
-  account_number: number
+  account_number: string
   debit: number
   credit: number
   memo: string | null
@@ -43,7 +43,7 @@ export async function postJournalEntry(formData: FormData): Promise<ActionResult
   // don't send obviously-empty rows the user left blank.
   const validLines = lines.filter(
     (l) =>
-      Number.isFinite(l.account_number) &&
+      Boolean(l.account_number) &&
       ((l.debit > 0 && l.credit === 0) || (l.credit > 0 && l.debit === 0))
   )
 

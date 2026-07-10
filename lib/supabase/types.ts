@@ -16,7 +16,7 @@ export type Database = {
     Tables: {
       accounts: {
         Row: {
-          account_number: number
+          account_number: string
           category: string
           created_at: string
           description: string | null
@@ -26,7 +26,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          account_number: number
+          account_number: string
           category: string
           created_at?: string
           description?: string | null
@@ -36,7 +36,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          account_number?: number
+          account_number?: string
           category?: string
           created_at?: string
           description?: string | null
@@ -3483,7 +3483,7 @@ export type Database = {
         Args: { p_as_of?: string }
         Returns: {
           account_name: string
-          account_number: number
+          account_number: string
           amount: number
           category: string
         }[]
@@ -3493,7 +3493,7 @@ export type Database = {
         Args: { p_end: string; p_start: string }
         Returns: {
           account_name: string
-          account_number: number
+          account_number: string
           amount: number
           category: string
         }[]
@@ -3502,7 +3502,7 @@ export type Database = {
         Args: { p_as_of?: string }
         Returns: {
           account_name: string
-          account_number: number
+          account_number: string
           category: string
           credit_balance: number
           debit_balance: number

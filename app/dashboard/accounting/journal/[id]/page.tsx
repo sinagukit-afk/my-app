@@ -56,7 +56,7 @@ export default async function JournalEntryDetailPage({
     memo: string | null;
     line_order: number;
     // One-to-one embed still types as T | T[]; normalize below.
-    accounts: { account_number: number; name: string } | { account_number: number; name: string }[] | null;
+    accounts: { account_number: string; name: string } | { account_number: string; name: string }[] | null;
   }[])
     .slice()
     .sort((a, b) => a.line_order - b.line_order);

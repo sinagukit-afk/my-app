@@ -225,13 +225,13 @@ admin/manager only
 > **▶ ACTIVE — resumed 2026-07-10 (clean restart), all data wiped.** See
 > `PROGRESS-ACCOUNTING.md` for detail.
 
-🟩 Chart of Accounts (ACCT-1) — re-seeded 2026-07-10 (103 accounts: 96 original + 7 new for ACCT-7). No edit UI yet (admin-only page still to build)
+🟩 Chart of Accounts (ACCT-1) — re-seeded 2026-07-10 (103 accounts: 96 original + 7 new for ACCT-7). Admin-only edit UI (add/edit/deactivate) built same day at `/dashboard/accounting/chart-of-accounts`
 🟩 Journal Core — `journal_entries`/`journal_entry_lines`, `post_journal_entry()` (ACCT-2)
 🟩 Manual Entry UI + retire income/expenses (ACCT-3)
 🟩 Financial Reports — Trial Balance, Income Statement, Balance Sheet (ACCT-4)
 🟩 Fixed Assets & Depreciation (ACCT-5)
 🟩 Historical Import / Opening Balance (ACCT-6)
-🟨 Event-driven auto-posting (ACCT-7) — rewritten 2026-07-10. `docs/ACCT-7-v2-Business-Events-Kickoff.md` (sub-phases 7.1..7.8). Done so far: COA re-seed (7.1, partial), item→account mapping page at `/dashboard/accounting/product-mapping` (7.3, tooling only — Sinag's actual mapping pass still pending). Not started: COA edit UI, Purchasing payment-method field, business event log, draft/review/approve workflow, reversal RPC, credit card payable
+🟨 Event-driven auto-posting (ACCT-7) — rewritten 2026-07-10. `docs/ACCT-7-v2-Business-Events-Kickoff.md` (sub-phases 7.1..7.8). Done so far: COA re-seed + edit UI (7.1, done), item→account mapping page at `/dashboard/accounting/product-mapping` (7.3, tooling only — Sinag's actual mapping pass still pending). Not started: Purchasing payment-method field, business event log, draft/review/approve workflow, reversal RPC, credit card payable
 ⬜ BIR tax estimate calculator (ACCT-8) — optional, lowest priority, not started
 
 Tracked separately in `PROGRESS-ACCOUNTING.md`, not this file's usual phase log.
