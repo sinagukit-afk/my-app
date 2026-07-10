@@ -91,6 +91,39 @@ export type Database = {
           },
         ]
       }
+      business_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          occurred_at: string
+          payload: Json
+          processed_at: string | null
+          source_id: string
+          source_table: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          occurred_at?: string
+          payload: Json
+          processed_at?: string | null
+          source_id: string
+          source_table: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          processed_at?: string | null
+          source_id?: string
+          source_table?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           category_type: string
@@ -3872,20 +3905,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      receive_purchase_order:
-        | {
-            Args: { p_lines: Json; p_purchase_order_id: string }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_is_credit_card?: boolean
-              p_lines: Json
-              p_payment_type_id?: string
-              p_purchase_order_id: string
-            }
-            Returns: undefined
-          }
+      receive_purchase_order: {
+        Args: {
+          p_is_credit_card?: boolean
+          p_lines: Json
+          p_payment_type_id?: string
+          p_purchase_order_id: string
+        }
+        Returns: undefined
+      }
       recompute_order_status: {
         Args: { p_order_id: string }
         Returns: undefined
@@ -3893,6 +3921,37 @@ export type Database = {
       recompute_shipping_status: {
         Args: { p_order_id: string }
         Returns: undefined
+      }
+      release_to_scrap: {
+        Args: {
+          p_note?: string
+          p_quantity: number
+          p_store_id: string
+          p_variant_id: string
+        }
+        Returns: {
+          available_qty: number
+          created_at: string
+          id: string
+          in_production_qty: number
+          in_stock: number
+          incoming_qty: number
+          low_stock_threshold: number | null
+          on_hold_qty: number
+          reserved_qty: number
+          source_id: string | null
+          source_updated_at: string | null
+          store_id: string
+          synced_at: string
+          updated_at: string
+          variant_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "inventory_levels"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       resume_order: {
         Args: { p_order_id: string }

@@ -24,12 +24,11 @@ export async function releaseOnHoldStock(formData: FormData): Promise<ActionResu
 
   const { error } =
     destination === 'scrap'
-      ? await supabase.rpc('deduct_stock_out', {
+      ? await supabase.rpc('release_to_scrap', {
           p_variant_id: variantId,
           p_store_id: storeId,
           p_quantity: quantity,
           p_note: note,
-          p_from_status: 'on_hold',
         })
       : await supabase.rpc('transfer_stock_status', {
           p_variant_id: variantId,

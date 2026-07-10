@@ -84,7 +84,7 @@ conventions worth keeping are:
 | ACCT-4 | Financial reports (trial balance, income statement, balance sheet) | Done | `0016_accounting_reports` | Runs before ACCT-5 — hence the lower migration number |
 | ACCT-5 | Fixed assets & depreciation | Done | `0017_accounting_fixed_assets` | Rounding caveat found — see session log |
 | ACCT-6 | Historical import / opening balance | Done | — (no plug account needed) | Posted 2026-07-02 as `journal_entries.id = 61d13de0-99a0-4c90-9296-1ded0b2ca823`. The doc's own Resolution section (₱142,532.17 Retained Earnings, ₱332.40 credit for 2010) did not actually balance — recomputed from an updated source workbook Sinag supplied mid-session; see session log for the corrected figures actually posted. `0018_accounting_opening_balance_adjustment` migration and 3099 plug account confirmed still not needed. |
-| ACCT-7 | Event-driven auto-posting (rewritten — see `docs/ACCT-7-v2-Business-Events-Kickoff.md`) | In progress | `acct7_reseed_chart_of_accounts`, `acct7_item_accounting_mappings`, `acct7_2_incoming_items_payment_method` | Original scope assumed `confirm_order()`, retired by D027 — full rescope done 2026-07-10, split into ACCT-7.1..7.8. 7.1 done (COA re-seeded + admin-only edit UI); 7.2 done (Purchasing payment-method capture); 7.3 done (Sinag reviewed Claude's first pass + mapped the 4 `Pkg-*` items himself; last gap — 4 `Srv-*`/`Shp-*` service items — closed by adding `SCA-4043 Service & Shipping Revenue`, 59/62 mapped, 3 intentionally-unmapped dev/test rows remain) |
+| ACCT-7 | Event-driven auto-posting (rewritten — see `docs/ACCT-7-v2-Business-Events-Kickoff.md`) | In progress | `acct7_reseed_chart_of_accounts`, `acct7_item_accounting_mappings`, `acct7_2_incoming_items_payment_method`, `acct7_4_business_events`, `acct7_4_wire_close_order_payment`, `acct7_4_wire_incoming_items_trigger`, `acct7_4_wire_adjust_stock`, `acct7_4_release_to_scrap`, `acct7_4_wire_shipment_cogs` | Original scope assumed `confirm_order()`, retired by D027 — full rescope done 2026-07-10, split into ACCT-7.1..7.8. 7.1 done (COA re-seeded + admin-only edit UI); 7.2 done (Purchasing payment-method capture); 7.3 done (Sinag reviewed Claude's first pass + mapped the 4 `Pkg-*` items himself; last gap — 4 `Srv-*`/`Shp-*` service items — closed by adding `SCA-4043 Service & Shipping Revenue`, 59/62 mapped, 3 intentionally-unmapped dev/test rows remain); 7.4 done (`business_events` table + all 6 trigger RPCs wired — see session log for the RPC-graph corrections found along the way) |
 
 > **Migration renumber (2026-07-02, ACCT-3):** ACCT-3 wasn't originally assigned a migration, but the Rent/Transportation decision added account `6015 Rent Expense`, which needed one. Created during ACCT-3 (chronologically before ACCT-4..7, none of which exist yet), it correctly takes the next free label `0015` — so the reserved labels for ACCT-4 (`0015→0016`), ACCT-5 (`0016→0017`), ACCT-6 (`0017→0018`), and ACCT-7 (`0018→0019`) each shift up by one, preserving the "lower label = created earlier" invariant the earlier amendments established.
 | ACCT-8 | BIR tax estimate calculator | Not started | — | Lowest priority, optional |
@@ -832,5 +832,119 @@ ACCT-7.3 is now done. No git commit (standing project rule — stopped for
 manual review; data-only change, no code/schema touched). Next up per the
 phase breakdown: ACCT-7.4 (`business_events` table + wiring the 6 trigger
 RPCs), now unblocked by both 7.2 and 7.3.
+
+---
+
+### 2026-07-10 — ACCT-7.4 (`business_events` table + wiring)
+
+**Re-verified the event catalog's RPC graph against the live schema first**
+(per this workstream's own standing caution — the original ACCT-7 died
+once already from a stale RPC assumption). Found the doc's mapping was
+half-wrong:
+
+- **Events #3 (Purchase received) and #4 (Manual incoming) share one real
+  choke point**, not two separate RPCs as the doc assumed:
+  `receive_purchase_order()` and Manual Incoming's insert both write into
+  `incoming_items`, and `apply_incoming_item_inventory_movement()` — an
+  `AFTER INSERT` trigger on that table (ACCT-7.2 discovery, not previously
+  connected to this doc) — is the single point both flows already pass
+  through. Wired the event insert there instead of duplicating it in two
+  RPCs; `new.source` (`'purchase_order'` vs `'manual'`) picks the event
+  type.
+- **Event #2 (COGS)** doesn't call `deduct_stock_out()` directly from
+  `mark_shipment_shipped()`/`mark_shipment_picked_up()` as the doc said —
+  both call a shared private helper, `_deduct_shipment_stock()`, which
+  loops over shipment components/packaging and calls `deduct_stock_out()`
+  per line. Wired the event there instead: one `cogs` event per shipment,
+  payload holding a `lines` array (item/variant/qty/unit cost snapshot per
+  line) rather than one event per line, since the rule engine (7.5) can
+  turn one event into several draft journal lines.
+- **Event #6 (scrap loss) genuinely had no dedicated RPC**, confirmed —
+  the doc's own "not fully pinned down" flag was correct. Items for
+  Review's "Release to Scrap" action was calling `deduct_stock_out()`
+  directly from app code (`p_from_status: 'on_hold'`), the same primitive
+  `_deduct_shipment_stock()` uses for COGS but with no way to distinguish
+  the two at that shared function. Resolved by adding a new dedicated RPC,
+  `release_to_scrap()`, that wraps `deduct_stock_out(..., 'on_hold')` and
+  writes the event itself; updated `items-for-review/actions.ts`'s scrap
+  branch to call it instead of `deduct_stock_out` directly.
+- **Event #5/#6 generic path (manual inventory count corrections)**: the
+  doc's own proposal already pointed at `adjust_stock()` for both — wired
+  directly there, branching gain vs. loss on the sign of `p_qty_delta`
+  (single generic RPC, freeform `p_reason` text, used by exactly one
+  screen — `/dashboard/inventory/adjustment`).
+- **Event #1 (Sale recognized)** matched the doc exactly —
+  `close_order_payment()` was the right hook, no surprises. Payload
+  derives `payment_status` (`paid`/`overpaid`/`partially_paid`) and
+  `write_off_amount` from the same total-paid-vs-total-money comparison
+  the function already does for its own logic, so no duplicate math.
+
+**Migrations applied** (all via Supabase MCP): `acct7_4_business_events`
+(new table — `event_type` check-constrained to the 6 catalog values,
+`source_table`/`source_id`, `occurred_at`, `payload jsonb`,
+`processed_at` for 7.5's rule engine to claim rows, select-only RLS
+admin+manager mirroring `journal_entries`/`accounts`, no insert/update/
+delete policy — confirmed via `pg_policy` inspection, and confirmed a raw
+`INSERT` even as an impersonated admin gets rejected by RLS since only the
+`SECURITY DEFINER` functions — which bypass RLS as table owner — can
+write); `acct7_4_wire_close_order_payment`, `acct7_4_wire_incoming_items_
+trigger`, `acct7_4_wire_adjust_stock`, `acct7_4_wire_shipment_cogs` (all
+body-only edits to existing functions, signatures unchanged, safe via
+`CREATE OR REPLACE` per the lesson in
+[[feedback_create_or_replace_function_signature_change]]);
+`acct7_4_release_to_scrap` (new function, no overload risk).
+
+Payloads deliberately snapshot the numbers each event needs (unit cost
+from `item_variants.cost` at event time, order totals/tip/write-off at
+close time, etc.) rather than leaving 7.5 to re-read operational tables
+later, per the kickoff doc's own design intent for `payload`.
+
+**Verified:**
+- `get_advisors(security)`: only the same baseline WARN pattern as every
+  other RPC in the project (anon can execute `SECURITY DEFINER` — the
+  internal role/RLS gates are what actually matter); no new categories of
+  advisory, and specifically none on `business_events` itself (RLS enabled
+  with a real policy, not missing).
+- `npm run build` passes zero errors; `lib/supabase/types.ts` regenerated
+  (same &gt;100K-character MCP-response workaround as the SCA-prefix
+  session — saved response parsed with a one-off Node script rather than
+  reading it through the truncating tool output).
+- **All 6 event-writing paths DB-verified** via role-impersonated,
+  rolled-back transactions (real data used where it existed, fully
+  self-contained where it didn't — e.g. temporarily topping up
+  `inventory_levels` buckets before a shipment test, or moving stock into
+  `on_hold` via `transfer_stock_status()` before a scrap test — all inside
+  the same rolled-back transaction): `sale_recognized` (real unclosed
+  overpaid order, correctly derived `tip_amount`/`write_off_amount`),
+  `purchase_received` + `manual_incoming` (confirmed both branch correctly
+  off the one shared trigger), `inventory_adjustment_gain` /
+  `inventory_adjustment_loss` (sign-branching confirmed both ways),
+  `inventory_adjustment_loss` via `release_to_scrap` (confirmed distinct
+  `reason: 'scrap_release'` tag), `cogs` (confirmed the `lines` array
+  shape against a real shipment's real components). Confirmed clean
+  afterward: `business_events` back to 0 rows, no order/shipment/PO status
+  left mutated.
+- **Browser-verified live** (admin `claude-code@sinagukit.internal`, once
+  port 3000 freed up mid-session — the other session's server from the
+  ACCT-7.3 entry was gone by the time this one needed it, no kill
+  required): Items for Review → clicked `Itm-Keychain Leather, Rectangle`
+  (1 unit on hold) → Release To "Scrap" → Release Stock. Row disappeared
+  from the list (on-hold qty hit 0), no console errors, and the DB shows a
+  real `inventory_adjustment_loss` event with the note text typed in the
+  form — confirming the `items-for-review/actions.ts` RPC swap
+  (`deduct_stock_out` → `release_to_scrap`) works end to end through the
+  real UI, not just in isolation. Left in place (real stock disposition,
+  matches this project's convention for self-contained verification
+  data).
+
+**Not built this session** (per phase breakdown, out of scope for 7.4):
+the rule engine that turns `business_events` rows into draft journal
+entries reading `item_accounting_mappings` (ACCT-7.5), so `business_events`
+will accumulate real rows now but nothing consumes them yet —
+`processed_at` stays null on everything until 7.5 exists.
+
+No git commit (standing project rule — stopped for manual review). Next
+up: ACCT-7.5 (`journal_entry_drafts`/`journal_entry_draft_lines` + the
+rule engine).
 
 ---
