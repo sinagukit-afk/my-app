@@ -11,11 +11,12 @@ type Props = {
   fullName: string | null;
   contactNumber: string | null;
   birthday: string | null;
+  username: string;
 };
 
-export function ProfileForm({ fullName, contactNumber, birthday }: Props) {
+export function ProfileForm({ fullName, contactNumber, birthday, username }: Props) {
   const [isEditing, setIsEditing] = useState(false);
-  const [current, setCurrent] = useState({ fullName, contactNumber, birthday });
+  const [current, setCurrent] = useState({ fullName, contactNumber, birthday, username });
   const [result, setResult] = useState<{ success: boolean; error?: string } | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -31,6 +32,7 @@ export function ProfileForm({ fullName, contactNumber, birthday }: Props) {
           fullName: (formData.get("full_name") as string).trim() || null,
           contactNumber: (formData.get("contact_number") as string).trim() || null,
           birthday: (formData.get("birthday") as string) || null,
+          username: (formData.get("username") as string).trim().toLowerCase(),
         });
         setIsEditing(false);
         setResult({ success: true });
@@ -78,6 +80,16 @@ export function ProfileForm({ fullName, contactNumber, birthday }: Props) {
               required
             />
             <Input
+              label="Username"
+              name="username"
+              type="text"
+              defaultValue={current.username}
+              placeholder="juan.delacruz"
+              pattern="[a-z0-9_.]{3,32}"
+              title="3-32 characters: lowercase letters, numbers, underscore, or period."
+              required
+            />
+            <Input
               label="Contact Number"
               name="contact_number"
               type="tel"
@@ -104,6 +116,10 @@ export function ProfileForm({ fullName, contactNumber, birthday }: Props) {
           </form>
         ) : (
           <dl className="space-y-3 text-sm">
+            <div>
+              <dt className="font-medium text-(--color-text)">Username</dt>
+              <dd className="mt-0.5 text-(--color-text-muted)">{current.username}</dd>
+            </div>
             <div>
               <dt className="font-medium text-(--color-text)">Contact Number</dt>
               <dd className="mt-0.5 text-(--color-text-muted)">

@@ -24,7 +24,7 @@ export default async function ProfilePage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, email, role, contact_number, birthday, created_at")
+    .select("full_name, email, role, contact_number, birthday, created_at, username")
     .eq("id", user.id)
     .single();
 
@@ -69,6 +69,9 @@ export default async function ProfilePage() {
               <p className="truncate text-sm text-(--color-text-muted)">
                 {profile?.email ?? user.email}
               </p>
+              {profile?.username && (
+                <p className="truncate text-xs text-(--color-text-muted)">@{profile.username}</p>
+              )}
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant={ROLE_BADGE[profile?.role ?? ""] ?? "neutral"}>
                   {profile?.role ?? "unknown"}
@@ -98,6 +101,7 @@ export default async function ProfilePage() {
         fullName={profile?.full_name ?? null}
         contactNumber={profile?.contact_number ?? null}
         birthday={profile?.birthday ?? null}
+        username={profile?.username ?? ""}
       />
 
       <PasswordForm />

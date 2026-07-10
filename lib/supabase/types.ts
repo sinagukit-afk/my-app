@@ -1267,8 +1267,9 @@ export type Database = {
       modifier_options: {
         Row: {
           created_at: string
+          deleted_at: string | null
           id: string
-          loyverse_modifier_option_id: string
+          loyverse_modifier_option_id: string | null
           modifier_id: string
           name: string
           price: number
@@ -1276,8 +1277,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
-          loyverse_modifier_option_id: string
+          loyverse_modifier_option_id?: string | null
           modifier_id: string
           name: string
           price?: number
@@ -1285,8 +1287,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
-          loyverse_modifier_option_id?: string
+          loyverse_modifier_option_id?: string | null
           modifier_id?: string
           name?: string
           price?: number
@@ -1307,7 +1310,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           id: string
-          loyverse_modifier_id: string
+          loyverse_modifier_id: string | null
           name: string
           raw: Json | null
           updated_at: string
@@ -1316,7 +1319,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id?: string
-          loyverse_modifier_id: string
+          loyverse_modifier_id?: string | null
           name: string
           raw?: Json | null
           updated_at?: string
@@ -1325,7 +1328,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id?: string
-          loyverse_modifier_id?: string
+          loyverse_modifier_id?: string | null
           name?: string
           raw?: Json | null
           updated_at?: string
@@ -1929,6 +1932,7 @@ export type Database = {
           function_title: string
           id: string
           role: Database["public"]["Enums"]["user_role"]
+          username: string
         }
         Insert: {
           birthday?: string | null
@@ -1939,6 +1943,7 @@ export type Database = {
           function_title?: string
           id: string
           role?: Database["public"]["Enums"]["user_role"]
+          username: string
         }
         Update: {
           birthday?: string | null
@@ -1949,6 +1954,7 @@ export type Database = {
           function_title?: string
           id?: string
           role?: Database["public"]["Enums"]["user_role"]
+          username?: string
         }
         Relationships: []
       }
@@ -3406,6 +3412,7 @@ export type Database = {
           category: string
         }[]
       }
+      get_email_for_username: { Args: { p_username: string }; Returns: string }
       get_income_statement: {
         Args: { p_end: string; p_start: string }
         Returns: {

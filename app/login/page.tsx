@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { login } from './actions'
 
 export default async function LoginPage({
@@ -25,23 +26,28 @@ export default async function LoginPage({
         )}
 
         <div>
-          <label htmlFor="email" className="mb-1 block text-sm font-medium text-stone-700">
-            Email
+          <label htmlFor="identifier" className="mb-1 block text-sm font-medium text-stone-700">
+            Email or Username
           </label>
           <input
-            id="email"
-            name="email"
-            type="email"
+            id="identifier"
+            name="identifier"
+            type="text"
             required
-            autoComplete="email"
+            autoComplete="username"
             className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-stone-500 focus:outline-none focus:ring-1 focus:ring-stone-500"
           />
         </div>
 
         <div>
-          <label htmlFor="password" className="mb-1 block text-sm font-medium text-stone-700">
-            Password
-          </label>
+          <div className="mb-1 flex items-center justify-between">
+            <label htmlFor="password" className="block text-sm font-medium text-stone-700">
+              Password
+            </label>
+            <Link href="/forgot-password" className="text-xs text-stone-500 underline hover:text-stone-900">
+              Forgot password?
+            </Link>
+          </div>
           <input
             id="password"
             name="password"
