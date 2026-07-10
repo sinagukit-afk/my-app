@@ -17,6 +17,8 @@ export type ReceivingLogRow = {
   purchase_order_reference: string | null;
   notes: string | null;
   received_by_email: string | null;
+  payment_type_name: string | null;
+  is_credit_card: boolean;
 };
 
 type Props = {
@@ -90,6 +92,23 @@ export function ReceivingLogTable({ data }: Props) {
       render: (value) =>
         value ? (
           <span>{String(value)}</span>
+        ) : (
+          <span className="text-(--color-text-subtle)">—</span>
+        ),
+    },
+    {
+      key: "payment_type_name",
+      header: "Payment",
+      render: (value, row) =>
+        value || row.is_credit_card ? (
+          <span className="text-sm text-(--color-text)">
+            {value ? String(value) : "—"}
+            {row.is_credit_card && (
+              <Badge variant="warning" className="ml-1.5">
+                Credit Card
+              </Badge>
+            )}
+          </span>
         ) : (
           <span className="text-(--color-text-subtle)">—</span>
         ),

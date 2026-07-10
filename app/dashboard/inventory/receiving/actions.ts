@@ -21,6 +21,8 @@ export async function createManualIncoming(formData: FormData): Promise<ActionRe
   const unit_price = parseFloat(formData.get('unit_price') as string)
   const date_received = (formData.get('date_received') as string)?.trim()
   const notes = (formData.get('notes') as string)?.trim() || null
+  const payment_type_id = (formData.get('payment_type_id') as string)?.trim() || null
+  const is_credit_card = formData.get('is_credit_card') === 'true'
 
   if (!item_id) return { success: false, error: 'Item is required.' }
   if (!date_received) return { success: false, error: 'Date received is required.' }
@@ -64,6 +66,8 @@ export async function createManualIncoming(formData: FormData): Promise<ActionRe
     purchase_order_id: null,
     shipping_fee: 0,
     discount_amount: 0,
+    payment_type_id,
+    is_credit_card,
   })
 
   if (error) return { success: false, error: error.message }

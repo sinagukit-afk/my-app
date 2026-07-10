@@ -30,6 +30,7 @@ export default async function ReceivingPage() {
     { data: itemData },
     { data: variantData },
     { data: logData, error: logError },
+    { data: paymentTypesData },
   ] = await Promise.all([
     supabase
       .from("purchase_orders")
@@ -60,10 +61,16 @@ export default async function ReceivingPage() {
     supabase
       .from("incoming_items")
       .select(
-        "id, reference, status, date_received, item_name_snapshot, variant_id, quantity, unit_price, total_price, supplier_id, supplier, notes, received_by_email, item_variants(option1_value, option2_value), suppliers(name), purchase_orders(reference)"
+        "id, reference, status, date_received, item_name_snapshot, variant_id, quantity, unit_price, total_price, supplier_id, supplier, notes, received_by_email, is_credit_card, item_variants(option1_value, option2_value), suppliers(name), purchase_orders(reference), payment_types(name)"
       )
       .order("date_received", { ascending: false })
       .order("created_at", { ascending: false }),
+
+    supabase
+      .from("payment_types")
+      .select("id, name")
+      .eq("is_active", true)
+      .order("name"),
   ]);
 
   const openPOs: ReceivablePO[] = (poData ?? []).map((po) => {
@@ -100,6 +107,7 @@ export default async function ReceivingPage() {
     const variantRel = firstOf(row.item_variants);
     const supplierRel = firstOf(row.suppliers);
     const poRel = firstOf(row.purchase_orders);
+    const paymentTypeRel = firstOf(row.payment_types);
 
     const variantLabel = variantRel
       ? [variantRel.option1_value, variantRel.option2_value].filter(Boolean).join(" / ") || null
@@ -119,12 +127,21 @@ export default async function ReceivingPage() {
       purchase_order_reference: poRel?.reference ?? null,
       notes: row.notes ?? null,
       received_by_email: row.received_by_email ?? null,
+      payment_type_name: paymentTypeRel?.name ?? null,
+      is_credit_card: row.is_credit_card,
     };
   });
 
+  const paymentTypeOptions = paymentTypesData ?? [];
+
   return (
     <div className="space-y-6">
-      <ReceivingHeader canWrite={canWrite} suppliers={suppliers} items={items} />
+      <ReceivingHeader
+        canWrite={canWrite}
+        suppliers={suppliers}
+        items={items}
+        paymentTypeOptions={paymentTypeOptions}
+      />
 
       {(poError || logError) && (
         <Card>

@@ -120,6 +120,11 @@ granularity than a single COGS line would.
 
 ## Prerequisite: Purchasing has no payment-method field
 
+**Resolved 2026-07-10 (ACCT-7.2).** Landed on `incoming_items`, not
+`purchase_orders` — see `PROGRESS-ACCOUNTING.md`'s ACCT-7.2 session log
+entry for the full rationale (row-level granularity the rule engine
+needs, shared by both `receive_purchase_order()` and Manual Incoming).
+
 `purchase_orders` has no `payment_type_id` at all today (unlike `orders`,
 which does). To support decision 7 (credit card vs. ordinary payment), a
 receiving-time capture is needed:
@@ -179,7 +184,7 @@ rewrite.
 | Phase | Description | Depends on |
 |---|---|---|
 | ACCT-7.1 | ~~Re-seed original 95 + 7 new accounts~~ **done 2026-07-10** (103 accounts live). ~~Chart of Accounts edit UI (admin-only)~~ **done 2026-07-10** — `/dashboard/accounting/chart-of-accounts` (add/edit/deactivate, admin-only writes) | Sinag confirms account numbers/names — done |
-| ACCT-7.2 | Purchasing payment-method capture at receiving (new field + credit-card flag) | — |
+| ACCT-7.2 | ~~Purchasing payment-method capture at receiving~~ **done 2026-07-10** — `incoming_items.payment_type_id`/`is_credit_card` (not on `purchase_orders`; captured per receiving transaction), `receive_purchase_order()` extended, both receiving UIs updated | — |
 | ACCT-7.3 | ~~Mapping table + page~~ **built 2026-07-10** (`item_accounting_mappings` + `/dashboard/accounting/product-mapping`). Sinag's confirmation pass (filling in all 62 items) still **not done** | ACCT-7.1 (reseed) — done |
 | ACCT-7.4 | `business_events` table + wire the 6 existing trigger RPCs to write into it | ACCT-7.2, ACCT-7.3 |
 | ACCT-7.5 | `journal_entry_drafts`/`journal_entry_draft_lines` + rule engine that turns unprocessed events into drafts | ACCT-7.4 |

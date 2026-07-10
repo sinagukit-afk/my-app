@@ -21,16 +21,18 @@ export type ItemOption = {
   name: string;
   variants: { id: string; label: string }[];
 };
+export type PaymentTypeOption = { id: string; name: string };
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   suppliers: SupplierOption[];
   items: ItemOption[];
+  paymentTypeOptions: PaymentTypeOption[];
   onSaved: () => void;
 };
 
-export function ManualIncomingForm({ open, onOpenChange, suppliers, items, onSaved }: Props) {
+export function ManualIncomingForm({ open, onOpenChange, suppliers, items, paymentTypeOptions, onSaved }: Props) {
   const [isPending, startTransition] = useTransition();
   const [selectedItemId, setSelectedItemId] = useState("");
 
@@ -153,6 +155,36 @@ export function ManualIncomingForm({ open, onOpenChange, suppliers, items, onSav
             required
             defaultValue={new Date().toISOString().slice(0, 10)}
           />
+
+          {/* Payment Method */}
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-(--color-text)">Payment Method</label>
+            <select
+              name="payment_type_id"
+              className="w-full rounded-md border border-(--color-border) bg-(--color-surface) px-3 py-2 text-sm text-(--color-text) focus:outline-none focus:ring-2 focus:ring-(--color-ring)"
+            >
+              <option value="">— Not specified —</option>
+              {paymentTypeOptions.map((pt) => (
+                <option key={pt.id} value={pt.id}>
+                  {pt.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Credit Card flag */}
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="is_credit_card"
+              name="is_credit_card"
+              value="true"
+              className="h-4 w-4 rounded border border-(--color-border-strong) bg-(--color-surface) accent-(--color-primary)"
+            />
+            <label htmlFor="is_credit_card" className="text-sm text-(--color-text)">
+              Paid via credit card
+            </label>
+          </div>
 
           {/* Notes */}
           <TextArea label="Notes" name="notes" rows={3} placeholder="Optional notes…" />

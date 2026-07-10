@@ -8,7 +8,9 @@ export type ActionResult = { success: true } | { success: false; error: string }
 export async function receivePurchaseOrder(
   purchaseOrderId: string,
   reference: string,
-  lines: { po_item_id: string; quantity: number }[]
+  lines: { po_item_id: string; quantity: number }[],
+  paymentTypeId: string | null,
+  isCreditCard: boolean
 ): Promise<ActionResult> {
   const validLines = lines.filter((l) => l.quantity > 0)
   if (validLines.length === 0) {
@@ -19,6 +21,8 @@ export async function receivePurchaseOrder(
   const { error } = await supabase.rpc('receive_purchase_order', {
     p_purchase_order_id: purchaseOrderId,
     p_lines: validLines,
+    p_payment_type_id: paymentTypeId,
+    p_is_credit_card: isCreditCard,
   })
 
   if (error) return { success: false, error: error.message }

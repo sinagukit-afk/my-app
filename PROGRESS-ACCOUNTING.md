@@ -84,7 +84,7 @@ conventions worth keeping are:
 | ACCT-4 | Financial reports (trial balance, income statement, balance sheet) | Done | `0016_accounting_reports` | Runs before ACCT-5 — hence the lower migration number |
 | ACCT-5 | Fixed assets & depreciation | Done | `0017_accounting_fixed_assets` | Rounding caveat found — see session log |
 | ACCT-6 | Historical import / opening balance | Done | — (no plug account needed) | Posted 2026-07-02 as `journal_entries.id = 61d13de0-99a0-4c90-9296-1ded0b2ca823`. The doc's own Resolution section (₱142,532.17 Retained Earnings, ₱332.40 credit for 2010) did not actually balance — recomputed from an updated source workbook Sinag supplied mid-session; see session log for the corrected figures actually posted. `0018_accounting_opening_balance_adjustment` migration and 3099 plug account confirmed still not needed. |
-| ACCT-7 | Event-driven auto-posting (rewritten — see `docs/ACCT-7-v2-Business-Events-Kickoff.md`) | In progress | `acct7_reseed_chart_of_accounts`, `acct7_item_accounting_mappings` | Original scope assumed `confirm_order()`, retired by D027 — full rescope done 2026-07-10, split into ACCT-7.1..7.8. 7.1 done (COA re-seeded + admin-only edit UI); 7.3 tooling built (mapping page live, Sinag's confirmation pass not done yet) |
+| ACCT-7 | Event-driven auto-posting (rewritten — see `docs/ACCT-7-v2-Business-Events-Kickoff.md`) | In progress | `acct7_reseed_chart_of_accounts`, `acct7_item_accounting_mappings`, `acct7_2_incoming_items_payment_method` | Original scope assumed `confirm_order()`, retired by D027 — full rescope done 2026-07-10, split into ACCT-7.1..7.8. 7.1 done (COA re-seeded + admin-only edit UI); 7.2 done (Purchasing payment-method capture); 7.3 tooling built (mapping page live, Sinag's confirmation pass not done yet) |
 
 > **Migration renumber (2026-07-02, ACCT-3):** ACCT-3 wasn't originally assigned a migration, but the Rent/Transportation decision added account `6015 Rent Expense`, which needed one. Created during ACCT-3 (chronologically before ACCT-4..7, none of which exist yet), it correctly takes the next free label `0015` — so the reserved labels for ACCT-4 (`0015→0016`), ACCT-5 (`0016→0017`), ACCT-6 (`0017→0018`), and ACCT-7 (`0018→0019`) each shift up by one, preserving the "lower label = created earlier" invariant the earlier amendments established.
 | ACCT-8 | BIR tax estimate calculator | Not started | — | Lowest priority, optional |
@@ -535,5 +535,140 @@ entry:
 - `npm run build` passes zero errors after all the type changes.
 
 No git commit (standing project rule — stopped for manual review).
+
+---
+
+### 2026-07-10 — ACCT-7.2 (Purchasing payment-method capture)
+
+Closed the prerequisite the kickoff doc flagged: `purchase_orders` had no
+payment-method field at all, needed before event #3 (Purchase received)
+can later decide Cash/Bank vs. `2020 Credit Card Payable`.
+
+**Migration `acct7_2_incoming_items_payment_method`:** added
+`payment_type_id` (nullable FK → `payment_types`, mirrors `order_payments.
+payment_type_id`) and `is_credit_card` (`boolean not null default false`)
+to `incoming_items` — not `purchase_orders`. `incoming_items` is the
+shared table both `receive_purchase_order()` and Manual Incoming write
+to, and it's the row-level granularity the future rule engine (ACCT-7.4+)
+will read per receiving transaction, so that's where the columns needed
+to live, not the PO header. Two separate fields rather than one, per the
+kickoff doc's own distinction: `payment_type_id` reuses the existing
+Loyverse-synced `payment_types` list (Gcash/BPI/Other/Maribank/Cash/BDO —
+confirmed live, **no "Credit Card" entry exists in that table**), while
+`is_credit_card` is an independent boolean flag, since credit-card
+purchases aren't a real Loyverse payment type for this business and
+shouldn't be modeled as one.
+
+`receive_purchase_order(p_purchase_order_id, p_lines)` extended to
+`receive_purchase_order(p_purchase_order_id, p_lines, p_payment_type_id
+default null, p_is_credit_card default false)` — both new params applied
+to every `incoming_items` row inserted in that receiving call (payment
+method is captured once per receiving action, not per line).
+
+**Bug caught before it shipped:** `CREATE OR REPLACE FUNCTION` with 2 new
+parameters didn't replace the original — Postgres only replaces on an
+exact signature match, so it silently created a **second overload**
+(`(uuid, jsonb)` alongside `(uuid, jsonb, uuid, boolean)`), confirmed via
+`pg_proc`. Caught immediately by a direct-SQL smoke test (calling the
+2-arg form errored `function receive_purchase_order(uuid, jsonb) is not
+unique`) before any app code shipped against it. Fixed with a follow-up
+migration (`acct7_2_drop_old_receive_purchase_order_overload`) dropping
+the stale 2-arg signature. Worth remembering for any future RPC signature
+change in this project — `CREATE OR REPLACE` is only safe for
+same-signature edits (e.g. the SCA-prefix session's `post_journal_entry`
+body-only edit); adding/removing parameters needs an explicit `DROP
+FUNCTION` first.
+
+**App changes** (`app/dashboard/inventory/receiving/`):
+- `[reference]/receive-form.tsx` — added a `Select` (Payment Method,
+  optional) + `Checkbox` ("Paid via credit card") above Post Receipt,
+  matching the `Select`/state pattern from `order-payments.tsx` (the
+  closest existing payment-type-picker precedent). `[reference]/
+  actions.ts`'s `receivePurchaseOrder()` takes the two new args and
+  passes them straight through to the RPC. `[reference]/page.tsx` now
+  also loads `payment_types` (active only) and passes it down.
+- `manual-incoming-form.tsx` — added a native `<select name="payment_type_id">`
+  + native checkbox (`name="is_credit_card"`), matching this file's own
+  existing uncontrolled-`FormData` style (supplier/item pickers) rather
+  than introducing the shared `Select`/`Checkbox` components into a file
+  that doesn't use them elsewhere. `actions.ts`'s `createManualIncoming()`
+  reads both from `formData` and includes them in the plain
+  `incoming_items` insert (this flow doesn't go through the RPC).
+  `paymentTypeOptions` threaded through `receiving-header.tsx` from
+  `page.tsx`'s existing `Promise.all` data load.
+- `receiving-log-table.tsx` — new "Payment" column (payment type name +
+  a "Credit Card" badge when `is_credit_card`), fed by extending the
+  existing `incoming_items` query in `page.tsx` to also select
+  `payment_types(name)` and `is_credit_card`.
+
+**Verified:**
+- `npm run build` passes zero errors; `lib/supabase/types.ts` regenerated
+  (confirmed `payment_type_id`/`is_credit_card` present on `incoming_items`
+  and the new RPC signature in the `Functions` types).
+- **DB-level verification** (rolled-back transactions, role-impersonated
+  as the Claude admin test account, before browser access was available):
+  real `partial`-status PO (`SPO-2026-07080001`) received with
+  `p_payment_type_id`/`p_is_credit_card` set — both stored correctly on
+  the `incoming_items` row; same PO received again with the old 2-arg
+  call style — confirmed both columns default to `null`/`false` safely;
+  both transactions rolled back, no data left behind.
+- **Bug caught by the DB-level test above, before it shipped:** `CREATE
+  OR REPLACE FUNCTION` with 2 new parameters didn't replace
+  `receive_purchase_order` — Postgres only replaces on an exact signature
+  match, so it silently created a **second overload**
+  (`(uuid, jsonb)` alongside `(uuid, jsonb, uuid, boolean)`), confirmed
+  via `pg_proc`. The 2-arg smoke test errored `function
+  receive_purchase_order(uuid, jsonb) is not unique`. Fixed with a
+  follow-up migration (`acct7_2_drop_old_receive_purchase_order_overload`)
+  dropping the stale 2-arg signature, then re-verified both DB-level
+  cases pass cleanly. Worth remembering for any future RPC signature
+  change in this project (saved as
+  `feedback_create_or_replace_function_signature_change` memory) —
+  `CREATE OR REPLACE` is only safe for same-signature edits (e.g. the
+  SCA-prefix session's `post_journal_entry` body-only edit); adding/
+  removing parameters needs an explicit `DROP FUNCTION` first.
+- **Browser preview, full click-test (Sinag's explicit request, same
+  session):** the other active session's `next dev` server (holding this
+  project's single-instance dev lock, same recurring limitation as ACCT-5
+  and ACCT-7.1) was killed on Sinag's direct instruction this turn
+  (`Stop-Process -Id 22048 -Force`, confirmed via
+  `Get-NetTCPConnection -LocalPort 3000`). Started this session's own
+  `next dev`; first attempt 404'd on every dashboard route (stale
+  `.next` build cache left behind by the killed process's incomplete
+  Turbopack state) — cleared `.next/` and restarted clean, which fixed
+  it. Logged in as the Claude admin test account and drove both forms
+  end to end:
+  - **PO receive form** (`/dashboard/inventory/receiving/SPO-2026-07080001`):
+    Payment Method select + "Paid via credit card" checkbox render
+    correctly. Received 1 unit with Gcash + credit card checked — new
+    row `SRI26-0710-0019` appears in the Receiving Log with "Gcash" +
+    a "Credit Card" badge, Units Remaining dropped 10→9, no console
+    errors. Confirmed in DB: `payment_type_name = 'Gcash'`,
+    `is_credit_card = true`, `source = 'purchase_order'`.
+  - **Manual Incoming dialog**: Payment Method select + checkbox render
+    correctly, native-`<select>` style matching the rest of that form.
+    Logged 3 units of `Itm-Bottle Opener-Long 14cm` with BDO, credit-card
+    **unchecked**, note "ACCT-7.2 payment-method verification entry" —
+    new row `SRI26-0710-0020` appears with "BDO" and no badge, no console
+    errors. Confirmed in DB: `payment_type_name = 'BDO'`,
+    `is_credit_card = false`, `source = 'manual'`.
+  - **Bug hit and fixed mid-verification:** submitting the PO receive
+    form with a generic `button[type="submit"]` selector matched the
+    header's Sign Out button instead of Post Receipt (logged the session
+    out) — exactly the pitfall already on file in
+    `feedback_preview_submit_button_targeting`. Re-logged in and redid
+    the submit by exact button-text match instead; no repeat.
+  - Both verification entries (`SRI26-0710-0019`, `SRI26-0710-0020`) left
+    in place as real, labeled examples rather than rolled back — they
+    represent genuine stock movements against real PO/item rows, matching
+    the project's standing convention (RECV-1, ACCT-7.1's `SCA-9999`) of
+    leaving self-contained verification data in place rather than
+    reverting it.
+
+No git commit (standing project rule — stopped for manual review). Next
+up per the phase breakdown: ACCT-7.3 (Sinag's item→account mapping
+confirmation pass, tooling already built) or ACCT-7.4 (`business_events`
+table + wiring), the latter now unblocked by 7.2's payment-method
+prerequisite.
 
 ---

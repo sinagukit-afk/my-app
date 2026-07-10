@@ -4,15 +4,21 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { ManualIncomingForm, type SupplierOption, type ItemOption } from "./manual-incoming-form";
+import {
+  ManualIncomingForm,
+  type SupplierOption,
+  type ItemOption,
+  type PaymentTypeOption,
+} from "./manual-incoming-form";
 
 type Props = {
   canWrite: boolean;
   suppliers: SupplierOption[];
   items: ItemOption[];
+  paymentTypeOptions: PaymentTypeOption[];
 };
 
-export function ReceivingHeader({ canWrite, suppliers, items }: Props) {
+export function ReceivingHeader({ canWrite, suppliers, items, paymentTypeOptions }: Props) {
   const router = useRouter();
   const [formOpen, setFormOpen] = useState(false);
 
@@ -34,6 +40,7 @@ export function ReceivingHeader({ canWrite, suppliers, items }: Props) {
           onOpenChange={setFormOpen}
           suppliers={suppliers}
           items={items}
+          paymentTypeOptions={paymentTypeOptions}
           onSaved={() => router.refresh()}
         />
       )}
