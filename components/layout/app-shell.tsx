@@ -99,6 +99,7 @@ const NAV: NavEntry[] = [
     roles: ["admin", "manager"],
     children: [
       { kind: "item", label: "Journal", href: "/dashboard/accounting/journal", icon: LedgerIcon },
+      { kind: "item", label: "Product Mapping", href: "/dashboard/accounting/product-mapping", icon: LedgerIcon },
       { kind: "item", label: "Fixed Assets", href: "/dashboard/accounting/fixed-assets", icon: LedgerIcon },
       { kind: "item", label: "Trial Balance", href: "/dashboard/accounting/trial-balance", icon: LedgerIcon },
       { kind: "item", label: "Income Statement", href: "/dashboard/accounting/income-statement", icon: LedgerIcon },

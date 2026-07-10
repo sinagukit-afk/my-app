@@ -872,6 +872,82 @@ export type Database = {
         }
         Relationships: []
       }
+      item_accounting_mappings: {
+        Row: {
+          created_at: string
+          expense_account_id: string | null
+          id: string
+          inventory_account_id: string | null
+          item_id: string
+          revenue_account_id: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          expense_account_id?: string | null
+          id?: string
+          inventory_account_id?: string | null
+          item_id: string
+          revenue_account_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          expense_account_id?: string | null
+          id?: string
+          inventory_account_id?: string | null
+          item_id?: string
+          revenue_account_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_accounting_mappings_expense_account_id_fkey"
+            columns: ["expense_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_accounting_mappings_inventory_account_id_fkey"
+            columns: ["inventory_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_accounting_mappings_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: true
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_accounting_mappings_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: true
+            referencedRelation: "v_item_catalog"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "item_accounting_mappings_revenue_account_id_fkey"
+            columns: ["revenue_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_accounting_mappings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       item_components: {
         Row: {
           component_variant_id: string

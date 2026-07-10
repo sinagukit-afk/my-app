@@ -84,7 +84,7 @@ conventions worth keeping are:
 | ACCT-4 | Financial reports (trial balance, income statement, balance sheet) | Done | `0016_accounting_reports` | Runs before ACCT-5 — hence the lower migration number |
 | ACCT-5 | Fixed assets & depreciation | Done | `0017_accounting_fixed_assets` | Rounding caveat found — see session log |
 | ACCT-6 | Historical import / opening balance | Done | — (no plug account needed) | Posted 2026-07-02 as `journal_entries.id = 61d13de0-99a0-4c90-9296-1ded0b2ca823`. The doc's own Resolution section (₱142,532.17 Retained Earnings, ₱332.40 credit for 2010) did not actually balance — recomputed from an updated source workbook Sinag supplied mid-session; see session log for the corrected figures actually posted. `0018_accounting_opening_balance_adjustment` migration and 3099 plug account confirmed still not needed. |
-| ACCT-7 | Auto-posting from `confirm_order()` / PO receiving | Gated | `0019_accounting_order_posting` | Waiting on core BMS order/PO flow to stabilize — do not start until confirmed |
+| ACCT-7 | Event-driven auto-posting (rewritten — see `docs/ACCT-7-v2-Business-Events-Kickoff.md`) | In progress | `acct7_reseed_chart_of_accounts`, `acct7_item_accounting_mappings` | Original scope assumed `confirm_order()`, retired by D027 — full rescope done 2026-07-10, split into ACCT-7.1..7.8. 7.1 partial (COA re-seeded, edit UI not built yet); 7.3 tooling built (mapping page live, Sinag's confirmation pass not done yet) |
 
 > **Migration renumber (2026-07-02, ACCT-3):** ACCT-3 wasn't originally assigned a migration, but the Rent/Transportation decision added account `6015 Rent Expense`, which needed one. Created during ACCT-3 (chronologically before ACCT-4..7, none of which exist yet), it correctly takes the next free label `0015` — so the reserved labels for ACCT-4 (`0015→0016`), ACCT-5 (`0016→0017`), ACCT-6 (`0017→0018`), and ACCT-7 (`0018→0019`) each shift up by one, preserving the "lower label = created earlier" invariant the earlier amendments established.
 | ACCT-8 | BIR tax estimate calculator | Not started | — | Lowest priority, optional |
@@ -283,5 +283,119 @@ before then.
 **Explicitly out of scope this session** (confirmed with Sinag): ACCT-7
 (auto-posting) and ACCT-8 (BIR calculator) stay deferred. No git commit
 (standing project rule — stopped for manual review).
+
+---
+
+### 2026-07-10 — ACCT-7 rescoped (design only, no code)
+
+Sinag brought a draft "Business Events → Accounting Snapshot → Rule Engine
+→ Journal Draft → Review → Post" architecture proposal for review. Checked
+it against the live schema/`DECISIONS.md` rather than taking it at face
+value:
+
+- **ACCT-7's original scope was dead on arrival** — it assumed a
+  `confirm_order()` hook, which D027 retired 2026-07-06. The order
+  lifecycle is now an 8-status state machine across ~8 RPCs; any
+  auto-posting design has to target that, not the doc's assumption.
+- The proposal's bottom half (Snapshot → Rules → Draft → Review → Approve
+  → Post → GL → Reports) was mostly **already built** for the GL/Reports
+  end (`journal_entries`, `get_trial_balance`/etc.) but **completely
+  missing** for the event/snapshot/rule-engine/draft/review front end —
+  today every journal entry is 100% hand-typed through the Journal UI,
+  with no draft state and no reversal mechanism (the one time a posted
+  entry needed fixing, in ACCT-4, it was fixed via a raw SQL `DELETE` —
+  flagged as the anti-pattern this workstream should replace).
+- Walked Sinag through the gaps (no invoice/AR concept in Sales, no
+  supplier-invoice concept in Purchasing, inventory bucket transfers vs.
+  real financial events, GR/IR clearing complexity with nothing to pair
+  against) and got explicit decisions on all of them — see the full list
+  in `docs/ACCT-7-v2-Business-Events-Kickoff.md`. Highlights: revenue
+  recognizes at `close_order_payment()` (not order confirmation, no AR
+  used); COGS posts separately at actual stock-out; Purchasing assumes
+  already-paid except credit card, which gets its own `Credit Card
+  Payable` liability + installment-payment event (Option B, chosen over
+  the simpler "ignore the installment" option); Review+Approve is
+  admin+manager, collapsed from the original doc's 4-stage flow to 2
+  human checkpoints (Snapshot/Draft auto, Review/Approve&Post manual).
+- **New doc:** `docs/ACCT-7-v2-Business-Events-Kickoff.md` — full event
+  catalog (7 events, each mapped to its real triggering RPC), 7 proposed
+  new Chart-of-Accounts entries (`1210 Inventory - Frame` fills a gap next
+  to the existing `4020`/`5020` Frame pair; `2020 Credit Card Payable`;
+  `4041 Tip Income`; `4042 Inventory Adjustment Gain`; `6090 Bad Debts/
+  Write-off Expense`; `6091 Inventory Shrinkage/Scrap Expense`; `6092
+  Credit Card Interest/Finance Charges`), and a phase breakdown ACCT-7.1
+  through ACCT-7.8.
+- **New prerequisite surfaced:** `purchase_orders` has no payment-method
+  field at all (unlike `orders.payment_type_id`) — needed before the
+  credit-card-vs-ordinary-payment branch can work. Folded into ACCT-7.2.
+- **No schema, RPC, or UI changes made this session** — Sinag explicitly
+  asked to stop at the kickoff doc, no coding yet. `PROGRESS-ACCOUNTING.md`'s
+  status table and `MODULE_STATUS.md`'s Accounting section were updated to
+  point at the new doc and to correct a stale "⏸ PAUSED (2026-07-02)"
+  banner in `MODULE_STATUS.md` that predated the 2026-07-10 restart.
+
+Still open before ACCT-7.1 can start: confirm the 7 proposed account
+numbers, and do the item/category → account mapping pass with Sinag
+(same shape as ACCT-3's Rent/Transportation resolution) — see the "Still
+open" section of the new doc.
+
+---
+
+### 2026-07-10 — ACCT-7.1 (partial) + ACCT-7.3 tooling built
+
+Sinag confirmed the 7 proposed accounts and asked for an easy way to do
+the item/category → account mapping pass, rather than raw SQL — built as
+a real page this session (first actual code for ACCT-7, everything before
+this was design-only).
+
+**Migration `acct7_reseed_chart_of_accounts`:** re-seeded the Chart of
+Accounts (0 rows since the 2026-07-10 restart) with the original 96-account
+list (95 from ACCT-1 + `6015 Rent Expense` from ACCT-3) plus the 7 new
+accounts from the kickoff doc. Verified live: 103 accounts total (25
+asset, 3 liability, 3 equity, 22 revenue, 50 expense).
+
+**Migration `acct7_item_accounting_mappings`:** new table
+`item_accounting_mappings` (`item_id` FK→`items`, unique; `revenue_
+account_id`/`inventory_account_id`/`expense_account_id` FK→`accounts`,
+all nullable; `updated_by`, timestamps). RLS mirrors `accounts` exactly —
+select admin+manager, insert/update admin-only, no delete policy.
+Confirmed via `pg_policy` inspection the expressions match byte-for-byte.
+
+**New page `/dashboard/accounting/product-mapping`** (added to the
+Accounting nav group, between Journal and Fixed Assets): one row per
+non-deleted item (62 rows), with Item/Category/Type columns plus three
+account-picker `<select>`s (Revenue/Inventory/COGS-Expense, each filtered
+to the matching account category) reusing the shared `DataTable` for
+search/sort/pagination/mobile-card-fallback for free. Admin sees editable
+selects + a "Save All Mappings" button (upserts the full 62-row state in
+one call — simpler than per-row dirty tracking at this scale); manager
+sees the same table read-only (disabled selects); other roles get the
+standard restricted-access card.
+
+**What this surfaced about the real product catalog** (useful context for
+Sinag's upcoming mapping pass, not previously documented anywhere): items
+split cleanly into `Itm-*` raw materials/components (`category = "Item"`,
+`item_type = simple`, has a real `cost` — these are what `Inventory
+Account`/`COGS Account` should map to) and `Pro-*` finished sellable
+products (`category = "Product(Custom)"`, `item_type = composite` — these
+are what `Revenue Account` should map to). `Pkg-*` (packaging assemblies)
+and `Srv-*`/`Shp-*` (services/shipping fee) are smaller groups that may
+only need one of the three columns filled in, or none. The page doesn't
+enforce this split — all three selects are always shown on every row — so
+Sinag can just leave irrelevant columns as "Not mapped."
+
+Verified live (browser, admin test account): page loads, search filters
+correctly, setting a mapping (`Itm-Ref Magnet Beechwood, Round 7cm` →
+`1200 Inventory - Wood for Ref Magnet` / `5001 Material Expense - Ref
+Magnet - Round`) and clicking Save persisted correctly to the DB — left
+in place as a working example rather than reverted. `npm run build`
+passes zero errors; `lib/supabase/types.ts` regenerated.
+
+**Not done:** the Chart of Accounts edit UI (admin-only) from ACCT-7.1
+is still unbuilt — accounts can only be added/changed via migration/SQL
+for now. The actual item→account mapping pass (filling in all 62 rows)
+is Sinag's to do using the new page, not done by Claude per the
+established "flows first, Sinag enters the real data" convention from
+the 2026-07-10 restart.
 
 ---
