@@ -4,7 +4,7 @@ Tracks the **Order Module Improvement** build for Sinag Ukit BMS. Follows the sa
 
 Source doc: `ORDER_MODULE_IMPROVEMENT.md` (handed over by Sinag from Downloads, 2026-07-06), assessed against the live app before any build. This is explicitly the deferred "future order page revision" phase referenced in `PROGRESS-QUOTES.md` (QUOTE-1: *"Reserved → deducted-at-completion stock transition, and partial-reservation-on-shortage — both deferred to a future 'order page revision' phase"*) and in `DECISIONS.md` D025.
 
-**Status: 🟩 DONE.** ORDER-1 through ORDER-10 complete.
+**Status: 🟩 DONE.** ORDER-1 through ORDER-11 complete.
 
 ## Gap analysis (2026-07-06 audit against live app)
 
@@ -230,6 +230,28 @@ Direct-SQL, JWT claim set to the Claude admin test account (this session's brows
 
 **Not built / open follow-ups:**
 - No real UI click-through this session (see above) — low risk given the direct-SQL RPC verification, but still owed.
+
+## ORDER-11 — CSV export with scope picker for Active Orders ✅ DONE
+
+**Requested by Sinag (2026-07-10):** add an "export to Excel" button to the Active Orders table (piloted here, generalizable to other `DataTable` screens later), then upgraded mid-session to a scope picker (Current Filter / This Month / Last Month / This Year / All Time) instead of a single direct-download button.
+
+**Note on numbering:** this was committed to git as "ORDER-10" before this doc was checked — that code was already taken by the `target_date` NOT NULL fix above. Filed here as ORDER-11 to avoid the collision; the pushed commit subject line still says ORDER-10 and was left as-is rather than rewriting already-pushed history.
+
+**Library decision:** the obvious `xlsx` (SheetJS) npm package was installed first, but `npm audit` flagged it with a high-severity prototype-pollution advisory and a ReDoS advisory, both with "no fix available" on the registry. Uninstalled it rather than build on it. `exceljs` was considered next but pulls in ~96 packages / 21.8MB (archiver, jszip, unzipper) for a need that's just flat rows. Landed on a dependency-free CSV export instead — Excel opens `.csv` natively on double-click, which covers this use case (flat rows, no formulas/multi-sheet/rich formatting needed).
+
+**What was built:**
+- `components/ui/data-table.tsx`: generic `downloadCsv()` helper (UTF-8 BOM for the ₱ sign, proper quote/comma escaping) exported for reuse, plus an optional `exportFilename` prop that renders a simple single-button "Export to Excel" affordance for tables that don't need a scope picker. `Column<T>` gained an optional `exportValue` per-column override, since `render` often returns JSX (badges, formatted dates) that isn't usable as a cell value — defaults to the raw field value when omitted.
+- `lib/utils/date-range-presets.ts`: extracted the This Month/Last Month/This Year/All Time date-math out of `components/business/date-range-filter.tsx` (which now imports it) so the export dialog can reuse the exact same preset definitions instead of duplicating the month/year arithmetic.
+- `app/dashboard/orders/active-orders/queries.ts`: extracted `page.tsx`'s order-fetch-and-shape query (the same one driving the on-screen list) into a standalone `fetchOrderRows(from, to)` so it can be called a second time, with a different date range, from the export path without duplicating the Supabase query/mapping logic.
+- `app/dashboard/orders/active-orders/actions.ts`: new `exportOrders(from, to)` server action, a thin wrapper around `fetchOrderRows`.
+- `app/dashboard/orders/active-orders/order-list-table.tsx`: replaced the single Export button with a `Dialog`-based scope picker (radio list, `Current Filter` selected by default). **Current Filter** exports client-side from the already-loaded `filteredData` (current date range + current Status filter, but *not* whatever text is typed into `DataTable`'s own search box — that state is private to `DataTable` and wasn't lifted up for this). **This Month / Last Month / This Year / All Time** each call `exportOrders()` for a fresh full-period snapshot — deliberately **ignoring** whatever Status filter tab is active on screen (confirmed with Sinag: these are period snapshots across all statuses, not "current status × different date range").
+
+**Verification:** `npx tsc --noEmit` and `eslint` clean on all touched files (2 pre-existing `react-hooks/static-components` lint errors in `data-table.tsx`, confirmed via `git stash` to predate this change). Browser-verified end-to-end (Claude admin account): dialog renders all 5 options; **Current Filter** downloads client-side with no server round-trip (dialog closes, no console errors); **This Month** correctly POSTs to the server action and returns properly-shaped `OrderRow[]` JSON (inspected the raw response body); **All Time** (empty `from`/`to`, exercising the `if (from) query.gte(...)` skip-path) completes cleanly with no errors. Did not verify **Last Month**/**This Year** individually in-browser beyond the shared code path already covered by This Month + All Time — both go through the identical `exportOrders()` call with a different computed range from the same `DATE_RANGE_PRESETS` list.
+
+**Not built / open follow-ups:**
+- Not rolled out to any other `DataTable` screen yet — Active Orders was an explicit pilot (Sinag's choice); the plain single-button `exportFilename` prop on `DataTable` is ready for tables that don't need date-range scoping, and the scope-picker `Dialog` pattern in `order-list-table.tsx` would need to be copied (not yet extracted into a shared component) for any other date-filtered table that wants the same picker.
+- "Current Filter" does not include the `DataTable` search box's typed text, only the date range + Status filter — see the note above; would need `DataTable` to lift its internal search state up via a callback prop if that's ever wanted.
+- Git commit subject line says ORDER-10 (numbering collision — see note above); not corrected via amend/force-push since the commit was already pushed to `origin/main`.
 
 ## Not built / open questions to resolve before or during build
 
