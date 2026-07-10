@@ -1,17 +1,16 @@
 # PROGRESS-ACCOUNTING.md
 
-> **⏸ PAUSED (2026-07-02).** Sinag asked to pause all Accounting Module
-> development until further notice. ACCT-1 through ACCT-6 are done and
-> live; ACCT-7 (auto-posting) and ACCT-8 (BIR calculator) are on hold —
-> **do not start or continue any ACCT-* work** (code, migrations, or
-> schema/RLS changes) in this session or any future session until Sinag
-> explicitly says to resume. This is a dev-pause only: no database
-> changes were requested, existing tables/RLS/UI are untouched and
-> remain live as-is. Treat any Accounting-adjacent request (bug fix,
-> tweak, "just one small thing") as out of scope for now unless Sinag
-> explicitly lifts the pause first — check with them before touching
-> `accounts`, `journal_entries`, `journal_entry_lines`, `fixed_assets`,
-> or `depreciation_entries`, or any file under `app/dashboard/accounting/`.
+> **▶ RESUMED — clean restart (2026-07-10).** Sinag lifted the 2026-07-02
+> pause and asked for a clean restart: keep the existing ACCT-1–6
+> schema/RPCs/UI as-is (it works), but wipe all data so the module starts
+> from zero — `accounts`, `journal_entries`, `journal_entry_lines`,
+> `fixed_assets`, `depreciation_entries` are all **0 rows** as of this
+> session. Flows come first; Sinag will manually input the real chart of
+> accounts and opening data later (no historical-import redo planned).
+> ACCT-7 (auto-posting) and ACCT-8 (BIR calculator) remain **out of
+> scope** for this restart — do not start either without Sinag
+> explicitly asking. See the 2026-07-10 session log entry below for full
+> detail, including the security fix applied in the same session.
 
 Tracking file for the Accounting Module workstream only. Kept separate from the
 core BMS `PROGRESS.md` so phase numbers don't collide between the two build
@@ -233,5 +232,56 @@ Verified Definition of Done directly against the live DB:
 - `npm run build` passes with zero errors.
 
 No git commit (standing project rule — stopped at DoD for manual review). ACCT-7 remains gated on core BMS order/PO stabilization; ACCT-8 (BIR tax estimate) not started.
+
+---
+
+### 2026-07-10 — Clean restart
+
+Sinag asked to resume the module with a clean restart: keep the ACCT-1–6
+schema/RPCs/UI exactly as built (it works), but remove all existing data so
+the module starts from zero. Flows first; real chart of accounts and
+opening balances to be entered manually by Sinag later — no repeat of the
+ACCT-6 historical-import exercise.
+
+**Security fix applied first** (migration `acct_fix_null_role_bypass`): the
+5 Accounting RPCs flagged in the 2026-07-07 sweep (`post_journal_entry`,
+`get_trial_balance`, `get_income_statement`, `get_balance_sheet`,
+`run_monthly_depreciation`) still had the null-role auth bypass —
+`current_user_role() not in (...)` / `<> 'admin'` evaluates to `NULL` (not
+true) for an unauthenticated/no-profile caller, so the check silently
+no-opped. Rewrote all 5 to the established `v_role := current_user_role();
+if v_role is null or v_role not in (...)` pattern, matching `adjust_stock`
+etc. Verified in rolled-back transactions: empty JWT claims now reject all
+5 with the expected "Not authorized..." error; a real admin (`sub` =
+Claude test account) still reaches the business logic. `get_advisors
+(security)` shows only the pre-existing baseline WARN (anon/authenticated
+can execute `SECURITY DEFINER` — expected, same as every other RPC in the
+project; the internal role check is the gate).
+
+**Data wipe** (direct `DELETE`, FK-safe order — not a migration, no schema
+change): `journal_entry_lines` → `depreciation_entries` →
+`journal_entries` → `fixed_assets` → `accounts`. All 5 tables confirmed at
+**0 rows** afterward. This removed the ACCT-6 opening-balance entry (1
+entry / 15 lines) and the 3 seeded fixed assets (Canon Printer, Sculpfan
+S30 Pro Max, RK Royal Kludge) — along with them, the open depreciation
+rounding caveat (round-up drift never hitting exactly ₱0 book value) is
+moot until assets are re-seeded and should be revisited then. The 96-row
+Chart of Accounts was also wiped per Sinag's choice (full clean slate, not
+data-only) — there is currently **no seed data and no Chart-of-Accounts
+entry UI**; accounts will need to be re-created (migration/SQL, same as
+ACCT-1) before any journal entry can be posted.
+
+**Verified in browser preview** (admin `claude-code@sinagukit.internal`):
+Journal list shows "No journal entries yet", Trial Balance shows
+₱0.00/₱0.00 "Balanced", Fixed Assets shows "No fixed assets yet" — all
+three render cleanly with no console errors. Note: the Fixed Assets empty
+state itself says "Assets are added via migration seed data for now — no
+add-asset UI yet" — if Sinag's later manual data entry is expected to
+include fixed assets, that gap (no add-asset form) will need addressing
+before then.
+
+**Explicitly out of scope this session** (confirmed with Sinag): ACCT-7
+(auto-posting) and ACCT-8 (BIR calculator) stay deferred. No git commit
+(standing project rule — stopped for manual review).
 
 ---
