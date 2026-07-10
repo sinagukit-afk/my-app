@@ -3,6 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils/cn";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 export type SortDirection = "asc" | "desc" | null;
 
@@ -11,6 +12,8 @@ export interface Column<T> {
   header: string;
   sortable?: boolean;
   render?: (value: T[keyof T], row: T) => React.ReactNode;
+  /** Plain value used for exports, since `render` may return JSX. Defaults to the raw field value. */
+  exportValue?: (value: T[keyof T], row: T) => string | number;
   className?: string;
 }
 
@@ -25,6 +28,42 @@ export interface DataTableProps<T extends Record<string, unknown>> {
   searchPlaceholder?: string;
   className?: string;
   onRowClick?: (row: T) => void;
+  /** Base filename (no extension) for the "Export to Excel" button. Omit to hide the button. */
+  exportFilename?: string;
+}
+
+function csvCell(value: string | number): string {
+  const s = String(value);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+export function downloadCsv<T extends Record<string, unknown>>(
+  rows: T[],
+  columns: Column<T>[],
+  filename: string
+) {
+  const header = columns.map((col) => csvCell(col.header));
+  const lines = rows.map((row) =>
+    columns
+      .map((col) => {
+        const value = row[col.key];
+        const exported = col.exportValue
+          ? col.exportValue(value, row)
+          : ((value ?? "") as string | number);
+        return csvCell(exported);
+      })
+      .join(",")
+  );
+  const csv = [header.join(","), ...lines].join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${filename}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 function DataTable<T extends Record<string, unknown>>({
@@ -38,6 +77,7 @@ function DataTable<T extends Record<string, unknown>>({
   searchPlaceholder = "Search…",
   className,
   onRowClick,
+  exportFilename,
 }: DataTableProps<T>) {
   const [search, setSearch] = React.useState("");
   const [sortKey, setSortKey] = React.useState<string | null>(null);
@@ -87,6 +127,11 @@ function DataTable<T extends Record<string, unknown>>({
     setPage(1);
   };
 
+  const handleExport = () => {
+    if (!exportFilename) return;
+    downloadCsv(sorted, columns, exportFilename);
+  };
+
   const EmptyState = () => (
     <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
       <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true" className="text-(--color-text-subtle)">
@@ -120,32 +165,52 @@ function DataTable<T extends Record<string, unknown>>({
 
   return (
     <div className={cn("flex flex-col gap-3", className)}>
-      {/* Search */}
-      {searchable && (
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1 max-w-xs">
-            <svg
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-(--color-text-muted)"
-              width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"
-            >
-              <path d="M6 11A5 5 0 1 0 6 1a5 5 0 0 0 0 10ZM13 13l-3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-            </svg>
-            <input
-              type="search"
-              value={search}
-              onChange={handleSearch}
-              placeholder={searchPlaceholder}
-              className={cn(
-                "h-9 w-full rounded-md border border-(--color-border) bg-(--color-surface) pl-9 pr-3 text-sm text-(--color-text) shadow-(--shadow-sm)",
-                "placeholder:text-(--color-text-subtle)",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) focus-visible:ring-offset-1"
+      {/* Search + export */}
+      {(searchable || exportFilename) && (
+        <div className="flex items-center justify-between gap-2">
+          {searchable ? (
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 max-w-xs">
+                <svg
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-(--color-text-muted)"
+                  width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"
+                >
+                  <path d="M6 11A5 5 0 1 0 6 1a5 5 0 0 0 0 10ZM13 13l-3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                </svg>
+                <input
+                  type="search"
+                  value={search}
+                  onChange={handleSearch}
+                  placeholder={searchPlaceholder}
+                  className={cn(
+                    "h-9 w-full rounded-md border border-(--color-border) bg-(--color-surface) pl-9 pr-3 text-sm text-(--color-text) shadow-(--shadow-sm)",
+                    "placeholder:text-(--color-text-subtle)",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) focus-visible:ring-offset-1"
+                  )}
+                />
+              </div>
+              {search && (
+                <span className="text-xs text-(--color-text-muted)">
+                  {filtered.length} result{filtered.length !== 1 ? "s" : ""}
+                </span>
               )}
-            />
-          </div>
-          {search && (
-            <span className="text-xs text-(--color-text-muted)">
-              {filtered.length} result{filtered.length !== 1 ? "s" : ""}
-            </span>
+            </div>
+          ) : (
+            <div />
+          )}
+          {exportFilename && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleExport}
+              disabled={sorted.length === 0}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M7 1v8M4 6.5 7 9.5l3-3M2 12h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Export to Excel
+            </Button>
           )}
         </div>
       )}

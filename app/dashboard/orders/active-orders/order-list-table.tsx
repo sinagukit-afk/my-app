@@ -3,12 +3,23 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { DataTable, type Column } from "@/components/ui/data-table";
+import { DataTable, downloadCsv, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { FilterBar } from "@/components/business/filter-bar";
 import { DateRangeFilter } from "@/components/business/date-range-filter";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { DATE_RANGE_PRESETS } from "@/lib/utils/date-range-presets";
+import { exportOrders } from "./actions";
 
 export type OrderRow = {
   orderNumber: string;
@@ -59,6 +70,20 @@ function peso(n: number) {
   return `₱${n.toFixed(2)}`;
 }
 
+const EXPORT_SCOPES = ["Current Filter", ...DATE_RANGE_PRESETS.map((p) => p.label)];
+
+const EXPORT_SCOPE_DESCRIPTIONS: Record<string, string> = {
+  "Current Filter": "Exactly what's on screen now — current date range and status filter.",
+  "This Month": "All orders this month, every status.",
+  "Last Month": "All orders last month, every status.",
+  "This Year": "All orders this year, every status.",
+  "All Time": "Every order ever placed, every status.",
+};
+
+function exportSlug(scope: string) {
+  return scope.toLowerCase().replace(/\s+/g, "-");
+}
+
 type Props = {
   data: OrderRow[];
   canCreate: boolean;
@@ -69,6 +94,10 @@ type Props = {
 export function OrderListTable({ data, canCreate, from, to }: Props) {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState("");
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportScope, setExportScope] = useState(EXPORT_SCOPES[0]);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const filteredData = statusFilter ? data.filter((row) => row.status === statusFilter) : data;
 
@@ -84,6 +113,7 @@ export function OrderListTable({ data, canCreate, from, to }: Props) {
       sortable: true,
       render: (value) =>
         (value as string) || <span className="text-(--color-text-subtle)">Walk-in</span>,
+      exportValue: (value) => (value as string) || "Walk-in",
     },
     {
       key: "orderDate",
@@ -95,12 +125,14 @@ export function OrderListTable({ data, canCreate, from, to }: Props) {
       header: "Created",
       sortable: true,
       render: (value) => new Date(value as string).toLocaleString(),
+      exportValue: (value) => new Date(value as string).toLocaleString(),
     },
     {
       key: "updatedAt",
       header: "Modified",
       sortable: true,
       render: (value) => new Date(value as string).toLocaleString(),
+      exportValue: (value) => new Date(value as string).toLocaleString(),
     },
     {
       key: "status",
@@ -111,6 +143,7 @@ export function OrderListTable({ data, canCreate, from, to }: Props) {
           {(value as string).replace(/_/g, " ")}
         </Badge>
       ),
+      exportValue: (value) => (value as string).replace(/_/g, " "),
     },
     {
       key: "totalItems",
@@ -137,17 +170,55 @@ export function OrderListTable({ data, canCreate, from, to }: Props) {
     },
   ];
 
+  async function handleExport() {
+    setExportError(null);
+    setIsExporting(true);
+    try {
+      if (exportScope === "Current Filter") {
+        downloadCsv(
+          filteredData,
+          columns,
+          `active-orders_${exportSlug(exportScope)}${from ? `_${from}` : ""}${to ? `_to_${to}` : ""}`
+        );
+      } else {
+        const preset = DATE_RANGE_PRESETS.find((p) => p.label === exportScope);
+        const range = preset ? preset.getRange() : { from: "", to: "" };
+        const { rows, error } = await exportOrders(range.from, range.to);
+        if (error) {
+          setExportError(error);
+          return;
+        }
+        downloadCsv(rows, columns, `active-orders_${exportSlug(exportScope)}`);
+      }
+      setExportOpen(false);
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <PageHeader
         title="Active Orders"
         description="Customer orders. Click a row to view details, edit, or move it into production."
         actions={
-          canCreate ? (
-            <Link href="/dashboard/orders/active-orders/new">
-              <Button>New Order</Button>
-            </Link>
-          ) : undefined
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setExportError(null);
+                setExportOpen(true);
+              }}
+            >
+              Export to Excel
+            </Button>
+            {canCreate && (
+              <Link href="/dashboard/orders/active-orders/new">
+                <Button>New Order</Button>
+              </Link>
+            )}
+          </div>
         }
       />
 
@@ -164,6 +235,47 @@ export function OrderListTable({ data, canCreate, from, to }: Props) {
         emptyDescription="Confirmed quotes will appear here."
         onRowClick={(row) => router.push(`/dashboard/orders/active-orders/${row.orderNumber}`)}
       />
+
+      <Dialog open={exportOpen} onOpenChange={setExportOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Export Orders</DialogTitle>
+            <DialogDescription>Choose which orders to include in the exported file.</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2 py-2">
+            {EXPORT_SCOPES.map((scope) => (
+              <label
+                key={scope}
+                className="flex items-start gap-2.5 rounded-md border border-(--color-border) p-3 cursor-pointer transition-colors hover:bg-(--color-bg) has-[:checked]:border-(--color-primary)"
+              >
+                <input
+                  type="radio"
+                  name="export-scope"
+                  value={scope}
+                  checked={exportScope === scope}
+                  onChange={() => setExportScope(scope)}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-(--color-primary)"
+                />
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-(--color-text)">{scope}</span>
+                  <span className="text-xs text-(--color-text-muted)">{EXPORT_SCOPE_DESCRIPTIONS[scope]}</span>
+                </div>
+              </label>
+            ))}
+          </div>
+          {exportError && <p className="text-sm text-(--color-danger)">Failed to export: {exportError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary">
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" onClick={handleExport} disabled={isExporting}>
+              {isExporting ? "Exporting…" : "Export"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
