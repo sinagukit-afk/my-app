@@ -10,7 +10,7 @@ interface PageHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
 function PageHeader({ title, description, actions, className, ...props }: PageHeaderProps) {
   return (
     <div
-      className={cn("flex items-start justify-between gap-4 pb-6", className)}
+      className={cn("flex flex-wrap items-start justify-between gap-4 pb-6 lg:flex-nowrap", className)}
       {...props}
     >
       <div className="min-w-0">
@@ -19,7 +19,9 @@ function PageHeader({ title, description, actions, className, ...props }: PageHe
           <p className="mt-1 text-sm text-(--color-text-muted)">{description}</p>
         )}
       </div>
-      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+      {actions && (
+        <div className="flex flex-wrap shrink-0 items-center gap-2 lg:flex-nowrap">{actions}</div>
+      )}
     </div>
   );
 }

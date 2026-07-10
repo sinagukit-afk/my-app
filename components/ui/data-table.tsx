@@ -87,6 +87,18 @@ function DataTable<T extends Record<string, unknown>>({
     setPage(1);
   };
 
+  const EmptyState = () => (
+    <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true" className="text-(--color-text-subtle)">
+        <rect x="6" y="10" width="28" height="22" rx="3" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M6 16h28" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M14 24h12M14 28h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+      <p className="font-medium text-(--color-text-muted)">{emptyMessage}</p>
+      <p className="text-xs text-(--color-text-subtle)">{emptyDescription}</p>
+    </div>
+  );
+
   const SortIcon = ({ col }: { col: string }) => {
     if (sortKey !== col) {
       return (
@@ -138,9 +150,9 @@ function DataTable<T extends Record<string, unknown>>({
         </div>
       )}
 
-      {/* Table */}
+      {/* Table (lg and up) */}
       <div className="rounded-lg border border-(--color-border) overflow-hidden bg-(--color-surface) shadow-(--shadow-sm)">
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto lg:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-(--color-border) bg-(--color-bg)">
@@ -176,16 +188,8 @@ function DataTable<T extends Record<string, unknown>>({
                 ))
               ) : paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={columns.length} className="px-4 py-12 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true" className="text-(--color-text-subtle)">
-                        <rect x="6" y="10" width="28" height="22" rx="3" stroke="currentColor" strokeWidth="1.5" />
-                        <path d="M6 16h28" stroke="currentColor" strokeWidth="1.5" />
-                        <path d="M14 24h12M14 28h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                      </svg>
-                      <p className="font-medium text-(--color-text-muted)">{emptyMessage}</p>
-                      <p className="text-xs text-(--color-text-subtle)">{emptyDescription}</p>
-                    </div>
+                  <td colSpan={columns.length}>
+                    <EmptyState />
                   </td>
                 </tr>
               ) : (
@@ -210,6 +214,64 @@ function DataTable<T extends Record<string, unknown>>({
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Stacked rows (below lg) — card fallback so dense tables don't require horizontal scrolling on phones/tablets */}
+        <div className="lg:hidden">
+          {isLoading ? (
+            <div className="divide-y divide-(--color-border)">
+              {Array.from({ length: pageSize }).map((_, i) => (
+                <div key={i} className="flex flex-col gap-2 p-4">
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : paginated.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <div className="divide-y divide-(--color-border)">
+              {paginated.map((row, ri) => {
+                const [primary, ...rest] = columns;
+                const labeled = rest.filter((col) => col.header);
+                const unlabeled = rest.filter((col) => !col.header);
+                return (
+                  <div
+                    key={ri}
+                    onClick={onRowClick ? () => onRowClick(row) : undefined}
+                    className={cn(
+                      "flex flex-col gap-2 p-4 transition-colors",
+                      onRowClick && "cursor-pointer active:bg-(--color-bg)"
+                    )}
+                  >
+                    <div className="text-(--color-text)">
+                      {primary.render
+                        ? primary.render(row[primary.key], row)
+                        : String(row[primary.key] ?? "")}
+                    </div>
+                    {labeled.map((col) => (
+                      <div key={col.key} className="flex items-start justify-between gap-3 text-sm">
+                        <span className="shrink-0 text-(--color-text-muted)">{col.header}</span>
+                        <span className="text-right text-(--color-text)">
+                          {col.render ? col.render(row[col.key], row) : String(row[col.key] ?? "")}
+                        </span>
+                      </div>
+                    ))}
+                    {unlabeled.length > 0 && (
+                      <div className="flex items-center justify-end gap-3 border-t border-(--color-border) pt-2">
+                        {unlabeled.map((col) => (
+                          <div key={col.key}>
+                            {col.render ? col.render(row[col.key], row) : String(row[col.key] ?? "")}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Pagination footer */}
