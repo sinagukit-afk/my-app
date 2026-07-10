@@ -84,7 +84,7 @@ conventions worth keeping are:
 | ACCT-4 | Financial reports (trial balance, income statement, balance sheet) | Done | `0016_accounting_reports` | Runs before ACCT-5 — hence the lower migration number |
 | ACCT-5 | Fixed assets & depreciation | Done | `0017_accounting_fixed_assets` | Rounding caveat found — see session log |
 | ACCT-6 | Historical import / opening balance | Done | — (no plug account needed) | Posted 2026-07-02 as `journal_entries.id = 61d13de0-99a0-4c90-9296-1ded0b2ca823`. The doc's own Resolution section (₱142,532.17 Retained Earnings, ₱332.40 credit for 2010) did not actually balance — recomputed from an updated source workbook Sinag supplied mid-session; see session log for the corrected figures actually posted. `0018_accounting_opening_balance_adjustment` migration and 3099 plug account confirmed still not needed. |
-| ACCT-7 | Event-driven auto-posting (rewritten — see `docs/ACCT-7-v2-Business-Events-Kickoff.md`) | In progress | `acct7_reseed_chart_of_accounts`, `acct7_item_accounting_mappings`, `acct7_2_incoming_items_payment_method` | Original scope assumed `confirm_order()`, retired by D027 — full rescope done 2026-07-10, split into ACCT-7.1..7.8. 7.1 done (COA re-seeded + admin-only edit UI); 7.2 done (Purchasing payment-method capture); 7.3 tooling built (mapping page live, Sinag's confirmation pass not done yet) |
+| ACCT-7 | Event-driven auto-posting (rewritten — see `docs/ACCT-7-v2-Business-Events-Kickoff.md`) | In progress | `acct7_reseed_chart_of_accounts`, `acct7_item_accounting_mappings`, `acct7_2_incoming_items_payment_method` | Original scope assumed `confirm_order()`, retired by D027 — full rescope done 2026-07-10, split into ACCT-7.1..7.8. 7.1 done (COA re-seeded + admin-only edit UI); 7.2 done (Purchasing payment-method capture); 7.3 done (Sinag reviewed Claude's first pass + mapped the 4 `Pkg-*` items himself; last gap — 4 `Srv-*`/`Shp-*` service items — closed by adding `SCA-4043 Service & Shipping Revenue`, 59/62 mapped, 3 intentionally-unmapped dev/test rows remain) |
 
 > **Migration renumber (2026-07-02, ACCT-3):** ACCT-3 wasn't originally assigned a migration, but the Rent/Transportation decision added account `6015 Rent Expense`, which needed one. Created during ACCT-3 (chronologically before ACCT-4..7, none of which exist yet), it correctly takes the next free label `0015` — so the reserved labels for ACCT-4 (`0015→0016`), ACCT-5 (`0016→0017`), ACCT-6 (`0017→0018`), and ACCT-7 (`0018→0019`) each shift up by one, preserving the "lower label = created earlier" invariant the earlier amendments established.
 | ACCT-8 | BIR tax estimate calculator | Not started | — | Lowest priority, optional |
@@ -738,5 +738,99 @@ split.
 
 No code or schema changes, so nothing to rebuild/typecheck. Committed to
 git this session (Sinag's explicit request).
+
+---
+
+### 2026-07-10 — ACCT-7.3 first-pass mapping (data only, Sinag's review pending)
+
+Sinag asked Claude to fill in the Product Account Mapping page directly
+("only the items that make sense, I will review after") rather than doing
+the full 62-row pass by hand. Read `item_components` (the BOM) to confirm
+which raw materials feed which finished products before assigning
+anything, rather than guessing from names alone.
+
+**Mapped 51 of 62 items via direct SQL** (`item_accounting_mappings`,
+`updated_by` = Claude test account):
+- **32 `Itm-*` raw materials** → Inventory + Expense only (no Revenue —
+  raw materials aren't sold directly), matched to the specific
+  material-family account pair (Ref Magnet/Coaster/Keychain
+  Metal/Keychain Leather/Paddle Hair Brush/Phone Stand/Bottle Opener).
+  Where no dedicated family account exists: box/bubble-wrap/addon-box
+  items → `1212`/`5060` (Packaging); Hand Mirror, Men's Comb, and the two
+  card-sleeve paper/sticker items (used across multiple product families
+  in the BOM, no single clean match) → `1213`/`5021` (Others catch-all).
+- **19 `Pro-*` finished products** (18 categorized + 1 — "Bamboo Coaster,
+  Round 10cm no Box" — miscategorized with a null `category_id` but
+  obviously a real Coaster product) → Revenue only, matched by product
+  family. No Inventory/Expense on composites — they don't carry their own
+  stock bucket; COGS is intended to derive from the underlying `Itm-*`
+  component mappings via the BOM (per the event catalog in
+  `docs/ACCT-7-v2-Business-Events-Kickoff.md`), not from the composite's
+  own row.
+
+**Left unmapped, flagged for Sinag** (11 items — no clean Chart of
+Accounts match exists, didn't want to guess):
+- 4 `Pkg-*` box assemblies (`Large 20x20x12`/`22.5x17x13`, `Medium
+  13x13x10`/`22.5x14x10.3`) — confirmed via the BOM these are **not**
+  used inside any `Pro-*...with Box` recipe (those use the dedicated
+  `Itm-Addon box, X` items instead), and `is_available_for_sale = true`
+  on all 4 — so they do appear to be sold standalone, but there's no
+  "Sales Revenue - Packaging" account to point at.
+- 4 `Srv-*`/`Shp-*` services (Engrave Charge, Labor Charge, Others,
+  Shipping Fee) — no dedicated service-revenue account exists (only the
+  generic non-operating `4040 Other Income`, which felt like the wrong
+  bucket to guess into for real operating revenue).
+- 3 obvious dev/test rows (`ITEM-6 Create Log Test (edited)`,
+  `ITEM-6.5 Live Test Composite/Simple`).
+
+Verified post-update: querying for rows where all three account columns
+are still null returns exactly those 11 items — confirms the pass landed
+as intended, nothing silently skipped.
+
+Sinag has not yet reviewed/confirmed this pass in the UI. If any of the
+family/catch-all assignments above look wrong on review, the fix is a
+plain edit through the Product Mapping page (admin-only), not a new
+migration. No git commit (standing project rule — stopped for manual
+review; this was a data-only change anyway, no code/schema touched).
+
+---
+
+### 2026-07-10 — ACCT-7.3 closed out
+
+Sinag asked to "Start ACCT-7.3" in a follow-up session. Live DB check
+first, since the previous session log entry turned out stale: Sinag had
+already gone through the Product Mapping page himself between sessions
+and clicked Save All Mappings — 55/62 items mapped (`updated_by` =
+Sinag's own account, all one timestamp), up from Claude's first-pass 51.
+The 4 `Pkg-*` box items Claude had flagged were resolved; the 3 dev/test
+rows remained correctly unmapped.
+
+The one real gap left: the 4 `Srv-*`/`Shp-*` service/shipping items
+(`Srv-Engrave Charge`, `Srv-Labor Charge`, `Srv-Others`, `Shp-Shipping
+Fee`) still had no revenue account — no dedicated service-revenue account
+existed, and mapping into the generic non-operating `4040 Other Income`
+felt wrong for real operating revenue (same reasoning Claude flagged in
+the first pass). Asked Sinag directly rather than guessing (same shape as
+ACCT-3's Rent/Transportation call); he chose one new shared account over
+per-item accounts or reusing `4040`.
+
+**Added account `SCA-4043 Service & Shipping Revenue`** (revenue,
+description names the 4 items it covers) via direct SQL — data-only
+insert, no schema change, consistent with how the Chart of Accounts audit
+session made its edits (the CRUD UI exists too, this was just faster).
+Mapped all 4 items' `revenue_account_id` to it, also via direct SQL.
+
+**Verified via DB query:** 59/62 mapped, and the 3 unmapped rows are
+exactly the known dev/test items (`ITEM-6 Create Log Test (edited)`,
+`ITEM-6.5 Live Test Composite`, `ITEM-6.5 Live Test Simple`) — nothing
+real left unmapped. **Browser verification skipped this session** — port
+3000 was already held by what looked like Sinag's own active dev server
+(PID 22940, plausibly the same session he used to do the manual mapping
+review), so it was left running rather than killed without asking.
+
+ACCT-7.3 is now done. No git commit (standing project rule — stopped for
+manual review; data-only change, no code/schema touched). Next up per the
+phase breakdown: ACCT-7.4 (`business_events` table + wiring the 6 trigger
+RPCs), now unblocked by both 7.2 and 7.3.
 
 ---

@@ -185,7 +185,7 @@ rewrite.
 |---|---|---|
 | ACCT-7.1 | ~~Re-seed original 95 + 7 new accounts~~ **done 2026-07-10** (103 accounts live). ~~Chart of Accounts edit UI (admin-only)~~ **done 2026-07-10** — `/dashboard/accounting/chart-of-accounts` (add/edit/deactivate, admin-only writes) | Sinag confirms account numbers/names — done |
 | ACCT-7.2 | ~~Purchasing payment-method capture at receiving~~ **done 2026-07-10** — `incoming_items.payment_type_id`/`is_credit_card` (not on `purchase_orders`; captured per receiving transaction), `receive_purchase_order()` extended, both receiving UIs updated | — |
-| ACCT-7.3 | ~~Mapping table + page~~ **built 2026-07-10** (`item_accounting_mappings` + `/dashboard/accounting/product-mapping`). Sinag's confirmation pass (filling in all 62 items) still **not done** | ACCT-7.1 (reseed) — done |
+| ACCT-7.3 | ~~Mapping table + page~~ **built 2026-07-10**, ~~confirmation pass~~ **done 2026-07-10** — 59/62 items mapped (3 dev/test rows intentionally unmapped); added `SCA-4043 Service & Shipping Revenue` to cover the 4 `Srv-*`/`Shp-*` items that had no home | ACCT-7.1 (reseed) — done |
 | ACCT-7.4 | `business_events` table + wire the 6 existing trigger RPCs to write into it | ACCT-7.2, ACCT-7.3 |
 | ACCT-7.5 | `journal_entry_drafts`/`journal_entry_draft_lines` + rule engine that turns unprocessed events into drafts | ACCT-7.4 |
 | ACCT-7.6 | Review & Approve/Post UI (admin/manager) + the RPC that promotes a draft into `post_journal_entry()` | ACCT-7.5 |
@@ -196,11 +196,12 @@ rewrite.
 
 ## Still open before build starts
 
-- Exact account numbers above are placeholders — confirm before ACCT-7.1
-  seeds them.
-- The item/category → account mapping (ACCT-7.3) needs Sinag's input
-  category-by-category, same as Rent/Transportation in ACCT-3 — can't be
-  guessed correctly from the outside.
+- ~~Exact account numbers above are placeholders — confirm before ACCT-7.1
+  seeds them.~~ Confirmed and seeded (ACCT-7.1), plus `SCA-4043 Service &
+  Shipping Revenue` added 2026-07-10 during the ACCT-7.3 close-out.
+- ~~The item/category → account mapping (ACCT-7.3) needs Sinag's input
+  category-by-category~~ **done 2026-07-10** — 59/62 items mapped, 3
+  dev/test rows intentionally left unmapped.
 - Exact RPC hook point for scrap release (event #6) needs confirming
   against the live Items for Review code at build time — not fully
   pinned down in this doc.
