@@ -12,6 +12,12 @@ const SOURCE_LABELS: Record<string, string> = {
   purchase_order: "Purchase Order",
   depreciation: "Depreciation",
   opening_balance: "Opening Balance",
+  sale_recognized: "Sale Recognized",
+  cogs: "COGS",
+  purchase_received: "Purchase Received",
+  manual_incoming: "Manual Incoming",
+  inventory_adjustment_gain: "Inventory Adjustment (Gain)",
+  inventory_adjustment_loss: "Inventory Adjustment (Loss)",
 };
 
 function peso(n: number) {

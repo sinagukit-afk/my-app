@@ -84,7 +84,7 @@ conventions worth keeping are:
 | ACCT-4 | Financial reports (trial balance, income statement, balance sheet) | Done | `0016_accounting_reports` | Runs before ACCT-5 — hence the lower migration number |
 | ACCT-5 | Fixed assets & depreciation | Done | `0017_accounting_fixed_assets` | Rounding caveat found — see session log |
 | ACCT-6 | Historical import / opening balance | Done | — (no plug account needed) | Posted 2026-07-02 as `journal_entries.id = 61d13de0-99a0-4c90-9296-1ded0b2ca823`. The doc's own Resolution section (₱142,532.17 Retained Earnings, ₱332.40 credit for 2010) did not actually balance — recomputed from an updated source workbook Sinag supplied mid-session; see session log for the corrected figures actually posted. `0018_accounting_opening_balance_adjustment` migration and 3099 plug account confirmed still not needed. |
-| ACCT-7 | Event-driven auto-posting (rewritten — see `docs/ACCT-7-v2-Business-Events-Kickoff.md`) | In progress | `acct7_reseed_chart_of_accounts`, `acct7_item_accounting_mappings`, `acct7_2_incoming_items_payment_method`, `acct7_4_business_events`, `acct7_4_wire_close_order_payment`, `acct7_4_wire_incoming_items_trigger`, `acct7_4_wire_adjust_stock`, `acct7_4_release_to_scrap`, `acct7_4_wire_shipment_cogs` | Original scope assumed `confirm_order()`, retired by D027 — full rescope done 2026-07-10, split into ACCT-7.1..7.8. 7.1 done (COA re-seeded + admin-only edit UI); 7.2 done (Purchasing payment-method capture); 7.3 done (Sinag reviewed Claude's first pass + mapped the 4 `Pkg-*` items himself; last gap — 4 `Srv-*`/`Shp-*` service items — closed by adding `SCA-4043 Service & Shipping Revenue`, 59/62 mapped, 3 intentionally-unmapped dev/test rows remain); 7.4 done (`business_events` table + all 6 trigger RPCs wired — see session log for the RPC-graph corrections found along the way) |
+| ACCT-7 | Event-driven auto-posting (rewritten — see `docs/ACCT-7-v2-Business-Events-Kickoff.md`) | In progress | `acct7_reseed_chart_of_accounts`, `acct7_item_accounting_mappings`, `acct7_2_incoming_items_payment_method`, `acct7_4_business_events`, `acct7_4_wire_close_order_payment`, `acct7_4_wire_incoming_items_trigger`, `acct7_4_wire_adjust_stock`, `acct7_4_release_to_scrap`, `acct7_4_wire_shipment_cogs`, `acct7_5_payment_type_accounting_mappings`, `acct7_5_enrich_close_order_payment_payload`, `acct7_5_journal_entry_drafts`, `acct7_5_generate_draft_journal_entries`, `acct7_5_wire_business_events_trigger`, `acct7_5_revoke_public_execute_drafts_trigger`, `acct7_6_draft_review_rpcs`, `acct7_6_extend_journal_entries_source_type_check`, `acct7_6_restore_approve_and_post_final` | Original scope assumed `confirm_order()`, retired by D027 — full rescope done 2026-07-10, split into ACCT-7.1..7.8. 7.1 done (COA re-seeded + admin-only edit UI); 7.2 done (Purchasing payment-method capture); 7.3 done (Sinag reviewed Claude's first pass + mapped the 4 `Pkg-*` items himself; last gap — 4 `Srv-*`/`Shp-*` service items — closed by adding `SCA-4043 Service & Shipping Revenue`, 59/62 mapped, 3 intentionally-unmapped dev/test rows remain); 7.4 done (`business_events` table + all 6 trigger RPCs wired — see session log for the RPC-graph corrections found along the way); 7.5 done (`journal_entry_drafts`/`journal_entry_draft_lines` + `generate_draft_journal_entries()` rule engine, auto-fired via `AFTER INSERT` trigger on `business_events` — see session log); 7.6 done (`/dashboard/accounting/review` Review & Approve/Post UI + 3 RPCs, browser-verified with a real post and a real reject) |
 
 > **Migration renumber (2026-07-02, ACCT-3):** ACCT-3 wasn't originally assigned a migration, but the Rent/Transportation decision added account `6015 Rent Expense`, which needed one. Created during ACCT-3 (chronologically before ACCT-4..7, none of which exist yet), it correctly takes the next free label `0015` — so the reserved labels for ACCT-4 (`0015→0016`), ACCT-5 (`0016→0017`), ACCT-6 (`0017→0018`), and ACCT-7 (`0018→0019`) each shift up by one, preserving the "lower label = created earlier" invariant the earlier amendments established.
 | ACCT-8 | BIR tax estimate calculator | Not started | — | Lowest priority, optional |
@@ -946,5 +946,223 @@ will accumulate real rows now but nothing consumes them yet —
 No git commit (standing project rule — stopped for manual review). Next
 up: ACCT-7.5 (`journal_entry_drafts`/`journal_entry_draft_lines` + the
 rule engine).
+
+---
+
+### 2026-07-10 — ACCT-7.5 (`journal_entry_drafts` + rule engine)
+
+**Real design gap found before writing any code:** the kickoff doc's event
+catalog says event #1 posts `Cr Sales Revenue [order total]` as one lump
+line, but the real Chart of Accounts has no single generic "Sales Revenue"
+account — only 7 distinct per-product-line ones (`SCA-4001`..`4020`, plus
+`4043` for services), which is exactly the granularity Sinag confirmed by
+hand in the ACCT-7.3 mapping pass. The catalog phrasing predates that
+mapping table's real shape. Resolved by splitting `sale_recognized`
+revenue per order line (same pattern COGS already uses), which required
+going back into `close_order_payment()` (shipped in 7.4) and enriching its
+event payload — safe, since zero real `sale_recognized` rows existed yet.
+Second gap: no field anywhere recorded which Chart-of-Accounts asset
+account (`Cash on hand` vs `Bank Account`) a given payment method actually
+settles to. Asked Sinag directly (same pattern as the ACCT-3 Rent/
+Transportation and ACCT-7.3 Service&Shipping confirms) — decision: **Cash
+→ Cash on hand; BDO/BPI/Gcash/Maribank/Other → Bank Account** (all
+electronic/e-wallet payments treated as bank funds).
+
+**Built:**
+- `payment_type_accounting_mappings` (new table, one row per
+  `payment_types` row → asset `account_id`). RLS mirrors
+  `item_accounting_mappings` (select admin+manager, insert/update
+  admin-only). Seeded with Sinag's confirmed mapping above. Used by both
+  the sale (`sale_recognized`) and purchase (`purchase_received`/
+  `manual_incoming`, non-credit-card branch) draft rules.
+- `close_order_payment()` re-`CREATE OR REPLACE`d, same signature — added
+  `lines` (per order-item revenue breakdown: `item_id`, `quantity`,
+  `unit_price`, `line_discount`, `modifier_total` from
+  `order_item_modifiers`, `line_total`) and `payments` (order_payments
+  grouped by `payment_type_id`) to the `sale_recognized` payload. Keeps
+  the event payload fully self-contained per the kickoff doc's own
+  "accounting never re-reads live operational tables" principle, instead
+  of having the rule engine join back to `order_items`/`order_payments`
+  live.
+- `journal_entry_drafts` / `journal_entry_draft_lines` — mutable staging
+  tables mirroring `journal_entries`/`journal_entry_lines`, plus `status`
+  (`pending_review`/`posted`/`rejected`, default `pending_review`),
+  `source_event_id` (unique FK → `business_events`), `posted_journal_
+  entry_id` (nullable, for ACCT-7.6 to fill in later), `reviewed_by`/
+  `reviewed_at`. RLS: select-only admin+manager, zero insert/update/delete
+  policies — same "writes only through a `SECURITY DEFINER` RPC"
+  convention as `journal_entries` itself. No edit RPC yet (that's 7.6's
+  Review UI); 7.5 only ever inserts.
+- `generate_draft_journal_entries()` — the rule engine. Scans
+  `business_events where processed_at is null for update skip locked`,
+  branches per `event_type`, resolves accounts via
+  `item_accounting_mappings`/`payment_type_accounting_mappings`, and
+  writes balanced draft lines (deduped/summed by account — e.g. multiple
+  COGS component lines mapping to the same Inventory/Expense pair collapse
+  into one draft line each, not one row per component). **If any line's
+  item/payment-type has no mapped account, the whole event is skipped
+  (left with `processed_at = null`, no draft created)** — never guesses an
+  account for real money; it just waits until the mapping gets filled in,
+  same conservative instinct as ACCT-3/7.3's "confirm with Sinag, don't
+  guess" pattern. Revenue-line allocation for `sale_recognized` is
+  proportional-by-line-total with the **last line absorbing the rounding
+  remainder**, guaranteeing the credit side always sums to `total_money`
+  to the centavo. Two payload key-naming inconsistencies from 7.4 handled
+  defensively rather than re-touched: `adjust_stock`'s gain/loss events use
+  `qty_delta` (signed), `release_to_scrap`'s loss events use `quantity`
+  (unsigned) — the engine does `abs(coalesce(qty_delta, quantity))` rather
+  than normalizing the two already-shipped RPCs.
+- **No role check inside `generate_draft_journal_entries()`** — deliberate.
+  It runs automatically via an `AFTER INSERT ... FOR EACH STATEMENT`
+  trigger on `business_events`, inside whatever transaction the
+  *originating* RPC opened (`adjust_stock`, `close_order_payment`, etc.),
+  which can legitimately be an **encoder** for several of the 6 event
+  paths. An internal `admin`/`manager`-only gate here would have aborted
+  the encoder's entire underlying transaction (e.g. their stock
+  adjustment) purely because the accounting side-effect re-checked a role
+  the outer RPC already cleared — same reasoning as why
+  `_deduct_shipment_stock()` doesn't re-check role either. Locked down the
+  other way instead: `REVOKE EXECUTE ... FROM public, anon, authenticated`
+  / `GRANT ... TO postgres, service_role` on both
+  `generate_draft_journal_entries()` and the trigger shim
+  `_business_events_generate_drafts_trigger()`, so neither is reachable as
+  a public RPC — only the trigger (and direct DB access) can invoke them.
+  `get_advisors(security)` flagged the trigger shim as anon/authenticated-
+  reachable before this revoke (a real, fixed finding, not the usual
+  baseline noise); re-ran clean after.
+
+**Verified — all rolled back or self-contained, nothing left mutated
+beyond the one real backfill below:**
+- Synthetic multi-branch test (role-impersonated as admin, one
+  transaction, `ROLLBACK` at the end): 9 events covering `sale_recognized`
+  paid/overpaid/partially_paid, `cogs` (2 components → 1 deduped account
+  pair), `purchase_received` (credit card branch → `SCA-2020`),
+  `manual_incoming` (bank branch), `inventory_adjustment_gain`/`loss`
+  (both `qty_delta` and `quantity` payload shapes), and one deliberately
+  **unmapped** item — every resulting draft's debits equaled its credits
+  exactly, and the unmapped-item event correctly produced no draft at all.
+- Trigger-wiring check (role-impersonated as the real **encoder** test
+  account, rolled back): called `adjust_stock()` directly — no
+  authorization error, and the resulting `inventory_adjustment_gain`
+  event came back `processed_at`-set with a matching balanced draft
+  already attached, confirming the no-role-check design actually works
+  for a non-admin caller.
+- Real end-to-end check against a genuine unclosed order
+  (`SOD26-0709-0026`, admin-impersonated, rolled back): inserted a real
+  `order_payments` row, called the real `close_order_payment()` RPC (not
+  a synthetic event) — produced `Dr Cash on hand 714.00 / Cr Sales
+  Revenue - Coaster 714.00`, correctly resolving the order's one mapped
+  line item.
+- **Real backfill, not rolled back:** ran `generate_draft_journal_entries()`
+  for real once, which picked up the one pre-existing unprocessed
+  `inventory_adjustment_loss` event left over from the ACCT-7.4 session
+  (`Itm-Keychain Leather, Rectangle` scrap release) — produced `Dr
+  Inventory Shrinkage/Scrap Expense 18.50 / Cr Inventory - Keychain with
+  Leather 18.50`, now sitting in `journal_entry_drafts` as the first real
+  draft in the system.
+- `get_advisors(security)`: clean after the trigger-shim revoke fix above;
+  no other new findings on any of the new tables/functions.
+
+**Not built this session** (per phase breakdown, out of scope for 7.5):
+any UI. Drafts are backend-only — nothing renders `journal_entry_drafts`
+yet, and nothing can promote a draft into a real posted `journal_entries`
+row (`post_journal_entry()` is untouched). That's ACCT-7.6.
+
+No git commit (standing project rule — stopped for manual review). Next
+up: ACCT-7.6 (Review & Approve/Post UI, admin/manager, + the RPC that
+promotes a draft into `post_journal_entry()`).
+
+---
+
+### 2026-07-10 — ACCT-7.6 (Review & Approve/Post UI)
+
+**Built:**
+- 3 new RPCs, all `SECURITY DEFINER`, admin/manager-only, all requiring the
+  target draft's `status = 'pending_review'` (raise otherwise): `update_
+  journal_entry_draft(p_draft_id, p_description, p_lines)` (re-validates
+  balance/line-count/account-existence exactly like `post_journal_entry()`,
+  delete-and-reinsert on `journal_entry_draft_lines`); `approve_and_post_
+  journal_entry_draft(p_draft_id)` (builds the lines array from the
+  draft's current lines, calls the **existing** `post_journal_entry()`
+  rather than duplicating its validation, passes the draft's `event_type`
+  as `p_source_type` and `source_event_id` as `p_source_id` for full
+  traceability back to the originating `business_events` row, then marks
+  the draft `posted` + links `posted_journal_entry_id`); `reject_journal_
+  entry_draft(p_draft_id, p_reason)` (marks `rejected`, stores the reason
+  in a new nullable `review_note` column).
+- `journal_entries.source_type` had a `CHECK` constraint hardcoded to the
+  5 pre-existing values (`manual`/`order`/`purchase_order`/`depreciation`/
+  `opening_balance`) — extended it to include the 6 new event types, since
+  `post_journal_entry()` was rejecting every approve attempt otherwise.
+  Purely additive (widens the allowed set).
+- `/dashboard/accounting/review` — list page + `review-table.tsx`
+  (Date/Description/Event Type badge/Amount/Status badge columns, same
+  `DataTable` as Journal) and `/dashboard/accounting/review/[id]` — detail
+  page that renders **editable** line rows (same UX as `NewJournalForm`:
+  account picker + debit/credit + memo, add/remove rows, live balance
+  check) when `status = 'pending_review'`, or a **read-only** static table
+  (same shape as the Journal detail page) once `posted`/`rejected`. Three
+  actions on the editable view: Save Changes, Approve & Post, Reject — the
+  latter two open a `Dialog` confirmation (not a native `confirm()` — see
+  bug note below). New nav item `Review` added to the Accounting
+  `NavGroup` in `app-shell.tsx`, between Chart of Accounts and Journal.
+  Extended the Journal list/detail pages' `SOURCE_LABELS` maps with the 6
+  new event types so posted entries from this pipeline display a friendly
+  badge instead of a raw enum string.
+
+**Two real bugs found and fixed while building this:**
+1. `journal_entry_drafts.reviewed_by references auth.users(id)` (copied
+   from the `updated_by` pattern on `item_accounting_mappings`/`payment_
+   type_accounting_mappings`) — not `public.profiles(id)`. The detail
+   page's `.select("...reviewer:profiles(full_name)...")` silently failed
+   (no FK for PostgREST to embed on) and the query's `error` was never
+   checked, so `!draft` fired `notFound()` on every single draft — the
+   route 404'd for real despite the server access log showing `200`.
+   Fixed by dropping the embed and doing a plain second query keyed off
+   `reviewed_by` when it's set, and by actually checking `error` this
+   time.
+2. **Not a real bug, but ate a lot of debugging time**: testing `approve_
+   and_post_journal_entry_draft()` via `SELECT (fn()).*` in raw SQL made
+   it look like the function was broken — it kept raising "already
+   posted" against a draft that a plain `SELECT` proved was still
+   `pending_review`. Root cause: `(fn()).*` on a **volatile**,
+   composite-returning function is a documented Postgres gotcha — Postgres
+   can invoke the function once per output column instead of once, so a
+   7-column return type meant the function ran ~7 times in one statement,
+   and the 2nd+ call legitimately saw the 1st call's own write. Fixed the
+   *tests* (`SELECT * FROM fn(...)` instead), not the function — real app
+   code calls RPCs once via `supabase.rpc()`, so this was never reachable
+   from the UI. Worth remembering for any future single-call verification
+   of a volatile RPC that returns a composite type.
+
+**Also swapped a native `window.confirm()` for a `Dialog`** on the Approve
+& Post button after it hung the browser-preview tooling completely
+(blocking native dialogs aren't visible to screenshots and have no
+programmatic dismiss in the available tools) — better UX consistency with
+the rest of the app anyway (Reject already used a `Dialog`), not just a
+workaround.
+
+**Verified — real browser session, admin test account, both real
+outcomes left in place (not rolled back):**
+- Approved and posted the one real draft from 7.5 (`Itm-Keychain Leather,
+  Rectangle` scrap loss) end-to-end through the actual UI — landed on the
+  new Journal Entry detail page showing the correct balanced lines, and
+  confirmed it now shows `Posted` back on the Review list and appears
+  correctly labeled ("Inventory Adjustment (Loss)") on the Journal list.
+  **This is the first entry ever posted through the new auto-posting
+  pipeline**, not manually via `post_journal_entry()`.
+- Inserted a second synthetic `inventory_adjustment_gain` event directly
+  (to get a fresh `pending_review` draft since the only real one was now
+  posted), confirmed the trigger auto-drafted it immediately, then
+  rejected it through the real UI with a reason — confirmed `Rejected`
+  status and the stored reason.
+- One real mistake mid-session: a generic `button[data-testid="sign-out-
+  button"]` habit accidentally hit the real Sign Out button — exactly the
+  documented pitfall this project already has a memory note about (never
+  target Sign Out generically). Re-logged in with no other consequence.
+
+No git commit (standing project rule — stopped for manual review). Next
+up: ACCT-7.7 (`reverse_journal_entry()` RPC + UI action on the journal
+detail page) or ACCT-7.8 (credit card installment event).
 
 ---

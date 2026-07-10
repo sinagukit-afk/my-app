@@ -3,25 +3,19 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { DataTable, type Column } from "@/components/ui/data-table";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 
-export type JournalRow = {
+export type ReviewRow = {
   id: string;
   entry_date: string;
   description: string;
-  source_type: string;
-  line_count: number;
+  event_type: string;
+  status: string;
   total: number;
 };
 
-const SOURCE_LABELS: Record<string, string> = {
-  manual: "Manual",
-  order: "Order",
-  purchase_order: "Purchase Order",
-  depreciation: "Depreciation",
-  opening_balance: "Opening Balance",
+export const EVENT_TYPE_LABELS: Record<string, string> = {
   sale_recognized: "Sale Recognized",
   cogs: "COGS",
   purchase_received: "Purchase Received",
@@ -30,14 +24,26 @@ const SOURCE_LABELS: Record<string, string> = {
   inventory_adjustment_loss: "Inventory Adjustment (Loss)",
 };
 
-type Props = {
-  data: JournalRow[];
+const STATUS_VARIANT: Record<string, "warning" | "success" | "danger"> = {
+  pending_review: "warning",
+  posted: "success",
+  rejected: "danger",
 };
 
-export function JournalTable({ data }: Props) {
+const STATUS_LABELS: Record<string, string> = {
+  pending_review: "Pending Review",
+  posted: "Posted",
+  rejected: "Rejected",
+};
+
+type Props = {
+  data: ReviewRow[];
+};
+
+export function ReviewTable({ data }: Props) {
   const router = useRouter();
 
-  const columns: Column<JournalRow>[] = [
+  const columns: Column<ReviewRow>[] = [
     {
       key: "entry_date",
       header: "Date",
@@ -52,17 +58,12 @@ export function JournalTable({ data }: Props) {
       className: "max-w-md truncate",
     },
     {
-      key: "source_type",
-      header: "Source",
+      key: "event_type",
+      header: "Event Type",
       sortable: true,
       render: (value) => (
-        <Badge variant="neutral">{SOURCE_LABELS[value as string] ?? (value as string)}</Badge>
+        <Badge variant="neutral">{EVENT_TYPE_LABELS[value as string] ?? (value as string)}</Badge>
       ),
-    },
-    {
-      key: "line_count",
-      header: "Lines",
-      sortable: true,
     },
     {
       key: "total",
@@ -75,14 +76,24 @@ export function JournalTable({ data }: Props) {
       ),
     },
     {
+      key: "status",
+      header: "Status",
+      sortable: true,
+      render: (value) => (
+        <Badge variant={STATUS_VARIANT[value as string] ?? "neutral"}>
+          {STATUS_LABELS[value as string] ?? (value as string)}
+        </Badge>
+      ),
+    },
+    {
       key: "id",
       header: "",
       render: (_value, row) => (
         <Link
-          href={`/dashboard/accounting/journal/${row.id}`}
+          href={`/dashboard/accounting/review/${row.id}`}
           className="text-sm font-medium text-(--color-primary) hover:underline"
         >
-          View
+          {row.status === "pending_review" ? "Review" : "View"}
         </Link>
       ),
     },
@@ -91,20 +102,17 @@ export function JournalTable({ data }: Props) {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Journal"
-        description="Every posted double-entry transaction. Each entry balances — total debits equal total credits."
-        actions={
-          <Button onClick={() => router.push("/dashboard/accounting/journal/new")}>New Journal Entry</Button>
-        }
+        title="Review"
+        description="Draft journal entries auto-generated from business events. Edit if needed, then approve to post them to the Journal."
       />
 
       <DataTable
         columns={columns}
         data={data}
-        searchPlaceholder="Search entries…"
-        emptyMessage="No journal entries yet"
-        emptyDescription="Post your first entry to start the ledger."
-        onRowClick={(row) => router.push(`/dashboard/accounting/journal/${row.id}`)}
+        searchPlaceholder="Search drafts…"
+        emptyMessage="No draft journal entries"
+        emptyDescription="Drafts appear automatically as sales, purchases, and stock adjustments happen."
+        onRowClick={(row) => router.push(`/dashboard/accounting/review/${row.id}`)}
       />
     </div>
   );
