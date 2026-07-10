@@ -1,0 +1,153 @@
+# PROGRESS-MOBILE.md
+
+Tracks the **mobile-responsiveness retrofit** for Sinag Ukit BMS. Follows the same convention as
+`PROGRESS-AUTH.md`/`PROGRESS-MANAGEMENT.md`: `MOBILE-` prefixed phases, kept separate from the
+core `PROGRESS.md` numbering. Append-only.
+
+Source: verbal ask from Sinag 2026-07-10 — "Make my-app mobile-responsive without changing
+desktop behavior." No separate kickoff doc — this file is self-contained. An assessment pass was
+run this session (read-only, no code written) to scope the work before any implementation; its
+findings are recorded below so a future session can start MOBILE-1 directly without re-auditing
+the codebase.
+
+**How to resume:** tell Claude "run MOBILE-N" (or just "next mobile phase"). Read this whole file
+first — the Locked decisions and Assessment findings sections below give a fresh session enough
+context to start MOBILE-1/2/3 without re-exploring the codebase. MOBILE-4 onward should still do
+a fresh look at the specific pages in scope, since other workstreams (Orders, Quotes, Inventory)
+touch those files independently and may have moved since this doc was written.
+
+---
+
+## Locked decisions (read this before starting any phase)
+
+- **Desktop must not change, at all.** Every change in this workstream is additive at `sm`/`md`
+  and below using Tailwind's mobile-first prefixes — base (unprefixed) classes only change where
+  they're demonstrably mobile-only today, and any existing `md:`/`lg:`+ class is left alone. This
+  is Sinag's explicit constraint, not a default — treat any change that alters desktop layout,
+  spacing, or behavior as a bug, even if it "looks like a minor improvement."
+- **No implementation happened in the assessment session (2026-07-10).** Everything below MOBILE-0
+  is scoped but not started. Do not treat any phase as done because it's described in detail here.
+- **Prefer CSS breakpoints over JS viewport detection** where possible (matches the codebase's
+  existing pattern — no `use-mobile`/`matchMedia` hook exists anywhere today, and introducing one
+  risks SSR/CSR hydration-mismatch flicker). The one exception is the sidebar open/closed state in
+  MOBILE-1, which already lives in client-side React state (`AppShell` is `"use client"`) — that's
+  fine to extend, not a new pattern.
+- **Breakpoint convention — confirmed by Sinag in MOBILE-0 (2026-07-10):** the sidebar
+  drawer/off-canvas treatment applies below **`lg` (1024px)** — i.e. phones **and** tablets
+  (including iPad portrait ~768px) get the hide/show drawer nav. Only `≥1024px` (real
+  desktop/laptop widths) keeps today's persistent sidebar, completely unchanged. Chosen over the
+  narrower `md`(768px) option specifically because this app's nav is deep (group > subgroup >
+  item) and staff may access the BMS from a tablet, not just a phone. **Every `lg:` class in
+  `app-shell.tsx` (MOBILE-1) is the practical enforcement of this decision** — build the drawer to
+  activate `<1024px` and the persistent sidebar at `≥1024px`, matching Tailwind's existing `lg:`
+  prefix (no custom breakpoint needed). Other phases (MOBILE-2/3/4) should default to the same
+  `lg:` cutoff for any "is this mobile or desktop" class decision, for consistency, unless a
+  specific page has a concrete reason to diverge (note it in that phase's log entry if so).
+- **`AGENTS.md` applies:** this is a non-standard Next.js build (16.2.9) with its own docs under
+  `node_modules/next/dist/docs/`. Already spot-checked `generate-viewport.md` this session — the
+  standard `viewport` export API is unchanged in this build, so no custom breaking-change risk
+  there. Still check the relevant doc before writing code in any phase that touches something
+  version-sensitive (routing, middleware/`proxy.ts`, client/server component boundaries).
+
+---
+
+## Assessment findings (2026-07-10) — read before starting MOBILE-1/2/3
+
+Stack: Next.js 16.2.9 (App Router), React 19, Tailwind v4. No `tailwind.config.js` breakpoint
+overrides found (`design/theme/tailwind.config.additions.ts` is color/token-only) — default
+Tailwind breakpoint scale applies.
+
+**Scope size:** 73 `page.tsx` files under `app/`, 35 `*-table.tsx`/`*-list.tsx` client wrapper
+files. Only 62 `sm:`/`md:`/`lg:`/`xl:` breakpoint-prefixed classes exist across 30 of those 73
+page files today — coverage is thin and inconsistent. Newer modules (`item-form.tsx`,
+`customer-detail.tsx`, `order-line-items.tsx`) already use `sm:grid-cols-*` responsibly — **use
+these as the reference pattern**, don't invent a new convention.
+
+**#1 blocker — [components/layout/app-shell.tsx](components/layout/app-shell.tsx):** the sidebar
+(`<aside>`, line ~425) renders as a permanent flex child at every viewport width — `w-56` expanded
+/ `w-14` collapsed, never hidden. There is no off-canvas/overlay pattern. The mobile hamburger
+button (`flex md:hidden`, line ~569) toggles the *same* `collapsed` state used for the desktop
+icon-only mode — so on a phone, tapping it only shrinks the sidebar to a 56px icon rail, it never
+fully hides. On a 375px screen that permanently leaves ~319px for content. **Nothing else in this
+plan matters until this is fixed** — it's the reason the app is currently unusable on a phone.
+Also in this file: header user-info block already hides pieces at `sm:` (lines ~577, ~583), which
+is a fine pattern to keep; breadcrumb bar (line ~598) has no overflow handling for deep paths on
+narrow screens; `main` content padding is a flat `p-6` (line ~603) with no mobile reduction.
+
+**[components/ui/data-table.tsx](components/ui/data-table.tsx):** already has `overflow-x-auto`
+(line ~143) so it won't break page layout, but there's no card/stacked-row fallback — dense tables
+(8+ columns, common in inventory/order lists) will still require heavy horizontal scrolling on a
+phone. This one component is used by all 35 table/list wrapper files, so a fix here cascades
+everywhere without touching individual pages.
+
+**[components/ui/page-header.tsx](components/ui/page-header.tsx):** title+actions row
+(`flex items-start justify-between gap-4`, no `flex-wrap`) — pages with 3+ header action buttons
+(common on detail pages) will overflow horizontally on narrow screens.
+
+**[components/ui/dialog.tsx](components/ui/dialog.tsx):** `DialogContent` is `w-full max-w-lg`
+centered with a flat `p-6` (line ~36) and no small-screen height cap — tall forms opened in a
+modal on a short phone viewport have no internal scroll handling.
+
+**Grid audit:** 15 instances of `grid-cols-2` or higher with **no** `sm:`/`md:`/`lg:` responsive
+variant found via `grep -rn "grid-cols-[2-9]"` excluding lines that already have a responsive
+prefix. Not individually enumerated here — re-run that grep at the start of MOBILE-3, since other
+workstreams touch these files independently and the list will drift.
+
+**Line-item editors** (`order-line-items.tsx`, `quote-line-items.tsx`, and similar) already use
+`sm:grid-cols-[2fr_1fr_1fr_auto]`-style responsive column templates — partially responsive-aware
+already, but these are the most interaction-heavy UI in the app (multiple inputs per row) and
+deserve dedicated manual testing in MOBILE-4 rather than a blind class sweep.
+
+**Low priority, not blocking:** buttons default to `h-8`/`h-9` (32/36px, see
+`components/ui/button.tsx`), below the ~44px touch-target guideline. Legitimate density tradeoff
+for a B2B admin UI — only revisit if real usage surfaces mis-taps, not proactively.
+
+---
+
+## Status
+
+| Phase | Description | Status | Notes |
+|---|---|---|---|
+| MOBILE-0 | Confirm breakpoint convention + viewport meta live-check | ✅ Done 2026-07-10 | Drawer breakpoint = `lg` (1024px); viewport meta confirmed live |
+| MOBILE-1 | App shell & navigation — off-canvas sidebar drawer, header, breadcrumb, content padding | Not started | Blocking — nothing else is testable on a phone until this lands. Build to the `lg` cutoff locked in MOBILE-0 |
+| MOBILE-2 | Shared primitives — `DataTable`, `PageHeader`, `Dialog` | Not started | Cascades to ~35+ pages automatically; do this before per-page audits |
+| MOBILE-3 | Form & grid audit — the fixed `grid-cols-N` sweep + create/edit screens | Not started | Re-run the grep from the findings section first; list will have drifted |
+| MOBILE-4 | Complex detail & line-item pages (order/quote/PO/customer/production detail, line-item editors) | Not started | Needs manual testing at 375/390/768px, not just class edits |
+| MOBILE-5 | Auth pages (login, forgot-password, update-password) | Not started | Expected low-risk, still needs an explicit pass |
+| MOBILE-6 | QA sweep — cross-module verification + desktop regression check | Not started | Walk one representative page per sidebar module at phone/tablet widths |
+
+## Session log
+
+*(Claude Code: append a dated entry here after each session — what was done, what was decided,
+anything left open.)*
+
+### 2026-07-10 — Assessment (no code)
+
+Read-only audit of the codebase's current responsive posture, at Sinag's request, before any
+implementation. No files were changed. Findings written up above and presented to Sinag as a
+per-phase plan; this file was created afterward, at Sinag's request, so the plan can be resumed
+from a fresh session via `MOBILE-N` phase codes instead of re-deriving it from conversation
+history. Next step: MOBILE-0, whenever Sinag starts the next session on this workstream.
+
+---
+
+### 2026-07-10 — MOBILE-0
+
+**Viewport meta tag — confirmed live, no action needed.** Fetched the rendered HTML from the
+already-running dev server (`curl http://localhost:3000/login`, another session's server per this
+project's documented one-dev-server-per-directory constraint — did not start or touch it beyond a
+GET request) and confirmed `<meta name="viewport" content="width=device-width, initial-scale=1"/>`
+is present in `<head>`. This is Next.js's own default injection (no explicit `viewport` export
+exists in `app/layout.tsx`, and none is needed) — matches the `generate-viewport.md` doc check
+from the assessment session. Nothing to fix here.
+
+**Sidebar drawer breakpoint — asked Sinag directly (`md`/768px vs `lg`/1024px), confirmed
+`lg`(1024px).** Recorded in Locked decisions above. Sinag's reasoning: staff may access the BMS
+from a tablet, and this app's nav is deep enough (group > subgroup > item, see `app-shell.tsx`)
+that a squeezed 768px sidebar-plus-content layout was judged not worth keeping the persistent
+sidebar for — tablets get the same drawer treatment as phones. Only real desktop/laptop widths
+(`≥1024px`) keep the current behavior.
+
+No files were changed this phase — MOBILE-0 was decisions + verification only, per its scope. Next
+step: MOBILE-1 (App shell & navigation), which is the blocking phase — build the off-canvas drawer
+in `components/layout/app-shell.tsx` using the `lg:` cutoff locked in here.
