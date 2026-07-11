@@ -542,7 +542,7 @@ export function AppShell({ children, userEmail, userRole, signOutAction, navCoun
                               {!effectiveCollapsed && (
                                 <button
                                   onClick={() => toggleSubgroup(child.label)}
-                                  className="flex w-full items-center gap-1 px-2 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-widest text-(--color-text-subtle) hover:text-(--color-text-muted) transition-colors"
+                                  className="flex w-full items-center gap-1 pl-7 pr-2 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-widest text-(--color-text-subtle) hover:text-(--color-text-muted) transition-colors"
                                 >
                                   <span className="flex-1 text-left">{child.label}</span>
                                   <ChevronDownIcon
