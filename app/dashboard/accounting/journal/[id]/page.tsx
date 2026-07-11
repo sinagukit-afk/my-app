@@ -94,7 +94,9 @@ export default async function JournalEntryDetailPage({
             <Link href="/dashboard/accounting/journal">
               <Button variant="secondary">Back to Journal</Button>
             </Link>
-            {hasAccess && !reversedBy && <ReverseEntryButton entryId={entry.id} />}
+            {hasAccess && !reversedBy && entry.source_type !== "reversal" && (
+              <ReverseEntryButton entryId={entry.id} />
+            )}
           </div>
         }
       />
