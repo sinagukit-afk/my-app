@@ -28,6 +28,7 @@ const SOURCE_LABELS: Record<string, string> = {
   manual_incoming: "Manual Incoming",
   inventory_adjustment_gain: "Inventory Adjustment (Gain)",
   inventory_adjustment_loss: "Inventory Adjustment (Loss)",
+  reversal: "Reversal",
 };
 
 type Props = {

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ReverseEntryButton } from "./reverse-entry-button";
 
 const SOURCE_LABELS: Record<string, string> = {
   manual: "Manual",
@@ -18,6 +19,7 @@ const SOURCE_LABELS: Record<string, string> = {
   manual_incoming: "Manual Incoming",
   inventory_adjustment_gain: "Inventory Adjustment (Gain)",
   inventory_adjustment_loss: "Inventory Adjustment (Loss)",
+  reversal: "Reversal",
 };
 
 function peso(n: number) {
@@ -48,12 +50,24 @@ export default async function JournalEntryDetailPage({
   const { data: entry } = await supabase
     .from("journal_entries")
     .select(
-      "id, entry_date, description, source_type, created_at, journal_entry_lines(id, debit, credit, memo, line_order, accounts(account_number, name))"
+      "id, entry_date, description, source_type, source_id, created_at, journal_entry_lines(id, debit, credit, memo, line_order, accounts(account_number, name))"
     )
     .eq("id", id)
     .single();
 
   if (!entry) notFound();
+
+  const [{ data: reversedBy }, { data: reverses }] = await Promise.all([
+    supabase
+      .from("journal_entries")
+      .select("id, description")
+      .eq("source_type", "reversal")
+      .eq("source_id", id)
+      .maybeSingle(),
+    entry.source_type === "reversal" && entry.source_id
+      ? supabase.from("journal_entries").select("id, description").eq("id", entry.source_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
 
   const lines = ((entry.journal_entry_lines ?? []) as {
     id: string;
@@ -76,9 +90,12 @@ export default async function JournalEntryDetailPage({
         title="Journal Entry"
         description={entry.description}
         actions={
-          <Link href="/dashboard/accounting/journal">
-            <Button variant="secondary">Back to Journal</Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/dashboard/accounting/journal">
+              <Button variant="secondary">Back to Journal</Button>
+            </Link>
+            {hasAccess && !reversedBy && <ReverseEntryButton entryId={entry.id} />}
+          </div>
         }
       />
 
@@ -96,6 +113,28 @@ export default async function JournalEntryDetailPage({
               <Badge variant="neutral">{SOURCE_LABELS[entry.source_type] ?? entry.source_type}</Badge>
             </p>
           </div>
+          {reverses && (
+            <div className="sm:col-span-2">
+              <p className="text-(--color-text-muted)">Reverses</p>
+              <Link
+                href={`/dashboard/accounting/journal/${reverses.id}`}
+                className="text-sm font-medium text-(--color-primary) hover:underline"
+              >
+                {reverses.description} →
+              </Link>
+            </div>
+          )}
+          {reversedBy && (
+            <div className="sm:col-span-2">
+              <p className="text-(--color-text-muted)">Reversed by</p>
+              <Link
+                href={`/dashboard/accounting/journal/${reversedBy.id}`}
+                className="text-sm font-medium text-(--color-primary) hover:underline"
+              >
+                {reversedBy.description} →
+              </Link>
+            </div>
+          )}
         </CardContent>
       </Card>
 

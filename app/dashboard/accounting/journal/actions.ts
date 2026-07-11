@@ -70,3 +70,20 @@ export async function postJournalEntry(formData: FormData): Promise<ActionResult
   revalidatePath(LIST_PATH)
   return { success: true, id: (data as { id: string }).id }
 }
+
+export async function reverseJournalEntry(entryId: string, reason: string): Promise<ActionResult> {
+  const trimmed = reason.trim()
+  if (!trimmed) return { success: false, error: 'A reason is required to reverse a journal entry.' }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('reverse_journal_entry', {
+    p_entry_id: entryId,
+    p_reason: trimmed,
+  })
+
+  if (error) return { success: false, error: friendlyError(error) }
+
+  revalidatePath(LIST_PATH)
+  revalidatePath(`${LIST_PATH}/${entryId}`)
+  return { success: true, id: (data as { id: string }).id }
+}

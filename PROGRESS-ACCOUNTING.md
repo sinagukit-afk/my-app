@@ -84,7 +84,7 @@ conventions worth keeping are:
 | ACCT-4 | Financial reports (trial balance, income statement, balance sheet) | Done | `0016_accounting_reports` | Runs before ACCT-5 — hence the lower migration number |
 | ACCT-5 | Fixed assets & depreciation | Done | `0017_accounting_fixed_assets` | Rounding caveat found — see session log |
 | ACCT-6 | Historical import / opening balance | Done | — (no plug account needed) | Posted 2026-07-02 as `journal_entries.id = 61d13de0-99a0-4c90-9296-1ded0b2ca823`. The doc's own Resolution section (₱142,532.17 Retained Earnings, ₱332.40 credit for 2010) did not actually balance — recomputed from an updated source workbook Sinag supplied mid-session; see session log for the corrected figures actually posted. `0018_accounting_opening_balance_adjustment` migration and 3099 plug account confirmed still not needed. |
-| ACCT-7 | Event-driven auto-posting (rewritten — see `docs/ACCT-7-v2-Business-Events-Kickoff.md`) | In progress | `acct7_reseed_chart_of_accounts`, `acct7_item_accounting_mappings`, `acct7_2_incoming_items_payment_method`, `acct7_4_business_events`, `acct7_4_wire_close_order_payment`, `acct7_4_wire_incoming_items_trigger`, `acct7_4_wire_adjust_stock`, `acct7_4_release_to_scrap`, `acct7_4_wire_shipment_cogs`, `acct7_5_payment_type_accounting_mappings`, `acct7_5_enrich_close_order_payment_payload`, `acct7_5_journal_entry_drafts`, `acct7_5_generate_draft_journal_entries`, `acct7_5_wire_business_events_trigger`, `acct7_5_revoke_public_execute_drafts_trigger`, `acct7_6_draft_review_rpcs`, `acct7_6_extend_journal_entries_source_type_check`, `acct7_6_restore_approve_and_post_final` | Original scope assumed `confirm_order()`, retired by D027 — full rescope done 2026-07-10, split into ACCT-7.1..7.8. 7.1 done (COA re-seeded + admin-only edit UI); 7.2 done (Purchasing payment-method capture); 7.3 done (Sinag reviewed Claude's first pass + mapped the 4 `Pkg-*` items himself; last gap — 4 `Srv-*`/`Shp-*` service items — closed by adding `SCA-4043 Service & Shipping Revenue`, 59/62 mapped, 3 intentionally-unmapped dev/test rows remain); 7.4 done (`business_events` table + all 6 trigger RPCs wired — see session log for the RPC-graph corrections found along the way); 7.5 done (`journal_entry_drafts`/`journal_entry_draft_lines` + `generate_draft_journal_entries()` rule engine, auto-fired via `AFTER INSERT` trigger on `business_events` — see session log); 7.6 done (`/dashboard/accounting/review` Review & Approve/Post UI + 3 RPCs, browser-verified with a real post and a real reject) |
+| ACCT-7 | Event-driven auto-posting (rewritten — see `docs/ACCT-7-v2-Business-Events-Kickoff.md`) | Done | `acct7_reseed_chart_of_accounts`, `acct7_item_accounting_mappings`, `acct7_2_incoming_items_payment_method`, `acct7_4_business_events`, `acct7_4_wire_close_order_payment`, `acct7_4_wire_incoming_items_trigger`, `acct7_4_wire_adjust_stock`, `acct7_4_release_to_scrap`, `acct7_4_wire_shipment_cogs`, `acct7_5_payment_type_accounting_mappings`, `acct7_5_enrich_close_order_payment_payload`, `acct7_5_journal_entry_drafts`, `acct7_5_generate_draft_journal_entries`, `acct7_5_wire_business_events_trigger`, `acct7_5_revoke_public_execute_drafts_trigger`, `acct7_6_draft_review_rpcs`, `acct7_6_extend_journal_entries_source_type_check`, `acct7_6_restore_approve_and_post_final`, `acct7_7_reverse_journal_entry`, `acct7_8_credit_card_installment_payments`, `acct7_8_widen_business_events_event_type_check`, `acct7_8_widen_journal_entries_source_type_check` | Original scope assumed `confirm_order()`, retired by D027 — full rescope done 2026-07-10, split into ACCT-7.1..7.8, **all 8 sub-phases now done**. 7.1 done (COA re-seeded + admin-only edit UI); 7.2 done (Purchasing payment-method capture); 7.3 done (Sinag reviewed Claude's first pass + mapped the 4 `Pkg-*` items himself; last gap — 4 `Srv-*`/`Shp-*` service items — closed by adding `SCA-4043 Service & Shipping Revenue`, 59/62 mapped, 3 intentionally-unmapped dev/test rows remain); 7.4 done (`business_events` table + all 6 trigger RPCs wired — see session log for the RPC-graph corrections found along the way); 7.5 done (`journal_entry_drafts`/`journal_entry_draft_lines` + `generate_draft_journal_entries()` rule engine, auto-fired via `AFTER INSERT` trigger on `business_events` — see session log); 7.6 done (`/dashboard/accounting/review` Review & Approve/Post UI + 3 RPCs, browser-verified with a real post and a real reject); 7.7 done (`reverse_journal_entry()` RPC + Reverse Entry action on the journal detail page, browser-verified with a real reversal); 7.8 done (`log_credit_card_installment_payment()` + `/dashboard/accounting/credit-card-payable`, browser-verified end-to-end with a real credit-card purchase paid down by a real installment) |
 
 > **Migration renumber (2026-07-02, ACCT-3):** ACCT-3 wasn't originally assigned a migration, but the Rent/Transportation decision added account `6015 Rent Expense`, which needed one. Created during ACCT-3 (chronologically before ACCT-4..7, none of which exist yet), it correctly takes the next free label `0015` — so the reserved labels for ACCT-4 (`0015→0016`), ACCT-5 (`0016→0017`), ACCT-6 (`0017→0018`), and ACCT-7 (`0018→0019`) each shift up by one, preserving the "lower label = created earlier" invariant the earlier amendments established.
 | ACCT-8 | BIR tax estimate calculator | Not started | — | Lowest priority, optional |
@@ -1164,5 +1164,121 @@ outcomes left in place (not rolled back):**
 No git commit (standing project rule — stopped for manual review). Next
 up: ACCT-7.7 (`reverse_journal_entry()` RPC + UI action on the journal
 detail page) or ACCT-7.8 (credit card installment event).
+
+---
+
+### 2026-07-11 — ACCT-7.7 (`reverse_journal_entry()` RPC + UI)
+
+Built the reversal mechanism the design doc's decision 11 called for
+(never edit/delete a posted entry, always reverse). One migration,
+`acct7_7_reverse_journal_entry`:
+
+- Widened `journal_entries_source_type_check` to add `'reversal'` (same
+  pattern as the 7.6 widen for draft-sourced event types).
+- New RPC `reverse_journal_entry(p_entry_id uuid, p_reason text)` —
+  admin/manager only (matches `post_journal_entry()`'s tier), requires a
+  non-blank reason, locks the original row (`for update`), rejects if the
+  entry has already been reversed (checked via an existing `source_type =
+  'reversal' and source_id = p_entry_id` row — one reversal per entry).
+  Builds the mirror line set (debit/credit swapped per line, same
+  accounts) and posts it through the **existing** `post_journal_entry()`
+  rather than duplicating its balance/account validation — same reuse
+  pattern `approve_and_post_journal_entry_draft()` established in 7.6.
+  The reversal posts at `current_date`, not backdated to the original
+  entry's date, so prior-period reports stay untouched (standard
+  reversing-entry practice). Reversing a reversal entry is intentionally
+  still allowed (only the *target* id is checked, not the source entry's
+  own `source_type`) — needed to undo a mistaken reversal without a
+  special case.
+
+UI: `/dashboard/accounting/journal/[id]` gained a "Reverse Entry" button
+(admin/manager, hidden once the entry has already been reversed) opening
+a `Dialog` with a required reason `TextArea` — mirrors the Reject dialog
+pattern from 7.6, not a native `confirm()`. The detail page now also
+shows a "Reverses →" link (on a reversal entry, back to the original) and
+a "Reversed by →" link (on an original entry, forward to its reversal).
+Added `reversal: "Reversal"` to both journal pages' `SOURCE_LABELS` maps.
+
+**Verified — real browser session, admin test account, real reversal left
+in place (not rolled back):** reversed the one real posted entry in the
+system (the 7.6 scrap-loss entry) with a reason, confirmed the new
+reversal entry shows swapped debit/credit lines that still balance
+(₱18.50/₱18.50), the "Reverses →" link back to the original, and correct
+labeling on the Journal list. Confirmed the original entry now shows
+"Reversed by →" and no longer offers a Reverse Entry button. Also
+DB-verified (rolled-back impersonated transactions) before touching the
+UI: blank-reason rejection, double-reversal rejection, and encoder-role
+rejection all raise the expected `plpgsql` exceptions. `get_advisors
+(security)` flagged `reverse_journal_entry` as anon/authenticated
+`EXECUTE`-able — confirmed this is the same pre-existing pattern as
+`post_journal_entry`/`approve_and_post_journal_entry_draft` (internal
+role check gates it, not a `REVOKE`), not a new gap.
+
+No git commit yet (standing project rule — stopped for manual review).
+Next up: ACCT-7.8 (Credit Card Payable installment event/RPC) — the last
+sub-phase in the ACCT-7 rewrite.
+
+---
+
+### 2026-07-11 — ACCT-7.8 (Credit Card Payable installment event/RPC) — ACCT-7 complete
+
+Closed out the last sub-phase of the ACCT-7 rewrite. New table
+`credit_card_installment_payments` (one row per real payment — not an
+amortization schedule, the design doc explicitly ruled that out; select-only
+RLS admin+manager, writes only via RPC, same convention as `business_events`/
+`journal_entry_drafts`). New RPC `log_credit_card_installment_payment(
+p_payment_type_id, p_principal_amount, p_interest_amount, p_paid_date,
+p_notes)` — admin/manager only, validates principal > 0, interest >= 0, a
+real payment type, and that principal doesn't exceed the outstanding
+`SCA-2020` balance computed live from **posted** `journal_entry_lines`
+(pending drafts don't count). Writes its own audit row, then a
+`business_events` row (`credit_card_installment_payment`) for the rule
+engine to pick up. Extended `generate_draft_journal_entries()` with event
+#7's rule: `Dr Credit Card Payable [principal] + Dr Credit Card Interest
+Expense [interest, if any] / Cr Cash/Bank [principal + interest]`, resolved
+via the existing `payment_type_accounting_mappings` table (same Cash→Cash on
+hand / else→Bank Account mapping from 7.5). New page
+`/dashboard/accounting/credit-card-payable` (outstanding-balance stat card +
+Log Payment dialog + payment history table, modeled on the Fixed Assets /
+Run Depreciation Dialog pattern), new nav link between Product Mapping and
+Fixed Assets.
+
+**Two real check-constraint gaps found and fixed, both the same class of
+mistake:** `business_events.event_type` and `journal_entries.source_type`
+both have `CHECK` constraints enumerating known values — missed on the
+first migration attempt (rolled-back SQL testing caught the `business_events`
+one before it hit the UI; the `journal_entries` one only surfaced when
+actually clicking Approve & Post in the browser, which hit a real native
+`alert()` that blocked the browser-preview tooling until dismissed with a
+keyboard Enter — screenshotting it directly was what caught the bug, get_
+page_text alone didn't surface it). Both fixed with a widening migration
+each (`acct7_8_widen_business_events_event_type_check`,
+`acct7_8_widen_journal_entries_source_type_check`). Lesson for any future
+event type: grep for **both** check constraints, not just one — 7.6 already
+widened `journal_entries_source_type_check` once for the draft-sourced event
+types, so it's an easy one to remember but still missed on the newer
+`business_events` one this time.
+
+**Verified — real browser session, admin test account, both real
+transactions left in place (not rolled back):** logged a real ₱200
+credit-card manual-incoming purchase (`Itm-Addon Box, Bottle opener`, Gcash
++ credit card), approved its auto-drafted entry (`Dr SCA-1212 Inventory-
+Packaging 200 / Cr SCA-2020 Credit Card Payable 200`) — first real balance
+ever on the Credit Card Payable account. Logged a real ₱120 principal + ₱5
+interest installment payment via BDO, approved its auto-drafted entry (`Dr
+SCA-2020 120 + Dr SCA-6092 Interest 5 / Cr SCA-1020 Bank Account 125`).
+Confirmed the Credit Card Payable page's outstanding balance tracked
+correctly at every step: ₱0 → ₱200 (after purchase posted) → ₱80 (after
+payment posted, `200 - 120`). Also DB-verified in rolled-back impersonated
+transactions before touching the UI: blank/zero principal, negative
+interest, unknown payment type, principal exceeding outstanding balance
+(₱0 at the time), and encoder-role all correctly rejected with the
+expected `plpgsql` exceptions.
+
+**ACCT-7 is now fully complete — all 8 sub-phases done.** Only ACCT-8 (BIR
+tax estimate calculator, lowest priority, untouched by this rewrite) remains
+open in the Accounting module.
+
+No git commit yet (standing project rule — stopped for manual review).
 
 ---

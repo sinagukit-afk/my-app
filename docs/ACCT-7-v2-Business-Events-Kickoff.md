@@ -189,8 +189,8 @@ rewrite.
 | ACCT-7.4 | ~~`business_events` table + wire the 6 existing trigger RPCs to write into it~~ **done 2026-07-10** — see `PROGRESS-ACCOUNTING.md`'s session log for the RPC-graph corrections found while wiring (events #3/#4 share one trigger, not two RPCs; event #2 hooks a shared helper not `deduct_stock_out()` directly; event #6 needed a brand-new RPC, `release_to_scrap()`) | ACCT-7.2, ACCT-7.3 |
 | ACCT-7.5 | ~~`journal_entry_drafts`/`journal_entry_draft_lines` + rule engine that turns unprocessed events into drafts~~ **done 2026-07-10** — `generate_draft_journal_entries()`, auto-fired via trigger on `business_events` insert; also added `payment_type_accounting_mappings` (new, Cash→Cash on hand, everything else→Bank Account per Sinag) and enriched `close_order_payment()`'s payload with per-line/per-payment breakdown | ACCT-7.4 |
 | ACCT-7.6 | ~~Review & Approve/Post UI (admin/manager) + the RPC that promotes a draft into `post_journal_entry()`~~ **done 2026-07-10** — `/dashboard/accounting/review`, 3 RPCs (`update_journal_entry_draft`, `approve_and_post_journal_entry_draft`, `reject_journal_entry_draft`); browser-verified with a real post (first entry ever through this pipeline) and a real reject | ACCT-7.5 |
-| ACCT-7.7 | `reverse_journal_entry()` RPC + UI action on the journal detail page | ACCT-2 (already live) |
-| ACCT-7.8 | Credit Card Payable event/RPC (#7 in the catalog) — logs an installment payment against the liability | ACCT-7.1, ACCT-7.2 |
+| ACCT-7.7 | ~~`reverse_journal_entry()` RPC + UI action on the journal detail page~~ **done 2026-07-11** — mirror-entry reversal posted through the existing `post_journal_entry()`, one reversal per entry, "Reverse Entry" dialog + "Reverses"/"Reversed by" links on `/dashboard/accounting/journal/[id]`; browser-verified with a real reversal | ACCT-2 (already live) |
+| ACCT-7.8 | ~~Credit Card Payable event/RPC (#7 in the catalog) — logs an installment payment against the liability~~ **done 2026-07-11** — `log_credit_card_installment_payment()` + `/dashboard/accounting/credit-card-payable` (outstanding balance + Log Payment dialog + history); browser-verified with a real credit-card purchase paid down by a real installment | ACCT-7.1, ACCT-7.2 |
 
 ---
 
@@ -202,6 +202,14 @@ rewrite.
 - ~~The item/category → account mapping (ACCT-7.3) needs Sinag's input
   category-by-category~~ **done 2026-07-10** — 59/62 items mapped, 3
   dev/test rows intentionally left unmapped.
-- Exact RPC hook point for scrap release (event #6) needs confirming
-  against the live Items for Review code at build time — not fully
-  pinned down in this doc.
+- ~~Exact RPC hook point for scrap release (event #6) needs confirming
+  against the live Items for Review code at build time~~ **done 2026-07-10**
+  — no dedicated RPC existed, so a new one was built (`release_to_scrap()`,
+  ACCT-7.4).
+
+**ACCT-7 (all sub-phases 7.1–7.8) is now complete as of 2026-07-11.**
+Every event in the catalog above is wired end-to-end: business event →
+auto-drafted journal entry → Review/Approve UI → posted ledger entry, plus
+reversal (7.7) and the Credit Card Payable installment loop (7.8). Only
+ACCT-8 (BIR calculator, untouched by this rewrite) remains in the
+Accounting module's phase list.
