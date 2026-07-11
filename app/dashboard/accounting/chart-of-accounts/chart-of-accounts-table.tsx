@@ -49,12 +49,18 @@ export function ChartOfAccountsTable({ data, canWrite }: Props) {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<AccountRow | null>(null);
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [deactivateTarget, setDeactivateTarget] = useState<AccountRow | null>(null);
   const [deactivateError, setDeactivateError] = useState<string | null>(null);
 
   const filtered = useMemo(
-    () => (categoryFilter ? data.filter((r) => r.category === categoryFilter) : data),
-    [data, categoryFilter]
+    () =>
+      data.filter((r) => {
+        if (categoryFilter && r.category !== categoryFilter) return false;
+        if (statusFilter && String(r.is_active) !== statusFilter) return false;
+        return true;
+      }),
+    [data, categoryFilter, statusFilter]
   );
 
   function openAdd() {
@@ -183,6 +189,17 @@ export function ChartOfAccountsTable({ data, canWrite }: Props) {
             { value: "expense", label: "Expense" },
           ]}
           className="w-44"
+        />
+        <Select
+          aria-label="Filter by status"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          options={[
+            { value: "", label: "All statuses" },
+            { value: "true", label: "Active" },
+            { value: "false", label: "Inactive" },
+          ]}
+          className="w-40"
         />
       </div>
 
