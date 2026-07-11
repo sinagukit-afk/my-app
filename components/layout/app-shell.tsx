@@ -7,7 +7,18 @@ import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 
 /* ── Nav config ─────────────────────────────────────────────── */
-type NavCountKey = "purchaseOrders" | "receiving" | "itemsForReview";
+type NavCountKey =
+  | "purchaseOrders"
+  | "receiving"
+  | "itemsForReview"
+  | "ordersActive"
+  | "ordersQuotation"
+  | "ordersConfirmed"
+  | "ordersOnHold"
+  | "ordersProduction"
+  | "ordersShipping"
+  | "ordersPayment"
+  | "accountingReview";
 
 type NavLeaf = {
   kind: "item";
@@ -57,13 +68,13 @@ const NAV: NavEntry[] = [
         kind: "subgroup",
         label: "Orders",
         children: [
-          { kind: "item", label: "Active Orders", href: "/dashboard/orders/active-orders", icon: ShoppingCartIcon },
-          { kind: "item", label: "Quotation", href: "/dashboard/orders/quotation", icon: ShoppingCartIcon },
-          { kind: "item", label: "Confirmed", href: "/dashboard/orders/confirmed", icon: ShoppingCartIcon },
-          { kind: "item", label: "On Hold", href: "/dashboard/orders/on-hold", icon: ShoppingCartIcon },
-          { kind: "item", label: "Production", href: "/dashboard/orders/production", icon: ShoppingCartIcon },
-          { kind: "item", label: "Shipping", href: "/dashboard/orders/shipping", icon: ShoppingCartIcon },
-          { kind: "item", label: "Payment", href: "/dashboard/orders/payment", icon: ShoppingCartIcon },
+          { kind: "item", label: "Active Orders", href: "/dashboard/orders/active-orders", icon: ShoppingCartIcon, countKey: "ordersActive" },
+          { kind: "item", label: "Quotation", href: "/dashboard/orders/quotation", icon: ShoppingCartIcon, countKey: "ordersQuotation" },
+          { kind: "item", label: "Confirmed", href: "/dashboard/orders/confirmed", icon: ShoppingCartIcon, countKey: "ordersConfirmed" },
+          { kind: "item", label: "On Hold", href: "/dashboard/orders/on-hold", icon: ShoppingCartIcon, countKey: "ordersOnHold" },
+          { kind: "item", label: "Production", href: "/dashboard/orders/production", icon: ShoppingCartIcon, countKey: "ordersProduction" },
+          { kind: "item", label: "Shipping", href: "/dashboard/orders/shipping", icon: ShoppingCartIcon, countKey: "ordersShipping" },
+          { kind: "item", label: "Payment", href: "/dashboard/orders/payment", icon: ShoppingCartIcon, countKey: "ordersPayment" },
           { kind: "item", label: "Completed", href: "/dashboard/orders/completed", icon: ShoppingCartIcon },
         ],
       },
@@ -99,7 +110,7 @@ const NAV: NavEntry[] = [
     roles: ["admin", "manager"],
     children: [
       { kind: "item", label: "Chart of Accounts", href: "/dashboard/accounting/chart-of-accounts", icon: LedgerIcon },
-      { kind: "item", label: "Review", href: "/dashboard/accounting/review", icon: LedgerIcon },
+      { kind: "item", label: "Review", href: "/dashboard/accounting/review", icon: LedgerIcon, countKey: "accountingReview" },
       { kind: "item", label: "Journal", href: "/dashboard/accounting/journal", icon: LedgerIcon },
       { kind: "item", label: "Product Mapping", href: "/dashboard/accounting/product-mapping", icon: LedgerIcon },
       { kind: "item", label: "Credit Card Payable", href: "/dashboard/accounting/credit-card-payable", icon: LedgerIcon },
