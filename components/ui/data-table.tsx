@@ -215,9 +215,9 @@ function DataTable<T extends Record<string, unknown>>({
         </div>
       )}
 
-      {/* Table (lg and up) */}
+      {/* Table (lg and up, mouse/trackpad only — touch devices always get the card fallback below) */}
       <div className="rounded-lg border border-(--color-border) overflow-hidden bg-(--color-surface) shadow-(--shadow-sm)">
-        <div className="hidden overflow-x-auto lg:block">
+        <div className="hidden overflow-x-auto pointer-fine:lg:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-(--color-border) bg-(--color-bg)">
@@ -264,7 +264,7 @@ function DataTable<T extends Record<string, unknown>>({
                     onClick={onRowClick ? () => onRowClick(row) : undefined}
                     className={cn(
                       "border-b border-(--color-border) last:border-0 hover:bg-(--color-bg) transition-colors",
-                      onRowClick && "cursor-pointer"
+                      onRowClick && "cursor-pointer touch-manipulation"
                     )}
                   >
                     {columns.map((col) => (
@@ -281,8 +281,8 @@ function DataTable<T extends Record<string, unknown>>({
           </table>
         </div>
 
-        {/* Stacked rows (below lg) — card fallback so dense tables don't require horizontal scrolling on phones/tablets */}
-        <div className="lg:hidden">
+        {/* Stacked rows (below lg, or any touch device regardless of width) — card fallback so dense tables don't require horizontal scrolling on phones/tablets */}
+        <div className="pointer-fine:lg:hidden">
           {isLoading ? (
             <div className="divide-y divide-(--color-border)">
               {Array.from({ length: pageSize }).map((_, i) => (
@@ -307,7 +307,7 @@ function DataTable<T extends Record<string, unknown>>({
                     onClick={onRowClick ? () => onRowClick(row) : undefined}
                     className={cn(
                       "flex flex-col gap-2 p-4 transition-colors",
-                      onRowClick && "cursor-pointer active:bg-(--color-bg)"
+                      onRowClick && "cursor-pointer touch-manipulation active:bg-(--color-bg)"
                     )}
                   >
                     <div className="text-(--color-text)">

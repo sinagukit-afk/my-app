@@ -455,7 +455,7 @@ export function AppShell({ children, userEmail, userRole, signOutAction, navCoun
         onClick={() => setMobileOpen(false)}
         aria-hidden="true"
         className={cn(
-          "fixed inset-0 z-30 bg-black/50 transition-opacity duration-200 lg:hidden",
+          "fixed inset-0 z-30 bg-black/50 transition-opacity duration-200 pointer-fine:lg:hidden",
           mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
         )}
       />
@@ -466,14 +466,14 @@ export function AppShell({ children, userEmail, userRole, signOutAction, navCoun
           "flex flex-col border-r border-(--color-border) bg-(--color-surface) transition-all duration-200 ease-in-out",
           "fixed inset-y-0 left-0 z-40 w-64 -translate-x-full",
           mobileOpen && "translate-x-0",
-          "lg:static lg:z-auto lg:translate-x-0 lg:shrink-0",
-          collapsed ? "lg:w-14" : "lg:w-56"
+          "pointer-fine:lg:static pointer-fine:lg:z-auto pointer-fine:lg:translate-x-0 pointer-fine:lg:shrink-0",
+          collapsed ? "pointer-fine:lg:w-14" : "pointer-fine:lg:w-56"
         )}
       >
         {/* Logo */}
         <div className={cn(
           "flex h-14 items-center gap-3 border-b border-(--color-border) px-4",
-          collapsed && "lg:justify-center lg:px-3"
+          collapsed && "pointer-fine:lg:justify-center pointer-fine:lg:px-3"
         )}>
           <img
             src="/sinag-ukit-logo.jpg"
@@ -589,7 +589,7 @@ export function AppShell({ children, userEmail, userRole, signOutAction, navCoun
         </nav>
 
         {/* Collapse toggle — desktop-only; mobile drawer is always full width */}
-        <div className={cn("hidden border-t border-(--color-border) p-2", collapsed ? "lg:flex lg:justify-center" : "lg:block")}>
+        <div className={cn("hidden border-t border-(--color-border) p-2", collapsed ? "pointer-fine:lg:flex pointer-fine:lg:justify-center" : "pointer-fine:lg:block")}>
           <button
             onClick={() => setCollapsed((c) => !c)}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -610,7 +610,7 @@ export function AppShell({ children, userEmail, userRole, signOutAction, navCoun
         <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-(--color-border) bg-(--color-surface) px-4 shadow-(--shadow-sm)">
           <button
             onClick={() => setMobileOpen((o) => !o)}
-            className="flex lg:hidden items-center justify-center h-8 w-8 rounded-(--radius-md) text-(--color-text-muted) hover:bg-(--color-bg) transition-colors"
+            className="flex pointer-fine:lg:hidden items-center justify-center h-8 w-8 rounded-(--radius-md) text-(--color-text-muted) hover:bg-(--color-bg) transition-colors"
             aria-label="Toggle navigation menu"
             aria-expanded={mobileOpen}
           >
