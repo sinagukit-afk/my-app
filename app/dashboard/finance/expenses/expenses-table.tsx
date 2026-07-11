@@ -1,95 +1,94 @@
 "use client";
 
-// DEPRECATED (ACCT-3): the `expenses` table is retired in favour of double-entry
-// `journal_entries`. This screen is now read-only historical reference — new
-// expenditures are recorded via the Accounting → Journal posting form. Do not
-// reintroduce create/edit/delete here; see PROGRESS-ACCOUNTING.md (ACCT-3).
-
 import Link from "next/link";
 import { DataTable, type Column } from "@/components/ui/data-table";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/ui/page-header";
-import { Card, CardContent } from "@/components/ui/card";
 
 export type ExpenseRow = {
   id: string;
-  date: string;
-  category: string;
+  expense_number: string;
+  description: string;
   amount: number;
-  note: string | null;
+  expense_date: string;
+  payment_status: "unpaid" | "partial" | "paid";
+  source: "direct" | "purchase_order";
+  category_name: string;
+  supplier_name: string | null;
+};
+
+const STATUS_VARIANT: Record<ExpenseRow["payment_status"], "danger" | "warning" | "success"> = {
+  unpaid: "danger",
+  partial: "warning",
+  paid: "success",
+};
+
+const SOURCE_LABEL: Record<ExpenseRow["source"], string> = {
+  direct: "Direct Entry",
+  purchase_order: "Expense PO",
 };
 
 type Props = {
   data: ExpenseRow[];
+  canWrite: boolean;
 };
 
 export function ExpensesTable({ data }: Props) {
-  const totalAmount = data.reduce((sum, row) => sum + Number(row.amount), 0);
-
   const columns: Column<ExpenseRow>[] = [
     {
-      key: "date",
-      header: "Date",
+      key: "expense_number",
+      header: "Expense #",
       sortable: true,
-      render: (value) => new Date(value as string).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }),
+      render: (value, row) => (
+        <Link href={`/dashboard/finance/expenses/${row.id}`} className="font-medium text-(--color-primary) hover:underline">
+          {String(value)}
+        </Link>
+      ),
+    },
+    { key: "expense_date", header: "Date", sortable: true },
+    { key: "category_name", header: "Category", sortable: true },
+    { key: "description", header: "Description", className: "max-w-xs truncate" },
+    {
+      key: "supplier_name",
+      header: "Supplier",
+      render: (value) => (value as string) || <span className="text-(--color-text-subtle)">—</span>,
     },
     {
-      key: "category",
-      header: "Category",
-      sortable: true,
+      key: "source",
+      header: "Source",
+      render: (value) => <Badge variant="neutral">{SOURCE_LABEL[value as ExpenseRow["source"]]}</Badge>,
     },
+    { key: "amount", header: "Amount", sortable: true, render: (value) => `₱${Number(value).toFixed(2)}` },
     {
-      key: "amount",
-      header: "Amount",
+      key: "payment_status",
+      header: "Payment",
       sortable: true,
       render: (value) => (
-        <span className="font-medium text-(--color-text)">
-          ₱{Number(value).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-        </span>
+        <Badge variant={STATUS_VARIANT[value as ExpenseRow["payment_status"]]}>
+          {(value as string).charAt(0).toUpperCase() + (value as string).slice(1)}
+        </Badge>
       ),
     },
     {
-      key: "note",
-      header: "Note",
-      className: "max-w-xs truncate",
-      render: (value) => (value as string) || <span className="text-(--color-text-subtle)">—</span>,
+      key: "id",
+      header: "",
+      render: (_value, row) => (
+        <Link href={`/dashboard/finance/expenses/${row.id}`}>
+          <Button variant="ghost" size="sm">
+            View
+          </Button>
+        </Link>
+      ),
     },
   ];
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Expenses"
-        description="Historical expenditure records (read-only). Superseded by the accounting journal."
-        actions={
-          <Link href="/dashboard/accounting/journal/new">
-            <Button>Record in Journal</Button>
-          </Link>
-        }
-      />
-
-      <Card>
-        <CardContent className="p-4 text-sm text-(--color-text-muted)">
-          This page is now a read-only archive. Expenses are recorded as balanced
-          double-entry transactions in{" "}
-          <Link href="/dashboard/accounting/journal" className="font-medium text-(--color-primary) hover:underline">
-            Accounting → Journal
-          </Link>
-          .
-        </CardContent>
-      </Card>
-
-      <p className="text-sm text-(--color-text-muted)">
-        Total recorded: <span className="font-medium text-(--color-text)">₱{totalAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-      </p>
-
-      <DataTable
-        columns={columns}
-        data={data}
-        searchPlaceholder="Search expenses…"
-        emptyMessage="No expenses recorded"
-        emptyDescription="Historical expense entries appear here."
-      />
-    </div>
+    <DataTable
+      columns={columns}
+      data={data}
+      searchPlaceholder="Search expenses…"
+      emptyMessage="No expenses recorded"
+      emptyDescription="Record a direct expense, or receive an Expense PO from Purchasing."
+    />
   );
 }

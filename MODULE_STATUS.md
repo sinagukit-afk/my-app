@@ -175,9 +175,9 @@ Orders")
 
 ## Inventory
 
-*Nav order/labels as of INV-16 (2026-07-09): Inventory Monitoring →
-Purchase Order(N) → Inventory Receiving(N) → Items for Review(N) → Item
-Adjustment, where `(N)` is a live count of in-progress rows per section.*
+*Nav order/labels as of PUR-1 (2026-07-11): Inventory Monitoring → Items for
+Review(N) → Item Adjustment. Purchase Order and Receiving moved out to the
+new top-level Purchasing group below (D044) — no longer nested here.*
 
 🟩 Inventory Monitoring (`/dashboard/inventory/monitoring`, renamed from
 "Inventory Status", merged with the former "Stock Movement" screen,
@@ -198,27 +198,66 @@ Production Order that produced it (label-only, not a real per-source
 ledger). Row click opens Release directly (destinations: Available or
 Scrap). See `PROGRESS-INVENTORY.md` INV-15.
 🟩 Item Adjustment
-🟩 Purchase Orders (`/dashboard/inventory/purchase-orders`, moved from
-the retired Purchasing group)
-🟩 Receiving (`/dashboard/inventory/receiving`, moved from the retired
-Purchasing group) — standalone "Incoming Inventory" screen retired;
-manual (non-PO) receipts now logged from Receiving itself via "Log
-Manual Incoming". Every receiving event (manual or PO-sourced) gets its
-own numbered receiving reference (`SRIYY-MMDD-0001`, yearly reset) and
-`status='received'`, shown in a combined Receiving Log alongside the
-existing Open Purchase Orders list. PO receipt now also bumps
-`available_qty`, not just legacy `in_stock` (INV-12). See
-`PROGRESS-PURCHASING.md` (RECV-1) and `PROGRESS-INVENTORY.md` (INV-12).
+
+## Purchasing
+
+*New top-level nav group as of PUR-1 (2026-07-11, `DECISIONS.md` D044) —
+Purchasing recreated as top-level, the opposite of D031's fold into
+Inventory, now justified because it routes three distinct PO types to
+three different destinations instead of doing one thing. One shared
+`purchase_orders` table (`po_type` discriminator), not three schemas.*
+
+🟩 Inventory PO (`/dashboard/purchasing/inventory-po`, moved back from
+`inventory/purchase-orders`) — unchanged behavior, scoped to
+`po_type='inventory'`.
+🟩 Expense PO (`/dashboard/purchasing/expense-po`) — new. Category +
+free-text description lines (no SKU); receiving creates an unpaid
+`opex_expenses` row in Finance → Expenses per line. Creation is
+admin/manager only (page-gated); receiving stays admin/manager/encoder,
+same as Inventory PO always was. See `PROGRESS-PURCHASING.md` PUR-1.
+🟩 Asset PO (`/dashboard/purchasing/asset-po`) — new. Same shape as
+Expense PO; receiving creates one `fixed_assets` row **per line** (not
+per unit — assets depreciate individually) in Finance → Fixed Assets,
+with useful life/salvage pre-filled from the asset category and
+overridable at receiving time. See `PROGRESS-PURCHASING.md` PUR-1.
+🟩 Receiving (`/dashboard/purchasing/receiving`, moved back from
+`inventory/receiving`) — Inventory-only (Expense/Asset PO receive
+inline on their own detail page instead, no shared log). Standalone
+"Incoming Inventory" screen retired; manual (non-PO) receipts logged
+via "Log Manual Incoming". Every receiving event gets its own numbered
+reference (`SRIYY-MMDD-0001`, yearly reset) and `status='received'`,
+shown in a combined Receiving Log alongside the Open Purchase Orders
+list. PO receipt also bumps `available_qty`, not just legacy
+`in_stock` (INV-12). See `PROGRESS-PURCHASING.md` (RECV-1, PUR-1) and
+`PROGRESS-INVENTORY.md` (INV-12).
 
 ## Finance
 
-🟩 Income — manual entry CRUD (`income` table), admin/manager only
-🟩 Expenses — manual entry CRUD (`expenses` table), admin/manager only
+🟩 Income — manual entry CRUD (`income` table), admin/manager only.
+**Deprecated/unchanged by PUR-1/FIN-1** — untouched, still reads the
+old `income` table, out of scope for the 2026-07-11 restructure.
+🟩 Expenses (`/dashboard/finance/expenses`) — real CRUD over a new
+`opex_expenses` table (replacing the deprecated `expenses`-table
+archive), admin/manager only: categories (+ inline Manage Categories),
+optional supplier, attachments (Supabase Storage), payment status
+(unpaid/partial/paid, derived from `payable_payments`), source (Direct
+Entry or Expense PO). See `PROGRESS-FINANCE.md` FIN-1.
+🟩 Fixed Assets (`/dashboard/finance/fixed-assets`, moved from
+Accounting) — gained the add/edit-asset UI it never had, plus
+`category_id`/`salvage_value`. Admin-only, matching the original
+ACCT-5 RLS tier. See `PROGRESS-FINANCE.md` FIN-1.
+🟩 Payments (`/dashboard/finance/payments`, moved from
+`orders/payment`) — relocation only, `close_order_payment()`/
+`order_payments` unchanged. "Central payment hub" spanning
+customer/expense/asset/credit-card payments is explicit future work,
+not built this phase. See `PROGRESS-FINANCE.md` FIN-1.
 🟩 Cash Flow — read-only income vs. expenses timeline with running
-balance, selectable date range, admin/manager only
+balance, selectable date range, admin/manager only. **Unchanged by
+PUR-1/FIN-1** — still reads the old `income`/`expenses` tables (both
+effectively empty since ACCT-3), flagged but out of scope.
 🟩 Profit & Loss — read-only revenue (confirmed+ orders) minus
-expenses statement with margin %, selectable date range,
-admin/manager only
+expenses statement with margin %, selectable date range, admin/manager
+only. Same stale-table caveat as Cash Flow above.
 
 ## Accounting
 
@@ -229,9 +268,20 @@ admin/manager only
 🟩 Journal Core — `journal_entries`/`journal_entry_lines`, `post_journal_entry()` (ACCT-2)
 🟩 Manual Entry UI + retire income/expenses (ACCT-3)
 🟩 Financial Reports — Trial Balance, Income Statement, Balance Sheet (ACCT-4)
-🟩 Fixed Assets & Depreciation (ACCT-5)
+🟩 Fixed Assets & Depreciation (ACCT-5) — asset register/depreciation engine
+built here; **the UI itself moved to `/dashboard/finance/fixed-assets` on
+2026-07-11 (FIN-1)**, this row now describes the underlying schema/RPC only
 🟩 Historical Import / Opening Balance (ACCT-6)
-🟨 Event-driven auto-posting (ACCT-7) — rewritten 2026-07-10. `docs/ACCT-7-v2-Business-Events-Kickoff.md` (sub-phases 7.1..7.8). Done so far: COA re-seed + edit UI (7.1, done), item→account mapping page at `/dashboard/accounting/product-mapping` (7.3, tooling only — Sinag's actual mapping pass still pending). Not started: Purchasing payment-method field, business event log, draft/review/approve workflow, reversal RPC, credit card payable
+🟩 Event-driven auto-posting (ACCT-7) — rewritten 2026-07-10, all 8
+sub-phases (7.1..7.8) done same day: COA re-seed + edit UI, Purchasing
+payment-method capture, item→account mapping (`/dashboard/accounting/
+product-mapping`), `business_events` log + 6 trigger RPCs, `journal_entry_
+drafts` rule engine, Review & Approve/Post UI, reversal RPC, Credit Card
+Payable. **Extended 2026-07-11 (7.9, D044)** with 4 more event types
+(expense/asset recorded + their payments, posting through `SCA-2000
+Accounts payable`) and a new Category Mapping page
+(`/dashboard/accounting/category-mapping`, expense/asset categories →
+accounts). See `PROGRESS-ACCOUNTING.md`.
 ⬜ BIR tax estimate calculator (ACCT-8) — optional, lowest priority, not started
 
 Tracked separately in `PROGRESS-ACCOUNTING.md`, not this file's usual phase log.

@@ -20,6 +20,11 @@ const SOURCE_LABELS: Record<string, string> = {
   inventory_adjustment_gain: "Inventory Adjustment (Gain)",
   inventory_adjustment_loss: "Inventory Adjustment (Loss)",
   reversal: "Reversal",
+  credit_card_installment_payment: "Credit Card Installment Payment",
+  expense_recorded: "Expense Recorded",
+  asset_acquired: "Asset Acquired",
+  expense_payment: "Expense Payment",
+  asset_payment: "Asset Payment",
 };
 
 function peso(n: number) {

@@ -983,3 +983,70 @@ own new top-level "Management" nav group.
 - **Not touched, flagged only:** `docs/inventory-status-phase1-kickoff` (still ahead of its
   own `origin` copy) and sibling worktree `laughing-kilby-845118` (still based on the old
   `cb9b408`) were left as-is — out of scope for this pass, no unique work at risk.
+
+## D044
+
+**Finance & Purchasing restructure (2026-07-11): Purchasing recreated as a top-level
+module (reversing D031's fold into Inventory), Finance gets real Expenses/Fixed
+Assets/Payments, Accounting's event pipeline extended with Accounts Payable.** Sinag
+brought a spec asking Purchasing to route POs to Inventory, Finance → Expenses, or
+Finance → Fixed Assets depending on type, with Finance owning everything that isn't
+inventory stock. See `PROGRESS-PURCHASING.md` (PUR-1), the new `PROGRESS-FINANCE.md`
+(FIN-1), and `PROGRESS-ACCOUNTING.md` (ACCT-7.9) for full build detail; this entry
+covers the cross-cutting schema/design calls only.
+
+- **One `purchase_orders` table with a `po_type` discriminator**
+  (`inventory`/`expense`/`asset`), not three separate PO schemas — reuses the existing
+  reference-numbering, status workflow (`draft→sent→partial/received→closed`), and
+  supplier linkage Inventory PO already had. `purchase_order_items.variant_id` became
+  nullable; Expense/Asset lines use a new `description` + `expense_category_id`/
+  `asset_category_id` instead (no SKU). `purchase_orders.supplier_id` was also made
+  nullable — it was `NOT NULL` under the original Inventory-only design, but Expense/Asset
+  POs need an optional supplier (a real bug caught live in browser verification: creating
+  an Asset PO with no supplier hard-failed on the NOT NULL constraint until fixed).
+- **Expense/Asset POs accrue to Accounts Payable (`SCA-2000`) at receiving, settled later
+  via a Finance Payment** — not "assume already paid," which is Inventory PO's existing,
+  deliberate behavior (ACCT-7-v2 design decision #6). Chosen because the spec explicitly
+  asks for Expense **Payment Status** and an approval-before-purchase workflow, and it
+  mirrors the Credit Card Payable pattern (ACCT-7.8) already proven in this codebase. Net
+  new: `payable_payments` (polymorphic `payable_type`/`payable_id`, mirrors
+  `credit_card_installment_payments`), and 4 new `business_events` types
+  (`expense_recorded`, `asset_acquired`, `expense_payment`, `asset_payment`) each with a
+  `generate_draft_journal_entries()` branch posting through `SCA-2000` — same "skip if
+  unmapped, never guess" conservative behavior as every existing branch.
+- **New table `opex_expenses`, not a resurrected `expenses`** — the old flat `expenses`
+  table was explicitly retired in ACCT-3 (deprecated archive, 0 live rows, "do not
+  reintroduce create/edit/delete here" per its own code comment). Reusing it would violate
+  that documented decision; `opex_expenses` fully replaces the `finance/expenses` page
+  instead, with its own reference series (`EXP-YYYY-MMDD####`), category FK, optional
+  supplier, `payment_status`, `source` (`direct`/`purchase_order`), and soft delete.
+- **Purchasing is genuinely top-level again** (sibling to Finance/Accounting/Operations in
+  the sidebar), not a subgroup under Operations/Inventory — the opposite of D031's fold,
+  now justified because Purchasing does three distinct things (Inventory/Expense/Asset PO)
+  instead of one. Inventory PO/Receiving physically moved
+  `inventory/purchase-orders``inventory/receiving` →
+  `purchasing/inventory-po`/`purchasing/receiving` (D031-style physical move, all path
+  references updated); Fixed Assets moved `accounting/fixed-assets` →
+  `finance/fixed-assets`; Payments moved `orders/payment` → `finance/payments`.
+- **Role tier split within Purchasing**: creating/editing a PO header follows the existing
+  admin/manager/encoder table RLS for all three `po_type`s, but Expense PO/Asset PO
+  **creation pages** are gated to admin/manager only at the page level (D016-style
+  narrowing beyond RLS) — matches the spec's "approval before purchasing" intent without a
+  schema change. **Receiving** (any `po_type`) stays open to encoder, matching Inventory
+  PO's existing physical-receiving precedent; Direct Expense Entry and Log Payment are
+  admin/manager only (Finance-tier, matches `fixed_assets`/`journal_entries`).
+- Fixed Assets gained the add/edit-asset UI it never had (`fixed_assets` previously had no
+  create path in the app at all — "Assets are added via migration seed data for now," per
+  ACCT-5's original session log) plus new `category_id`/`salvage_value` columns;
+  `run_monthly_depreciation()`'s math updated to depreciate `(cost - salvage_value)`
+  instead of `cost` — the ACCT-5 rounding caveat about book value never quite reaching zero
+  is now scoped to `(cost - salvage_value)` rather than `cost`, unchanged otherwise.
+- Verified live (browser preview, Claude admin test account): a real Expense PO and a real
+  Asset PO each round-tripped through Purchasing → Finance → Accounting Review → Approve &
+  Post → real Journal Entry, both balanced through `SCA-2000`. Two more real bugs caught
+  during this pass (both fixed same session): Category Mapping's client component held
+  stale local state that didn't resync after adding a category via `router.refresh()`
+  (missing `useEffect` re-sync — `useState`'s initial value is only read once); the new
+  event types were missing from the Journal/Review pages' friendly-label maps (also
+  backfilled a pre-existing gap where ACCT-7.8's own `credit_card_installment_payment`
+  was never added to `journal-table.tsx`'s map).

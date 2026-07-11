@@ -41,3 +41,64 @@ purchase-orders` and `app/dashboard/inventory/receiving` as part of the
 Operations nav restructure — the Purchasing sidebar group was retired,
 folded into Inventory. File names/contents unchanged, only routes +
 physical folders moved. See `DECISIONS.md` D031.
+
+---
+
+## PUR-1 — Purchasing recreated as a top-level module: Expense PO + Asset PO ✅ DONE
+
+**Status:** Complete 2026-07-11. See `DECISIONS.md` D044 for the cross-cutting schema
+decisions (shared here in brief) and `PROGRESS-FINANCE.md` FIN-1 /
+`PROGRESS-ACCOUNTING.md` ACCT-7.9 for the Finance/Accounting halves of this same build.
+
+**Ask (Sinag):** split Finance into real Expenses/Fixed Assets/Payments, and make
+Purchasing a real top-level module again — this time routing to three destinations by PO
+type instead of the single Inventory-only flow D031 folded away: Inventory PO → Inventory
+(unchanged), Expense PO → Finance → Expenses, Asset PO → Finance → Fixed Assets. Recurring
+OPEX (rent/utilities/internet/salaries) skips the PO entirely via Direct Expense Entry.
+
+**Schema (migrations `finpur_1`..`finpur_12`):**
+- `purchase_orders.po_type` (`inventory`/`expense`/`asset`, default `inventory`) — one
+  shared table/reference series/status workflow across all three types, not three schemas.
+- `purchase_order_items.variant_id` made nullable; added `description`,
+  `expense_category_id`, `asset_category_id` — Expense/Asset lines aren't SKU-based.
+- New `expense_categories`/`asset_categories` (category → default Chart-of-Accounts
+  mapping, same shape as `item_accounting_mappings`) — asset categories also carry
+  `default_useful_life_months`, pre-filled at receiving time and overridable per line.
+- `purchase_orders.supplier_id` dropped its `NOT NULL` (was Inventory-only-shaped; Expense/
+  Asset POs need an optional supplier) — caught live in browser verification, not before.
+- New RPCs: `receive_expense_purchase_order()` / `receive_asset_purchase_order()` (mirror
+  `receive_purchase_order()`'s partial-receiving shape; route to `opex_expenses`/
+  `fixed_assets` instead of `incoming_items`, one `fixed_assets` row per Asset-PO *line*
+  — not per unit, matching how each asset is depreciated individually), `record_direct_
+  expense()`, `log_payable_payment()`. All four insert a `business_events` row for
+  Accounting to pick up — see ACCT-7.9 for the posting side.
+
+**App (`app/dashboard/purchasing/`):**
+- `inventory-po/`, `receiving/` — physically moved back from `app/dashboard/inventory/`
+  (D031 reversed), file contents otherwise unchanged; list/receiving queries scoped to
+  `po_type = 'inventory'` since the table is now shared.
+- `expense-po/`, `asset-po/` — new, same file shape as Inventory PO (`page.tsx` list,
+  `new/` create form, `[reference]/` detail+receive) but with a category+description line
+  picker instead of a variant picker, and an inline Receive dialog on the detail page
+  itself rather than routing through the shared Receiving screen (Expense/Asset receiving
+  has no `incoming_items`-equivalent log to share with Inventory's).
+- Role tier: PO creation/header-edit is page-gated to admin/manager for Expense/Asset PO
+  (narrower than the underlying `purchase_orders` table RLS, which still allows encoder for
+  all types) — matches "approval before purchasing"; **Receiving** stays admin/manager/
+  encoder for all three types, same as Inventory PO always was.
+- New top-level `Purchasing` `NavGroup` in `app-shell.tsx` (Inventory PO, Expense PO, Asset
+  PO, Receiving), removed from the Inventory subgroup. `dashboard/layout.tsx`'s nav-badge
+  counts split by `po_type` (previously counted all `purchase_orders` rows as inventory).
+
+**Verified (browser preview, Claude admin test account, left in place as labeled real
+data per this project's standing verification convention):**
+- Created an Expense PO with no supplier → hit the `supplier_id NOT NULL` bug live, fixed
+  the schema, retried successfully.
+- Full Asset PO round trip: created "Machinery & Equipment" category (mapped to
+  `SCA-1530`/`1531`/`6002`, 24mo default life) via the new Accounting → Category Mapping
+  page → raised `SPO-2026-07110002` → Approve & Send → Receive (useful life/salvage
+  pre-filled from the category, both overridable) → landed in Finance → Fixed Assets as
+  "Laser Engraving Machine," ₱25,000, Active.
+- Full Expense PO / Direct Entry round trip documented in FIN-1 (same session).
+- `npm run build` passes, all `/dashboard/purchasing/*` routes registered;
+  `get_advisors(security)` shows only the standard baseline WARN, no new categories.

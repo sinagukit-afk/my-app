@@ -28,6 +28,8 @@ export default async function DashboardLayout({
   const [
     { count: purchaseOrdersCount },
     { count: receivingCount },
+    { count: expensePOsCount },
+    { count: assetPOsCount },
     { count: itemsForReviewCount },
     { count: ordersActiveCount },
     { count: ordersQuotationCount },
@@ -42,11 +44,23 @@ export default async function DashboardLayout({
     supabase
       .from("purchase_orders")
       .select("id", { count: "exact", head: true })
+      .eq("po_type", "inventory")
       .in("status", ["draft", "sent", "partial"]),
     supabase
       .from("purchase_orders")
       .select("id", { count: "exact", head: true })
+      .eq("po_type", "inventory")
       .in("status", ["sent", "partial"]),
+    supabase
+      .from("purchase_orders")
+      .select("id", { count: "exact", head: true })
+      .eq("po_type", "expense")
+      .in("status", ["draft", "sent", "partial"]),
+    supabase
+      .from("purchase_orders")
+      .select("id", { count: "exact", head: true })
+      .eq("po_type", "asset")
+      .in("status", ["draft", "sent", "partial"]),
     supabase
       .from("inventory_levels")
       .select("id", { count: "exact", head: true })
@@ -113,6 +127,8 @@ export default async function DashboardLayout({
       navCounts={{
         purchaseOrders: purchaseOrdersCount ?? 0,
         receiving: receivingCount ?? 0,
+        expensePOs: expensePOsCount ?? 0,
+        assetPOs: assetPOsCount ?? 0,
         itemsForReview: itemsForReviewCount ?? 0,
         ordersActive: ordersActiveCount ?? 0,
         ordersQuotation: ordersQuotationCount ?? 0,

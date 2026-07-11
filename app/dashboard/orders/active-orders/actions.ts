@@ -211,8 +211,8 @@ export async function closeOrderPayment(orderId: string, orderNumber: string, no
   if (error) return { success: false, error: error.message }
 
   revalidatePath(`${LIST_PATH}/${orderId}`)
-  revalidatePath(`/dashboard/orders/payment/${orderNumber}`)
-  revalidatePath(`/dashboard/orders/payment/${orderNumber}/preview`)
+  revalidatePath(`/dashboard/finance/payments/${orderNumber}`)
+  revalidatePath(`/dashboard/finance/payments/${orderNumber}/preview`)
   return { success: true }
 }
 

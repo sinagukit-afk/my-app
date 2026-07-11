@@ -84,7 +84,7 @@ conventions worth keeping are:
 | ACCT-4 | Financial reports (trial balance, income statement, balance sheet) | Done | `0016_accounting_reports` | Runs before ACCT-5 — hence the lower migration number |
 | ACCT-5 | Fixed assets & depreciation | Done | `0017_accounting_fixed_assets` | Rounding caveat found — see session log |
 | ACCT-6 | Historical import / opening balance | Done | — (no plug account needed) | Posted 2026-07-02 as `journal_entries.id = 61d13de0-99a0-4c90-9296-1ded0b2ca823`. The doc's own Resolution section (₱142,532.17 Retained Earnings, ₱332.40 credit for 2010) did not actually balance — recomputed from an updated source workbook Sinag supplied mid-session; see session log for the corrected figures actually posted. `0018_accounting_opening_balance_adjustment` migration and 3099 plug account confirmed still not needed. |
-| ACCT-7 | Event-driven auto-posting (rewritten — see `docs/ACCT-7-v2-Business-Events-Kickoff.md`) | Done | `acct7_reseed_chart_of_accounts`, `acct7_item_accounting_mappings`, `acct7_2_incoming_items_payment_method`, `acct7_4_business_events`, `acct7_4_wire_close_order_payment`, `acct7_4_wire_incoming_items_trigger`, `acct7_4_wire_adjust_stock`, `acct7_4_release_to_scrap`, `acct7_4_wire_shipment_cogs`, `acct7_5_payment_type_accounting_mappings`, `acct7_5_enrich_close_order_payment_payload`, `acct7_5_journal_entry_drafts`, `acct7_5_generate_draft_journal_entries`, `acct7_5_wire_business_events_trigger`, `acct7_5_revoke_public_execute_drafts_trigger`, `acct7_6_draft_review_rpcs`, `acct7_6_extend_journal_entries_source_type_check`, `acct7_6_restore_approve_and_post_final`, `acct7_7_reverse_journal_entry`, `acct7_8_credit_card_installment_payments`, `acct7_8_widen_business_events_event_type_check`, `acct7_8_widen_journal_entries_source_type_check` | Original scope assumed `confirm_order()`, retired by D027 — full rescope done 2026-07-10, split into ACCT-7.1..7.8, **all 8 sub-phases now done**. 7.1 done (COA re-seeded + admin-only edit UI); 7.2 done (Purchasing payment-method capture); 7.3 done (Sinag reviewed Claude's first pass + mapped the 4 `Pkg-*` items himself; last gap — 4 `Srv-*`/`Shp-*` service items — closed by adding `SCA-4043 Service & Shipping Revenue`, 59/62 mapped, 3 intentionally-unmapped dev/test rows remain); 7.4 done (`business_events` table + all 6 trigger RPCs wired — see session log for the RPC-graph corrections found along the way); 7.5 done (`journal_entry_drafts`/`journal_entry_draft_lines` + `generate_draft_journal_entries()` rule engine, auto-fired via `AFTER INSERT` trigger on `business_events` — see session log); 7.6 done (`/dashboard/accounting/review` Review & Approve/Post UI + 3 RPCs, browser-verified with a real post and a real reject); 7.7 done (`reverse_journal_entry()` RPC + Reverse Entry action on the journal detail page, browser-verified with a real reversal); 7.8 done (`log_credit_card_installment_payment()` + `/dashboard/accounting/credit-card-payable`, browser-verified end-to-end with a real credit-card purchase paid down by a real installment) |
+| ACCT-7 | Event-driven auto-posting (rewritten — see `docs/ACCT-7-v2-Business-Events-Kickoff.md`) | Done, extended | `acct7_reseed_chart_of_accounts`, `acct7_item_accounting_mappings`, `acct7_2_incoming_items_payment_method`, `acct7_4_business_events`, `acct7_4_wire_close_order_payment`, `acct7_4_wire_incoming_items_trigger`, `acct7_4_wire_adjust_stock`, `acct7_4_release_to_scrap`, `acct7_4_wire_shipment_cogs`, `acct7_5_payment_type_accounting_mappings`, `acct7_5_enrich_close_order_payment_payload`, `acct7_5_journal_entry_drafts`, `acct7_5_generate_draft_journal_entries`, `acct7_5_wire_business_events_trigger`, `acct7_5_revoke_public_execute_drafts_trigger`, `acct7_6_draft_review_rpcs`, `acct7_6_extend_journal_entries_source_type_check`, `acct7_6_restore_approve_and_post_final`, `acct7_7_reverse_journal_entry`, `acct7_8_credit_card_installment_payments`, `acct7_8_widen_business_events_event_type_check`, `acct7_8_widen_journal_entries_source_type_check`, `finpur_7_widen_event_type_checks`, `finpur_8_expense_asset_po_rpcs`, `finpur_11_rule_engine_expense_asset_events` | Original scope assumed `confirm_order()`, retired by D027 — full rescope done 2026-07-10, split into ACCT-7.1..7.8, **all 8 sub-phases done same day**; **7.9 added 2026-07-11** (Finance & Purchasing restructure, D044) with 4 more event types (`expense_recorded`/`asset_acquired`/`expense_payment`/`asset_payment`, all posting through `SCA-2000 Accounts payable`) and the new Category Mapping page — see session log. 7.1 done (COA re-seeded + admin-only edit UI); 7.2 done (Purchasing payment-method capture); 7.3 done (Sinag reviewed Claude's first pass + mapped the 4 `Pkg-*` items himself; last gap — 4 `Srv-*`/`Shp-*` service items — closed by adding `SCA-4043 Service & Shipping Revenue`, 59/62 mapped, 3 intentionally-unmapped dev/test rows remain); 7.4 done (`business_events` table + all 6 trigger RPCs wired — see session log for the RPC-graph corrections found along the way); 7.5 done (`journal_entry_drafts`/`journal_entry_draft_lines` + `generate_draft_journal_entries()` rule engine, auto-fired via `AFTER INSERT` trigger on `business_events` — see session log); 7.6 done (`/dashboard/accounting/review` Review & Approve/Post UI + 3 RPCs, browser-verified with a real post and a real reject); 7.7 done (`reverse_journal_entry()` RPC + Reverse Entry action on the journal detail page, browser-verified with a real reversal); 7.8 done (`log_credit_card_installment_payment()` + `/dashboard/accounting/credit-card-payable`, browser-verified end-to-end with a real credit-card purchase paid down by a real installment); 7.9 done (see above) |
 
 > **Migration renumber (2026-07-02, ACCT-3):** ACCT-3 wasn't originally assigned a migration, but the Rent/Transportation decision added account `6015 Rent Expense`, which needed one. Created during ACCT-3 (chronologically before ACCT-4..7, none of which exist yet), it correctly takes the next free label `0015` — so the reserved labels for ACCT-4 (`0015→0016`), ACCT-5 (`0016→0017`), ACCT-6 (`0017→0018`), and ACCT-7 (`0018→0019`) each shift up by one, preserving the "lower label = created earlier" invariant the earlier amendments established.
 | ACCT-8 | BIR tax estimate calculator | Not started | — | Lowest priority, optional |
@@ -1278,6 +1278,68 @@ expected `plpgsql` exceptions.
 **ACCT-7 is now fully complete — all 8 sub-phases done.** Only ACCT-8 (BIR
 tax estimate calculator, lowest priority, untouched by this rewrite) remains
 open in the Accounting module.
+
+No git commit yet (standing project rule — stopped for manual review).
+
+---
+
+### 2026-07-11 — ACCT-7.9 (Expense/Asset events + Category Mapping)
+
+Extends the ACCT-7 event pipeline for the Finance & Purchasing restructure
+(`DECISIONS.md` D044, `PROGRESS-PURCHASING.md` PUR-1, `PROGRESS-FINANCE.md`
+FIN-1) rather than forking a second posting mechanism — same
+`business_events` → `generate_draft_journal_entries()` → `journal_entry_
+drafts` → Review → `post_journal_entry()` pipeline ACCT-7.4/7.5/7.6 already
+built.
+
+**4 new event types**, widened onto the existing `business_events.event_type`
+and `journal_entries.source_type` CHECK constraints (grep for **both**, per
+the standing lesson from ACCT-7.8's own near-miss): `expense_recorded`
+(Direct Entry or Expense-PO receipt), `asset_acquired` (Asset-PO receipt),
+`expense_payment`/`asset_payment` (settling a `payable_payments` row). All
+four route through the existing `SCA-2000 Accounts payable` account —
+already present in the seeded Chart of Accounts, no new account needed:
+
+- `expense_recorded` → `Dr <category's default expense account> / Cr
+  SCA-2000`, resolved via the new `expense_categories` table (same "skip if
+  unmapped" conservative behavior as every other branch — never guesses).
+- `asset_acquired` → `Dr <asset account, already resolved into the event
+  payload at receiving time by `receive_asset_purchase_order()`> / Cr
+  SCA-2000`.
+- `expense_payment`/`asset_payment` → `Dr SCA-2000 / Cr <Cash/Bank via the
+  existing `payment_type_accounting_mappings` table>` — same shape as
+  ACCT-7.8's `credit_card_installment_payment` branch, just against a
+  different payable.
+
+**New `/dashboard/accounting/category-mapping` page** (admin-only edit,
+admin/manager view — mirrors Product Mapping's pattern exactly): two
+sections, Expense Categories (name → expense account) and Asset Categories
+(name → asset/accum.-depreciation/depreciation-expense account triplet +
+default useful-life-months), each with inline "Add Category" + "Save
+Mappings." New nav item between Product Mapping and Credit Card Payable.
+
+**Bug caught during this pass, not by `npm run build`:** the page's client
+table component seeded `useState` from server props once and never resynced
+— adding a new category via `router.refresh()` correctly refetched server
+data but the already-mounted component kept its stale initial state, so the
+new row silently didn't appear until a full reload. Fixed with a `useEffect`
+resync. Full detail and the sibling latent instance in `product-mapping-
+table.tsx` are in `PROGRESS-FINANCE.md` FIN-1.
+
+**Verified (browser preview, Claude admin test account, real entries left in
+place per this project's standing convention):** mapped a real expense
+category and a real asset category to real Chart-of-Accounts rows, then
+drove a Direct Expense and a full Asset PO receipt through to a posted,
+balanced Journal Entry each (`Dr <expense/asset account> / Cr SCA-2000`,
+detail in PUR-1/FIN-1). DB-level role tests (rolled-back transactions,
+admin + real encoder test account): `receive_expense_purchase_order`/
+`receive_asset_purchase_order` allow encoder (matches Inventory PO's
+existing receiving precedent); `record_direct_expense`/`update_direct_
+expense`/`delete_expense`/`add_expense_attachment`/`log_payable_payment` all
+correctly reject encoder ("Not authorized..."). `get_advisors(security)`
+shows only the standard baseline WARN (anon/authenticated can execute
+`SECURITY DEFINER` — internal role checks are the real gate), no new
+categories of finding.
 
 No git commit yet (standing project rule — stopped for manual review).
 

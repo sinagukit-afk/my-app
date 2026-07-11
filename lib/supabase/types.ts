@@ -91,6 +91,64 @@ export type Database = {
           },
         ]
       }
+      asset_categories: {
+        Row: {
+          created_at: string
+          default_accum_depreciation_account_id: string | null
+          default_asset_account_id: string | null
+          default_depreciation_expense_account_id: string | null
+          default_useful_life_months: number | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_accum_depreciation_account_id?: string | null
+          default_asset_account_id?: string | null
+          default_depreciation_expense_account_id?: string | null
+          default_useful_life_months?: number | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_accum_depreciation_account_id?: string | null
+          default_asset_account_id?: string | null
+          default_depreciation_expense_account_id?: string | null
+          default_useful_life_months?: number | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_categories_default_accum_depreciation_account_id_fkey"
+            columns: ["default_accum_depreciation_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_categories_default_asset_account_id_fkey"
+            columns: ["default_asset_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_categories_default_depreciation_expense_account_id_fkey"
+            columns: ["default_depreciation_expense_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_events: {
         Row: {
           created_at: string
@@ -183,6 +241,54 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      credit_card_installment_payments: {
+        Row: {
+          created_at: string
+          id: string
+          interest_amount: number
+          notes: string | null
+          paid_by: string | null
+          paid_date: string
+          payment_type_id: string
+          principal_amount: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          interest_amount?: number
+          notes?: string | null
+          paid_by?: string | null
+          paid_date?: string
+          payment_type_id: string
+          principal_amount: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          interest_amount?: number
+          notes?: string | null
+          paid_by?: string | null
+          paid_date?: string
+          payment_type_id?: string
+          principal_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_card_installment_payments_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_card_installment_payments_payment_type_id_fkey"
+            columns: ["payment_type_id"]
+            isOneToOne: false
+            referencedRelation: "payment_types"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       customer_sources: {
         Row: {
@@ -385,6 +491,76 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_attachments: {
+        Row: {
+          created_at: string
+          expense_id: string
+          file_name: string
+          file_path: string
+          id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          expense_id: string
+          file_name: string
+          file_path: string
+          id?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          expense_id?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_attachments_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "opex_expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_categories: {
+        Row: {
+          created_at: string
+          default_expense_account_id: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_expense_account_id?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_expense_account_id?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_categories_default_expense_account_id_fkey"
+            columns: ["default_expense_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number
@@ -433,39 +609,51 @@ export type Database = {
         Row: {
           accum_depreciation_account_id: string
           asset_account_id: string
+          category_id: string | null
           cost: number
           created_at: string
           depreciation_expense_account_id: string
           disposed_at: string | null
           id: string
           name: string
+          purchase_order_id: string | null
           purchased_date: string
+          salvage_value: number
+          supplier_id: string | null
           updated_at: string
           useful_life_months: number
         }
         Insert: {
           accum_depreciation_account_id: string
           asset_account_id: string
+          category_id?: string | null
           cost: number
           created_at?: string
           depreciation_expense_account_id: string
           disposed_at?: string | null
           id?: string
           name: string
+          purchase_order_id?: string | null
           purchased_date: string
+          salvage_value?: number
+          supplier_id?: string | null
           updated_at?: string
           useful_life_months: number
         }
         Update: {
           accum_depreciation_account_id?: string
           asset_account_id?: string
+          category_id?: string | null
           cost?: number
           created_at?: string
           depreciation_expense_account_id?: string
           disposed_at?: string | null
           id?: string
           name?: string
+          purchase_order_id?: string | null
           purchased_date?: string
+          salvage_value?: number
+          supplier_id?: string | null
           updated_at?: string
           useful_life_months?: number
         }
@@ -485,10 +673,31 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "fixed_assets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "asset_categories"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "fixed_assets_depreciation_expense_account_id_fkey"
             columns: ["depreciation_expense_account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixed_assets_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixed_assets_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -1338,6 +1547,117 @@ export type Database = {
           },
         ]
       }
+      journal_entry_draft_lines: {
+        Row: {
+          account_id: string
+          created_at: string
+          credit: number
+          debit: number
+          draft_id: string
+          id: string
+          line_order: number
+          memo: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          credit?: number
+          debit?: number
+          draft_id: string
+          id?: string
+          line_order?: number
+          memo?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          credit?: number
+          debit?: number
+          draft_id?: string
+          id?: string
+          line_order?: number
+          memo?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entry_draft_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_draft_lines_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entry_drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journal_entry_drafts: {
+        Row: {
+          created_at: string
+          description: string
+          entry_date: string
+          event_type: string
+          id: string
+          posted_journal_entry_id: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_event_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          entry_date?: string
+          event_type: string
+          id?: string
+          posted_journal_entry_id?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_event_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          entry_date?: string
+          event_type?: string
+          id?: string
+          posted_journal_entry_id?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_event_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entry_drafts_posted_journal_entry_id_fkey"
+            columns: ["posted_journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_drafts_source_event_id_fkey"
+            columns: ["source_event_id"]
+            isOneToOne: true
+            referencedRelation: "business_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       journal_entry_lines: {
         Row: {
           account_id: string
@@ -1456,6 +1776,79 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      opex_expenses: {
+        Row: {
+          amount: number
+          category_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          description: string
+          expense_date: string
+          expense_number: string
+          id: string
+          payment_status: string
+          purchase_order_id: string | null
+          source: string
+          supplier_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category_id: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description: string
+          expense_date?: string
+          expense_number: string
+          id?: string
+          payment_status?: string
+          purchase_order_id?: string | null
+          source?: string
+          supplier_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category_id?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string
+          expense_date?: string
+          expense_number?: string
+          id?: string
+          payment_status?: string
+          purchase_order_id?: string | null
+          source?: string
+          supplier_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opex_expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opex_expenses_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opex_expenses_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_item_modifiers: {
         Row: {
@@ -1926,6 +2319,92 @@ export type Database = {
           },
         ]
       }
+      payable_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          paid_date: string
+          payable_id: string
+          payable_type: string
+          payment_type_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          paid_date?: string
+          payable_id: string
+          payable_type: string
+          payment_type_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          paid_date?: string
+          payable_id?: string
+          payable_type?: string
+          payment_type_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payable_payments_payment_type_id_fkey"
+            columns: ["payment_type_id"]
+            isOneToOne: false
+            referencedRelation: "payment_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_type_accounting_mappings: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          payment_type_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          payment_type_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          payment_type_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_type_accounting_mappings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_type_accounting_mappings_payment_type_id_fkey"
+            columns: ["payment_type_id"]
+            isOneToOne: true
+            referencedRelation: "payment_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_types: {
         Row: {
           created_at: string
@@ -2082,8 +2561,11 @@ export type Database = {
       }
       purchase_order_items: {
         Row: {
+          asset_category_id: string | null
           created_at: string
+          description: string | null
           discount_amount: number
+          expense_category_id: string | null
           id: string
           item_name_snapshot: string | null
           line_total: number
@@ -2092,11 +2574,14 @@ export type Database = {
           quantity_ordered: number
           quantity_received: number
           unit_cost: number
-          variant_id: string
+          variant_id: string | null
         }
         Insert: {
+          asset_category_id?: string | null
           created_at?: string
+          description?: string | null
           discount_amount?: number
+          expense_category_id?: string | null
           id?: string
           item_name_snapshot?: string | null
           line_total?: number
@@ -2105,11 +2590,14 @@ export type Database = {
           quantity_ordered: number
           quantity_received?: number
           unit_cost?: number
-          variant_id: string
+          variant_id?: string | null
         }
         Update: {
+          asset_category_id?: string | null
           created_at?: string
+          description?: string | null
           discount_amount?: number
+          expense_category_id?: string | null
           id?: string
           item_name_snapshot?: string | null
           line_total?: number
@@ -2118,9 +2606,23 @@ export type Database = {
           quantity_ordered?: number
           quantity_received?: number
           unit_cost?: number
-          variant_id?: string
+          variant_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "purchase_order_items_asset_category_id_fkey"
+            columns: ["asset_category_id"]
+            isOneToOne: false
+            referencedRelation: "asset_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_items_expense_category_id_fkey"
+            columns: ["expense_category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "purchase_order_items_purchase_order_id_fkey"
             columns: ["purchase_order_id"]
@@ -2174,12 +2676,13 @@ export type Database = {
           id: string
           note: string | null
           order_date: string
+          po_type: string
           reference: string
           shipping_fee: number
           status: string
           store_id: string | null
           subtotal: number
-          supplier_id: string
+          supplier_id: string | null
           total: number
           updated_at: string
         }
@@ -2191,12 +2694,13 @@ export type Database = {
           id?: string
           note?: string | null
           order_date?: string
+          po_type?: string
           reference: string
           shipping_fee?: number
           status?: string
           store_id?: string | null
           subtotal?: number
-          supplier_id: string
+          supplier_id?: string | null
           total?: number
           updated_at?: string
         }
@@ -2208,12 +2712,13 @@ export type Database = {
           id?: string
           note?: string | null
           order_date?: string
+          po_type?: string
           reference?: string
           shipping_fee?: number
           status?: string
           store_id?: string | null
           subtotal?: number
-          supplier_id?: string
+          supplier_id?: string | null
           total?: number
           updated_at?: string
         }
@@ -3048,6 +3553,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      add_expense_attachment: {
+        Args: { p_expense_id: string; p_file_name: string; p_file_path: string }
+        Returns: string
+      }
       add_production_completed_qty: {
         Args: { p_production_order_id: string; p_qty: number }
         Returns: {
@@ -3190,6 +3699,24 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "inventory_movements"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      approve_and_post_journal_entry_draft: {
+        Args: { p_draft_id: string }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          description: string
+          entry_date: string
+          id: string
+          source_id: string | null
+          source_type: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "journal_entries"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -3525,6 +4052,8 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      delete_expense: { Args: { p_id: string }; Returns: undefined }
+      generate_draft_journal_entries: { Args: never; Returns: number }
       get_balance_sheet: {
         Args: { p_as_of?: string }
         Returns: {
@@ -3598,6 +4127,42 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      log_credit_card_installment_payment: {
+        Args: {
+          p_interest_amount?: number
+          p_notes?: string
+          p_paid_date?: string
+          p_payment_type_id: string
+          p_principal_amount: number
+        }
+        Returns: {
+          created_at: string
+          id: string
+          interest_amount: number
+          notes: string | null
+          paid_by: string | null
+          paid_date: string
+          payment_type_id: string
+          principal_amount: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "credit_card_installment_payments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      log_payable_payment: {
+        Args: {
+          p_amount: number
+          p_notes?: string
+          p_paid_date?: string
+          p_payable_id: string
+          p_payable_type: string
+          p_payment_type_id: string
+        }
+        Returns: string
       }
       mark_delivered: {
         Args: { p_order_id: string }
@@ -3905,6 +4470,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      receive_asset_purchase_order: {
+        Args: { p_lines: Json; p_purchase_order_id: string }
+        Returns: undefined
+      }
+      receive_expense_purchase_order: {
+        Args: { p_lines: Json; p_purchase_order_id: string }
+        Returns: undefined
+      }
       receive_purchase_order: {
         Args: {
           p_is_credit_card?: boolean
@@ -3921,6 +4494,40 @@ export type Database = {
       recompute_shipping_status: {
         Args: { p_order_id: string }
         Returns: undefined
+      }
+      record_direct_expense: {
+        Args: {
+          p_amount: number
+          p_category_id: string
+          p_description: string
+          p_expense_date?: string
+          p_payment_status?: string
+          p_supplier_id?: string
+        }
+        Returns: string
+      }
+      reject_journal_entry_draft: {
+        Args: { p_draft_id: string; p_reason?: string }
+        Returns: {
+          created_at: string
+          description: string
+          entry_date: string
+          event_type: string
+          id: string
+          posted_journal_entry_id: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_event_id: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "journal_entry_drafts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       release_to_scrap: {
         Args: {
@@ -3994,6 +4601,24 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      reverse_journal_entry: {
+        Args: { p_entry_id: string; p_reason: string }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          description: string
+          entry_date: string
+          id: string
+          source_id: string | null
+          source_type: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "journal_entries"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -4210,6 +4835,40 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_direct_expense: {
+        Args: {
+          p_amount: number
+          p_category_id: string
+          p_description: string
+          p_expense_date: string
+          p_id: string
+          p_supplier_id?: string
+        }
+        Returns: undefined
+      }
+      update_journal_entry_draft: {
+        Args: { p_description: string; p_draft_id: string; p_lines: Json }
+        Returns: {
+          created_at: string
+          description: string
+          entry_date: string
+          event_type: string
+          id: string
+          posted_journal_entry_id: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_event_id: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "journal_entry_drafts"
           isOneToOne: true
           isSetofReturn: false
         }

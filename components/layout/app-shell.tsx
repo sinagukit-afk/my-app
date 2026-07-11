@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 type NavCountKey =
   | "purchaseOrders"
   | "receiving"
+  | "expensePOs"
+  | "assetPOs"
   | "itemsForReview"
   | "ordersActive"
   | "ordersQuotation"
@@ -74,7 +76,6 @@ const NAV: NavEntry[] = [
           { kind: "item", label: "On Hold", href: "/dashboard/orders/on-hold", icon: ShoppingCartIcon, countKey: "ordersOnHold" },
           { kind: "item", label: "Production", href: "/dashboard/orders/production", icon: ShoppingCartIcon, countKey: "ordersProduction" },
           { kind: "item", label: "Shipping", href: "/dashboard/orders/shipping", icon: ShoppingCartIcon, countKey: "ordersShipping" },
-          { kind: "item", label: "Payment", href: "/dashboard/orders/payment", icon: ShoppingCartIcon, countKey: "ordersPayment" },
           { kind: "item", label: "Completed", href: "/dashboard/orders/completed", icon: ShoppingCartIcon },
         ],
       },
@@ -83,12 +84,21 @@ const NAV: NavEntry[] = [
         label: "Inventory",
         children: [
           { kind: "item", label: "Inventory Monitoring", href: "/dashboard/inventory/monitoring", icon: LayersIcon },
-          { kind: "item", label: "Purchase Order", href: "/dashboard/inventory/purchase-orders", icon: LayersIcon, countKey: "purchaseOrders" },
-          { kind: "item", label: "Inventory Receiving", href: "/dashboard/inventory/receiving", icon: LayersIcon, countKey: "receiving" },
           { kind: "item", label: "Items for Review", href: "/dashboard/inventory/items-for-review", icon: LayersIcon, countKey: "itemsForReview" },
           { kind: "item", label: "Item Adjustment", href: "/dashboard/inventory/adjustment", icon: LayersIcon },
         ],
       },
+    ],
+  },
+  {
+    kind: "group",
+    label: "Purchasing",
+    icon: BoxIcon,
+    children: [
+      { kind: "item", label: "Inventory PO", href: "/dashboard/purchasing/inventory-po", icon: BoxIcon, countKey: "purchaseOrders" },
+      { kind: "item", label: "Expense PO", href: "/dashboard/purchasing/expense-po", icon: BoxIcon, countKey: "expensePOs" },
+      { kind: "item", label: "Asset PO", href: "/dashboard/purchasing/asset-po", icon: BoxIcon, countKey: "assetPOs" },
+      { kind: "item", label: "Receiving", href: "/dashboard/purchasing/receiving", icon: BoxIcon, countKey: "receiving" },
     ],
   },
   {
@@ -99,6 +109,8 @@ const NAV: NavEntry[] = [
     children: [
       { kind: "item", label: "Income", href: "/dashboard/finance/income", icon: CurrencyIcon },
       { kind: "item", label: "Expenses", href: "/dashboard/finance/expenses", icon: CurrencyIcon },
+      { kind: "item", label: "Fixed Assets", href: "/dashboard/finance/fixed-assets", icon: CurrencyIcon },
+      { kind: "item", label: "Payments", href: "/dashboard/finance/payments", icon: CurrencyIcon, countKey: "ordersPayment" },
       { kind: "item", label: "Cash Flow", href: "/dashboard/finance/cash-flow", icon: CurrencyIcon },
       { kind: "item", label: "Profit & Loss", href: "/dashboard/finance/profit-loss", icon: CurrencyIcon },
     ],
@@ -113,8 +125,8 @@ const NAV: NavEntry[] = [
       { kind: "item", label: "Review", href: "/dashboard/accounting/review", icon: LedgerIcon, countKey: "accountingReview" },
       { kind: "item", label: "Journal", href: "/dashboard/accounting/journal", icon: LedgerIcon },
       { kind: "item", label: "Product Mapping", href: "/dashboard/accounting/product-mapping", icon: LedgerIcon },
+      { kind: "item", label: "Category Mapping", href: "/dashboard/accounting/category-mapping", icon: LedgerIcon },
       { kind: "item", label: "Credit Card Payable", href: "/dashboard/accounting/credit-card-payable", icon: LedgerIcon },
-      { kind: "item", label: "Fixed Assets", href: "/dashboard/accounting/fixed-assets", icon: LedgerIcon },
       { kind: "item", label: "Trial Balance", href: "/dashboard/accounting/trial-balance", icon: LedgerIcon },
       { kind: "item", label: "Income Statement", href: "/dashboard/accounting/income-statement", icon: LedgerIcon },
       { kind: "item", label: "Balance Sheet", href: "/dashboard/accounting/balance-sheet", icon: LedgerIcon },

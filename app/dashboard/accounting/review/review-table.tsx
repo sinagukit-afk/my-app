@@ -22,6 +22,11 @@ export const EVENT_TYPE_LABELS: Record<string, string> = {
   manual_incoming: "Manual Incoming",
   inventory_adjustment_gain: "Inventory Adjustment (Gain)",
   inventory_adjustment_loss: "Inventory Adjustment (Loss)",
+  credit_card_installment_payment: "Credit Card Installment Payment",
+  expense_recorded: "Expense Recorded",
+  asset_acquired: "Asset Acquired",
+  expense_payment: "Expense Payment",
+  asset_payment: "Asset Payment",
 };
 
 const STATUS_VARIANT: Record<string, "warning" | "success" | "danger"> = {

@@ -137,7 +137,7 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
             <CardDescription>Append-only payment history for this order.</CardDescription>
           </div>
           <div className="flex gap-2">
-            <Link href={`/dashboard/orders/payment/${data.orderNumber}/preview`}>
+            <Link href={`/dashboard/finance/payments/${data.orderNumber}/preview`}>
               <Button variant="secondary">Payment Preview</Button>
             </Link>
             {data.canAddPayment && !data.isClosed && (
