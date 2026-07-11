@@ -352,6 +352,36 @@ Two more asks from Sinag against the detail page screenshot: drop the status bad
 
 ---
 
+## INV-17 — `_deduct_shipment_stock` picks the deduction bucket per order item ✅ DONE (2026-07-11)
+
+Sinag hit "Mark Shipped" on `SOD26-0708-0022` and got `Insufficient in_production quantity (have 0, need 15)` for `Itm-Hairbrush Large (SUIV-0008)` despite having 296 units on hand.
+
+**Root cause, two separate things:**
+1. **Data corruption on `SUIV-0008` specifically:** `inventory_movements` showed a 2026-07-08 entry noted `"INV-9 verification cleanup - releasing test production"` that released this order's 15 legitimately-in-production units back to `available` — the order wasn't test data, it kept living and its Production Order was later marked `completed` (15/15), leaving `in_production_qty` at 0 for stock the shipping flow still expected to find there.
+2. **Real bug that would have hit the next two lines regardless:** `deduct_stock_out()`'s default bucket for any tracked non-packaging item is hardcoded to `'in_production'`, and `_deduct_shipment_stock()` never overrode it per line. That's correct for a completed Production Order (stock deliberately stays in `in_production` until shipped, per [[project_inv9_production_order_relink_fix]]'s invariant) but wrong once a line's Production Order is *cancelled* — `cancel_production_order()` already releases that quantity to `available` and nulls `order_items.production_order_id`. `SUIV-0009`/`SUIV-0019` on this same order were in exactly that state (PO cancelled, stock correctly sitting in `available`) and would have thrown the identical error right after SUIV-0008 was fixed.
+
+**Fix:**
+- One-off data reconciliation: `transfer_stock_status('available' → 'in_production', 15, ...)` on `SUIV-0008` to restore the invariant for this specific order (ran via Supabase MCP under the admin test account's `request.jwt.claim.sub`).
+- Code fix (migration `inv17_deduct_shipment_stock_bucket_per_order_item`): `_deduct_shipment_stock()` now reads each shipment line's `order_items.production_order_id` and passes `deduct_stock_out(..., p_from_status)` explicitly — `'in_production'` when the FK is still set (active or completed PO), `'available'` when it's null (PO was cancelled, stock already released). No `deduct_stock_out` change needed — its `p_from_status` override already existed from `inv15_deduct_stock_out_explicit_from_status`, just wasn't being used by this call site.
+
+**Verified live (Claude admin test account):** confirmed via SQL that `SUIV-0009`/`SUIV-0019` had `production_order_id = null` (cancelled) before retrying; clicked Mark Shipped on `SSH26-0711-0031` in the browser — succeeded, order status → `shipped`, shipment → `shipped` with timestamp. Post-shipment SQL check: `SUIV-0008` deducted 15 from `in_production` (→0), `SUIV-0009`/`SUIV-0019` deducted 5/8 from `available` — each bucket matched what the fix intended.
+
+---
+
+## INV-18 — `start_production()` auto-tops-up reservation instead of silently creating an unbacked Production Order ✅ DONE (2026-07-11)
+
+Same day as INV-17, Sinag hit the identical `Insufficient in_production quantity` error on a *different* order (`SOD26-0709-0026`, `Pro-Bamboo Coaster` → component `SUIV-0007`, need 15) — INV-17's fix didn't help because this order's Production Order (`SPR26-0709-0034`) was still linked and `completed` (not cancelled), yet `in_production_qty` was genuinely 0.
+
+**Root cause:** `activity_logs`/`inventory_movements` reconstructed the real sequence: `SPR26-0709-0033` (this order's first Production Order, 15 units) was started — correctly moving 15 units `reserved → in_production` — then cancelled ~1 minute later, which correctly released the stock and zeroed `order_items.reserved_qty` (order reverted to `confirmed`, per [[project_ps21_cancel_order_on_hold_bucket_fix]]-era design). ~9 hours later, "Start Production" was run again on the same order. `start_production()`'s stock-transfer loop only processes lines with `reserved_qty > 0`, so it moved nothing — but its Production-Order-creation loop groups over *all* order items unconditionally, so it still created a brand-new PO (`SPR26-0709-0034`, quantity 15) and flipped the order to `in_production`. That PO was later marked `completed` (which never moves stock either, by design — see INV-17), producing a Production Order that claims 15 units done with zero backing inventory. Any order that gets its production cancelled and restarted without an intervening re-edit hits this.
+
+**Fix (migration `inv18_start_production_top_up_reservation`):** `start_production()` now walks every order item (not just `reserved_qty > 0` ones) and tops up any shortfall (`quantity - reserved_qty`) from `available` first — same greedy per-component `floor(available/ratio)` reservation `adjust_order_items()` already uses — before doing the existing `reserved → in_production` transfer. Partial stock shortage is still tolerated (best-effort, no exception), matching `adjust_order_items()`'s existing tolerance.
+
+**Verified live/direct RPC (Claude admin test account):**
+- Unblocked `SOD26-0709-0026` itself: `transfer_stock_status('available'→'in_production', 15)` on `SUIV-0007`; Mark Shipped then succeeded in the browser (order/shipment both → `shipped`).
+- Reproduced and closed the actual gap with a disposable order (`SOD26-0711-0028`, 2× `SUIV-0001`, deleted/cancelled after): `create_order` → `start_production` (created PO, moved 2 units `reserved→in_production` as expected) → `cancel_production_order` (confirmed `reserved_qty` zeroed, order back to `confirmed`, matching the bug precondition) → `start_production` again — this time `order_items.reserved_qty` came back to `2` (topped up from `available`, which dropped 244→242) and `in_production_qty` correctly showed `2`, instead of silently creating an unbacked PO. Cancelled the test order afterward; `SUIV-0001` levels confirmed back to their exact pre-test baseline (244/0/0/0).
+
+---
+
 ## Open / deferred (not blocking this phase)
 
 - Wiring the generated `Database` type into `lib/supabase/client.ts`/`server.ts` and the ~23 call sites (INV-2) — separate follow-up, not part of Phase 1.
