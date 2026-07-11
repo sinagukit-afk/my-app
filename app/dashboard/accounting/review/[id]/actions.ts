@@ -27,10 +27,12 @@ function friendlyError(error: { code?: string; message: string }): string {
 export async function saveDraft(
   draftId: string,
   description: string,
+  postingDate: string,
   lines: DraftLineInput[]
 ): Promise<ActionResult> {
   const trimmed = description.trim()
   if (!trimmed) return { success: false, error: 'Description is required.' }
+  if (!postingDate) return { success: false, error: 'Posting date is required.' }
 
   const validLines = lines.filter(
     (l) =>
@@ -53,6 +55,7 @@ export async function saveDraft(
     p_draft_id: draftId,
     p_description: trimmed,
     p_lines: validLines,
+    p_posting_date: postingDate,
   })
 
   if (error) return { success: false, error: friendlyError(error) }

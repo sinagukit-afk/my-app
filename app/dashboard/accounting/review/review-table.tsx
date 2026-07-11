@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
+import { FilterBar } from "@/components/business/filter-bar";
 
 export type ReviewRow = {
   id: string;
@@ -41,12 +43,22 @@ const STATUS_LABELS: Record<string, string> = {
   rejected: "Rejected",
 };
 
+const STATUS_FILTER_OPTIONS = [
+  { label: "All", value: "" },
+  { label: "Pending Review", value: "pending_review" },
+  { label: "Posted", value: "posted" },
+  { label: "Rejected", value: "rejected" },
+];
+
 type Props = {
   data: ReviewRow[];
 };
 
 export function ReviewTable({ data }: Props) {
   const router = useRouter();
+  const [statusFilter, setStatusFilter] = useState("");
+
+  const filteredData = statusFilter ? data.filter((row) => row.status === statusFilter) : data;
 
   const columns: Column<ReviewRow>[] = [
     {
@@ -111,9 +123,11 @@ export function ReviewTable({ data }: Props) {
         description="Draft journal entries auto-generated from business events. Edit if needed, then approve to post them to the Journal."
       />
 
+      <FilterBar options={STATUS_FILTER_OPTIONS} value={statusFilter} onChange={setStatusFilter} />
+
       <DataTable
         columns={columns}
-        data={data}
+        data={filteredData}
         searchPlaceholder="Search drafts…"
         emptyMessage="No draft journal entries"
         emptyDescription="Drafts appear automatically as sales, purchases, and stock adjustments happen."

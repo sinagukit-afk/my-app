@@ -26,7 +26,7 @@ export default async function ReviewDetailPage({
   const { data: draft, error } = await supabase
     .from("journal_entry_drafts")
     .select(
-      "id, entry_date, description, event_type, status, posted_journal_entry_id, review_note, reviewed_at, reviewed_by, created_at, journal_entry_draft_lines(id, debit, credit, memo, line_order, accounts(account_number, name))"
+      "id, entry_date, posting_date, description, event_type, status, posted_journal_entry_id, review_note, reviewed_at, reviewed_by, created_at, journal_entry_draft_lines(id, debit, credit, memo, line_order, accounts(account_number, name))"
     )
     .eq("id", id)
     .single();
@@ -59,6 +59,7 @@ export default async function ReviewDetailPage({
   const detail: DraftDetail = {
     id: draft.id,
     entry_date: draft.entry_date,
+    posting_date: draft.posting_date,
     description: draft.description,
     event_type: draft.event_type,
     status: draft.status,

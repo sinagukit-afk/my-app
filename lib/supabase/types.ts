@@ -1606,6 +1606,7 @@ export type Database = {
           event_type: string
           id: string
           posted_journal_entry_id: string | null
+          posting_date: string
           review_note: string | null
           reviewed_at: string | null
           reviewed_by: string | null
@@ -1620,6 +1621,7 @@ export type Database = {
           event_type: string
           id?: string
           posted_journal_entry_id?: string | null
+          posting_date: string
           review_note?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -1634,6 +1636,7 @@ export type Database = {
           event_type?: string
           id?: string
           posted_journal_entry_id?: string | null
+          posting_date?: string
           review_note?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -4515,6 +4518,7 @@ export type Database = {
           event_type: string
           id: string
           posted_journal_entry_id: string | null
+          posting_date: string
           review_note: string | null
           reviewed_at: string | null
           reviewed_by: string | null
@@ -4851,7 +4855,12 @@ export type Database = {
         Returns: undefined
       }
       update_journal_entry_draft: {
-        Args: { p_description: string; p_draft_id: string; p_lines: Json }
+        Args: {
+          p_description: string
+          p_draft_id: string
+          p_lines: Json
+          p_posting_date?: string
+        }
         Returns: {
           created_at: string
           description: string
@@ -4859,6 +4868,7 @@ export type Database = {
           event_type: string
           id: string
           posted_journal_entry_id: string | null
+          posting_date: string
           review_note: string | null
           reviewed_at: string | null
           reviewed_by: string | null

@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { TextArea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +44,7 @@ export type DraftLine = {
 export type DraftDetail = {
   id: string;
   entry_date: string;
+  posting_date: string;
   description: string;
   event_type: string;
   status: string;
@@ -110,6 +112,21 @@ export function ReviewDetail({ draft, accounts }: Props) {
       : [emptyRow(), emptyRow()]
   );
   const [description, setDescription] = useState(draft.description);
+  const [postingDate, setPostingDate] = useState(draft.posting_date);
+
+  // Snapshot of what's actually persisted, so we can tell if the form has
+  // unsaved edits (component isn't remounted on router.refresh(), so this
+  // can't just be re-derived from the `draft` prop after a save).
+  const [savedDescription, setSavedDescription] = useState(draft.description);
+  const [savedPostingDate, setSavedPostingDate] = useState(draft.posting_date);
+  const [savedLines, setSavedLines] = useState<DraftLineInput[]>(() =>
+    draft.lines.map((l) => ({
+      account_number: l.account_number,
+      debit: l.debit,
+      credit: l.credit,
+      memo: l.memo,
+    }))
+  );
 
   const accountOptions = useMemo(
     () => accounts.map((a) => ({ value: a.account_number, label: `${a.account_number} — ${a.name}` })),
@@ -136,7 +153,7 @@ export function ReviewDetail({ draft, accounts }: Props) {
   const filledLines = rows.filter(
     (r) => r.accountNumber && ((Number(r.debit) || 0) > 0 || (Number(r.credit) || 0) > 0)
   );
-  const canSave = balanced && filledLines.length >= 2 && description.trim() && !isPending;
+  const canSave = balanced && filledLines.length >= 2 && description.trim() && postingDate && !isPending;
 
   function buildLines(): DraftLineInput[] {
     return filledLines.map((r) => ({
@@ -147,16 +164,25 @@ export function ReviewDetail({ draft, accounts }: Props) {
     }));
   }
 
+  const isDirty =
+    description.trim() !== savedDescription ||
+    postingDate !== savedPostingDate ||
+    JSON.stringify(buildLines()) !== JSON.stringify(savedLines);
+
   function handleSave() {
     setSaveError(null);
-    const twoSided = buildLines().find((l) => l.debit > 0 && l.credit > 0);
+    const lines = buildLines();
+    const twoSided = lines.find((l) => l.debit > 0 && l.credit > 0);
     if (twoSided) {
       setSaveError(`Account ${twoSided.account_number} has both a debit and a credit — each line takes one or the other.`);
       return;
     }
     startTransition(async () => {
-      const res = await saveDraft(draft.id, description, buildLines());
+      const res = await saveDraft(draft.id, description, postingDate, lines);
       if (res.success) {
+        setSavedDescription(description.trim());
+        setSavedPostingDate(postingDate);
+        setSavedLines(lines);
         router.refresh();
       } else {
         setSaveError(res.error);
@@ -201,12 +227,18 @@ export function ReviewDetail({ draft, accounts }: Props) {
         }
       />
 
-      <Card className="max-w-2xl">
-        <CardContent className="grid grid-cols-1 gap-4 p-6 text-sm sm:grid-cols-3">
+      <Card className="max-w-3xl">
+        <CardContent className="grid grid-cols-1 gap-4 p-6 text-sm sm:grid-cols-4">
           <div>
             <p className="text-(--color-text-muted)">Date</p>
             <p className="font-medium text-(--color-text)">
               {new Date(draft.entry_date).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })}
+            </p>
+          </div>
+          <div>
+            <p className="text-(--color-text-muted)">Posting Date</p>
+            <p className="font-medium text-(--color-text)">
+              {new Date(draft.posting_date).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })}
             </p>
           </div>
           <div>
@@ -224,7 +256,7 @@ export function ReviewDetail({ draft, accounts }: Props) {
             </p>
           </div>
           {draft.status === "posted" && draft.posted_journal_entry_id && (
-            <div className="sm:col-span-3">
+            <div className="sm:col-span-4">
               <Link
                 href={`/dashboard/accounting/journal/${draft.posted_journal_entry_id}`}
                 className="text-sm font-medium text-(--color-primary) hover:underline"
@@ -234,13 +266,13 @@ export function ReviewDetail({ draft, accounts }: Props) {
             </div>
           )}
           {draft.status === "rejected" && (
-            <div className="sm:col-span-3">
+            <div className="sm:col-span-4">
               <p className="text-(--color-text-muted)">Rejection reason</p>
               <p className="text-(--color-text)">{draft.review_note || "No reason given"}</p>
             </div>
           )}
           {draft.reviewer_name && (
-            <div className="sm:col-span-3 text-xs text-(--color-text-subtle)">
+            <div className="sm:col-span-4 text-xs text-(--color-text-subtle)">
               Reviewed by {draft.reviewer_name}
               {draft.reviewed_at
                 ? ` on ${new Date(draft.reviewed_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}`
@@ -255,11 +287,17 @@ export function ReviewDetail({ draft, accounts }: Props) {
           <CardHeader>
             <CardTitle>Entry Details</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-[2fr_1fr]">
             <Input
               label="Description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              required
+            />
+            <DatePicker
+              label="Posting Date"
+              value={postingDate}
+              onChange={(e) => setPostingDate(e.target.value)}
               required
             />
           </CardContent>
@@ -387,6 +425,9 @@ export function ReviewDetail({ draft, accounts }: Props) {
       {isEditable && (
         <div className="space-y-2">
           {saveError && <p className="text-sm text-(--color-danger)">{saveError}</p>}
+          {isDirty && !saveError && (
+            <p className="text-sm text-(--color-text-muted)">You have unsaved changes — save them before approving.</p>
+          )}
           <div className="flex flex-wrap justify-end gap-2">
             <Button
               type="button"
@@ -409,7 +450,7 @@ export function ReviewDetail({ draft, accounts }: Props) {
                 setApproveError(null);
                 setApproveOpen(true);
               }}
-              disabled={!balanced || isPending}
+              disabled={!balanced || isPending || isDirty}
             >
               Approve & Post
             </Button>
