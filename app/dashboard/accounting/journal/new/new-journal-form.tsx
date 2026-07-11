@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/select";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
+import { randomId } from "@/lib/utils/random-id";
 import { postJournalEntry, type JournalLineInput } from "../actions";
 
 export type AccountOption = {
@@ -26,7 +27,7 @@ type LineRow = {
 };
 
 function emptyRow(): LineRow {
-  return { rowId: crypto.randomUUID(), accountNumber: "", debit: "", credit: "", memo: "" };
+  return { rowId: randomId(), accountNumber: "", debit: "", credit: "", memo: "" };
 }
 
 function todayISO() {

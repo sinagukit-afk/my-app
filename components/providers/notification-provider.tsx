@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils/cn";
+import { randomId } from "@/lib/utils/random-id";
 
 interface Notification {
   id: string;
@@ -43,7 +44,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const notify = React.useCallback(
     (message: string, type: Notification["type"] = "info") => {
-      const id = crypto.randomUUID();
+      const id = randomId();
       setNotifications((prev) => [...prev, { id, message, type }]);
       setTimeout(() => dismiss(id), AUTO_DISMISS_MS);
     },

@@ -11,6 +11,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Button } from "@/components/ui/button";
 import { createPurchaseOrderWithItems, type NewItemInput } from "../actions";
+import { randomId } from "@/lib/utils/random-id";
 
 export type VariantOption = {
   id: string;
@@ -30,7 +31,7 @@ type ItemRow = {
 };
 
 function emptyRow(): ItemRow {
-  return { rowId: crypto.randomUUID(), variantId: "", quantity: "1", unitCost: "", discount: "0" };
+  return { rowId: randomId(), variantId: "", quantity: "1", unitCost: "", discount: "0" };
 }
 
 type Props = {

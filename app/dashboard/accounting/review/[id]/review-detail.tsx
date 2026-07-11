@@ -21,6 +21,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils/cn";
+import { randomId } from "@/lib/utils/random-id";
 import { saveDraft, approveDraft, rejectDraft, type DraftLineInput } from "./actions";
 import { EVENT_TYPE_LABELS } from "../review-table";
 
@@ -61,7 +62,7 @@ type LineRow = {
 };
 
 function emptyRow(): LineRow {
-  return { rowId: crypto.randomUUID(), accountNumber: "", debit: "", credit: "", memo: "" };
+  return { rowId: randomId(), accountNumber: "", debit: "", credit: "", memo: "" };
 }
 
 function peso(n: number) {

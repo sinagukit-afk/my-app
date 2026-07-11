@@ -25,6 +25,7 @@ import {
   markShipmentDelivered,
   markShipmentPickedUp,
 } from "../actions";
+import { randomId } from "@/lib/utils/random-id";
 
 export type ShippableOrderItem = {
   orderItemId: string;
@@ -100,7 +101,7 @@ function formatAddress(parts: (string | null | undefined)[]) {
 type PackagingRow = { rowId: string; variantId: string; quantity: string };
 
 function emptyPackagingRow(): PackagingRow {
-  return { rowId: crypto.randomUUID(), variantId: "", quantity: "1" };
+  return { rowId: randomId(), variantId: "", quantity: "1" };
 }
 
 export function OrderShipments({
@@ -217,7 +218,7 @@ export function OrderShipments({
     setLineQtys(Object.fromEntries(s.productLines.map((p) => [p.orderItemId, String(p.quantityShipped)])));
     setPackagingRows(
       s.packagingLines.length > 0
-        ? s.packagingLines.map((p) => ({ rowId: crypto.randomUUID(), variantId: p.variantId, quantity: String(p.quantityUsed) }))
+        ? s.packagingLines.map((p) => ({ rowId: randomId(), variantId: p.variantId, quantity: String(p.quantityUsed) }))
         : [emptyPackagingRow()]
     );
     setFormOpen(true);

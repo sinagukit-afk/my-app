@@ -20,6 +20,7 @@ import { NumberInput } from "@/components/ui/number-input";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Button } from "@/components/ui/button";
 import { upsertItem } from "./actions";
+import { randomId } from "@/lib/utils/random-id";
 
 export type CategoryOption = { id: string; name: string };
 export type SupplierOption = { id: string; name: string };
@@ -99,7 +100,7 @@ type VariantRow = {
 
 function emptyVariantRow(option1_value = "", option2_value = "", option3_value = ""): VariantRow {
   return {
-    rowId: crypto.randomUUID(),
+    rowId: randomId(),
     option1_value,
     option2_value,
     option3_value,
@@ -117,13 +118,13 @@ function emptyVariantRow(option1_value = "", option2_value = "", option3_value =
 }
 
 function emptyComponentRow(): ComponentRow {
-  return { rowId: crypto.randomUUID(), component_variant_id: "", quantity: "1" };
+  return { rowId: randomId(), component_variant_id: "", quantity: "1" };
 }
 
 function seedRows(initial: ItemFormInitial | undefined): VariantRow[] {
   if (!initial || initial.variants.length === 0) return [emptyVariantRow()];
   return initial.variants.map((v) => ({
-    rowId: crypto.randomUUID(),
+    rowId: randomId(),
     id: v.id,
     option1_value: v.option1_value ?? "",
     option2_value: v.option2_value ?? "",
@@ -138,7 +139,7 @@ function seedRows(initial: ItemFormInitial | undefined): VariantRow[] {
     initial_stock: "",
     low_stock_threshold: v.low_stock_threshold != null ? String(v.low_stock_threshold) : "",
     components: v.components.map((c) => ({
-      rowId: crypto.randomUUID(),
+      rowId: randomId(),
       component_variant_id: c.component_variant_id,
       quantity: String(c.quantity),
     })),

@@ -5,6 +5,7 @@ import { Select } from "@/components/ui/select";
 import { NumberInput } from "@/components/ui/number-input";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Button } from "@/components/ui/button";
+import { randomId } from "@/lib/utils/random-id";
 
 export type VariantOption = {
   id: string;
@@ -56,7 +57,7 @@ const VARIABLE_DISCOUNT_TYPES = ["VARIABLE_AMOUNT", "VARIABLE_PERCENT"];
 
 export function emptyQuoteRow(): QuoteLineRow {
   return {
-    rowId: crypto.randomUUID(),
+    rowId: randomId(),
     variantId: "",
     quantity: "1",
     unitPrice: "",
