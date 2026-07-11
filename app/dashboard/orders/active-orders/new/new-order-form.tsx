@@ -44,6 +44,7 @@ export function NewOrderForm({ customers, variantOptions, discounts, modifierGro
   const [orderDate, setOrderDate] = useState(todayIso());
   const [targetDate, setTargetDate] = useState(plusDays(todayIso(), 5));
   const [rows, setRows] = useState<OrderLineRow[]>([emptyOrderRow()]);
+  const [error, setError] = useState<string | null>(null);
 
   function handleOrderDateChange(value: string) {
     setOrderDate(value);
@@ -52,12 +53,13 @@ export function NewOrderForm({ customers, variantOptions, discounts, modifierGro
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     const formData = new FormData(e.currentTarget);
 
     const newItems = resolveOrderLines(rows, variantOptions, discounts, modifierGroups);
 
     if (newItems.length === 0) {
-      alert("Add at least one line item with a quantity greater than zero.");
+      setError("Add at least one line item with a quantity greater than zero.");
       return;
     }
 
@@ -71,7 +73,7 @@ export function NewOrderForm({ customers, variantOptions, discounts, modifierGro
           res.orderNumber ? `/dashboard/orders/active-orders/${res.orderNumber}` : "/dashboard/orders/active-orders"
         );
       } else {
-        alert(res.error);
+        setError(res.error);
       }
     });
   }
@@ -107,6 +109,7 @@ export function NewOrderForm({ customers, variantOptions, discounts, modifierGro
         modifierGroups={modifierGroups}
       />
 
+      {error && <p className="text-sm text-(--color-danger)">{error}</p>}
       <div className="flex justify-end gap-2">
         <Button type="submit" disabled={isPending}>
           {isPending ? "Creating…" : "Create Order"}

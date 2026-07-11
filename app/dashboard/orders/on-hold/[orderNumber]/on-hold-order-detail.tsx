@@ -1,12 +1,22 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { useNotifications } from "@/components/providers/notification-provider";
 import { resumeOrder, cancelOrder } from "../../active-orders/actions";
 import {
   OrderShipments,
@@ -67,29 +77,33 @@ const LIST_PATH = "/dashboard/orders/on-hold";
 
 export function OnHoldOrderDetail({ data }: { data: OnHoldOrderData }) {
   const router = useRouter();
+  const { notify } = useNotifications();
   const [isPending, startTransition] = useTransition();
+
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   function handleResumeOrder() {
     startTransition(async () => {
       const res = await resumeOrder(data.id);
       if (!res.success) {
-        alert(res.error);
+        notify(res.error, "error");
       } else {
-        alert("Order resumed.");
+        notify("Order resumed.", "success");
         router.push(LIST_PATH);
       }
     });
   }
 
   function handleCancelOrder() {
-    if (!confirm("Cancel this order? Reserved and in-production inventory will be released.")) return;
+    setCancelError(null);
     startTransition(async () => {
       const res = await cancelOrder(data.id);
-      if (!res.success) {
-        alert(res.error);
-      } else {
-        alert("Order cancelled.");
+      if (res.success) {
+        notify("Order cancelled.", "success");
         router.push(LIST_PATH);
+      } else {
+        setCancelError(res.error);
       }
     });
   }
@@ -107,7 +121,7 @@ export function OnHoldOrderDetail({ data }: { data: OnHoldOrderData }) {
               </Button>
             )}
             {data.canCancel && (
-              <Button variant="secondary" className="text-(--color-danger)" disabled={isPending} onClick={handleCancelOrder}>
+              <Button variant="secondary" className="text-(--color-danger)" disabled={isPending} onClick={() => setCancelOpen(true)}>
                 Cancel Order
               </Button>
             )}
@@ -256,6 +270,34 @@ export function OnHoldOrderDetail({ data }: { data: OnHoldOrderData }) {
           onChanged={() => router.refresh()}
         />
       )}
+
+      <Dialog
+        open={cancelOpen}
+        onOpenChange={(next) => {
+          setCancelOpen(next);
+          if (!next) setCancelError(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Order</DialogTitle>
+            <DialogDescription>
+              Cancel this order? Reserved and in-production inventory will be released.
+            </DialogDescription>
+          </DialogHeader>
+          {cancelError && <p className="text-sm text-(--color-danger)">{cancelError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" variant="danger" onClick={handleCancelOrder} disabled={isPending}>
+              {isPending ? "Cancelling…" : "Cancel Order"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

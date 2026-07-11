@@ -84,7 +84,12 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [editOpen, setEditOpen] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
   const [itemFormOpen, setItemFormOpen] = useState(false);
+  const [statusTarget, setStatusTarget] = useState<{ status: string; label: string } | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<PurchaseOrderItemRow | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
 
   function refresh() {
     router.refresh();
@@ -92,6 +97,7 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
 
   function handleEditSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setEditError(null);
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
       const res = await updatePurchaseOrderHeader(po.id, po.reference, formData);
@@ -99,25 +105,37 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
         refresh();
         setEditOpen(false);
       } else {
-        alert(res.error);
+        setEditError(res.error);
       }
     });
   }
 
-  function handleStatusChange(nextStatus: string) {
-    if (!confirm(`Change status to "${nextStatus}"?`)) return;
+  function confirmStatusChange() {
+    if (!statusTarget) return;
+    setStatusError(null);
     startTransition(async () => {
-      const res = await setPurchaseOrderStatus(po.id, po.reference, nextStatus);
-      if (!res.success) alert(res.error);
-      else refresh();
+      const res = await setPurchaseOrderStatus(po.id, po.reference, statusTarget.status);
+      if (res.success) {
+        setStatusTarget(null);
+        refresh();
+      } else {
+        setStatusError(res.error);
+      }
     });
   }
 
-  async function handleRemoveItem(row: PurchaseOrderItemRow) {
-    if (!confirm(`Remove "${row.label}" from this order?`)) return;
-    const res = await removePurchaseOrderItem(po.id, po.reference, row.id);
-    if (!res.success) alert(res.error);
-    else refresh();
+  function confirmRemoveItem() {
+    if (!removeTarget) return;
+    setRemoveError(null);
+    startTransition(async () => {
+      const res = await removePurchaseOrderItem(po.id, po.reference, removeTarget.id);
+      if (res.success) {
+        setRemoveTarget(null);
+        refresh();
+      } else {
+        setRemoveError(res.error);
+      }
+    });
   }
 
   const canEditHeader = canWrite && po.status === "draft";
@@ -157,7 +175,15 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
       header: "Actions",
       render: (_value, row) =>
         canEditItems && canDelete && row.quantity_received === 0 ? (
-          <Button variant="ghost" size="sm" className="text-(--color-danger)" onClick={() => handleRemoveItem(row)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-(--color-danger)"
+            onClick={() => {
+              setRemoveTarget(row);
+              setRemoveError(null);
+            }}
+          >
             Remove
           </Button>
         ) : null,
@@ -183,7 +209,15 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
               </Button>
             )}
             {transitions.map((t) => (
-              <Button key={t.status} variant="secondary" disabled={isPending} onClick={() => handleStatusChange(t.status)}>
+              <Button
+                key={t.status}
+                variant="secondary"
+                disabled={isPending}
+                onClick={() => {
+                  setStatusTarget(t);
+                  setStatusError(null);
+                }}
+              >
                 {t.label}
               </Button>
             ))}
@@ -253,7 +287,13 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
       </div>
 
       {canEditHeader && (
-        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <Dialog
+          open={editOpen}
+          onOpenChange={(next) => {
+            setEditOpen(next);
+            if (!next) setEditError(null);
+          }}
+        >
           <DialogContent>
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <DialogHeader>
@@ -274,6 +314,8 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
               </div>
               <CurrencyInput label="Shipping Fee" name="shipping_fee" defaultValue={po.shipping_fee} />
               <TextArea label="Notes" name="note" rows={3} defaultValue={po.note ?? ""} />
+
+              {editError && <p className="text-sm text-(--color-danger)">{editError}</p>}
 
               <DialogFooter>
                 <DialogClose asChild>
@@ -300,6 +342,66 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
           onSaved={refresh}
         />
       )}
+
+      <Dialog
+        open={!!statusTarget}
+        onOpenChange={(next) => {
+          if (!next) {
+            setStatusTarget(null);
+            setStatusError(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Status</DialogTitle>
+            <DialogDescription>
+              Change status to &quot;{statusTarget?.status}&quot;?
+            </DialogDescription>
+          </DialogHeader>
+          {statusError && <p className="text-sm text-(--color-danger)">{statusError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" onClick={confirmStatusChange} disabled={isPending}>
+              {isPending ? "Updating…" : statusTarget?.label ?? "Confirm"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!removeTarget}
+        onOpenChange={(next) => {
+          if (!next) {
+            setRemoveTarget(null);
+            setRemoveError(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove Item</DialogTitle>
+            <DialogDescription>
+              Remove &quot;{removeTarget?.label}&quot; from this order?
+            </DialogDescription>
+          </DialogHeader>
+          {removeError && <p className="text-sm text-(--color-danger)">{removeError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" variant="danger" onClick={confirmRemoveItem} disabled={isPending}>
+              {isPending ? "Removing…" : "Remove"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

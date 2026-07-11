@@ -32,6 +32,7 @@ export function AdjustmentForm({ variants }: Props) {
   const [isPending, startTransition] = useTransition();
   const [variantId, setVariantId] = useState("");
   const [qtyDelta, setQtyDelta] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const selected = useMemo(() => variants.find((v) => v.id === variantId) ?? null, [variants, variantId]);
 
@@ -42,6 +43,7 @@ export function AdjustmentForm({ variants }: Props) {
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
       const res = await adjustStock(formData);
@@ -51,7 +53,7 @@ export function AdjustmentForm({ variants }: Props) {
         setQtyDelta("");
         router.refresh();
       } else {
-        alert(res.error);
+        setError(res.error);
       }
     });
   }
@@ -110,6 +112,8 @@ export function AdjustmentForm({ variants }: Props) {
           <Select label="Reason" name="reason" placeholder="Select a reason…" options={REASONS} />
 
           <TextArea label="Note" name="note" rows={3} placeholder="Optional details…" />
+
+          {error && <p className="text-sm text-(--color-danger)">{error}</p>}
 
           <Button type="submit" disabled={isPending || !variantId}>
             {isPending ? "Saving…" : "Submit Adjustment"}

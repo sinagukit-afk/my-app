@@ -94,13 +94,16 @@ export function QuoteDetail({ data, logs }: { data: QuoteDetailData; logs: Activ
   const [isPending, startTransition] = useTransition();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [cancelError, setCancelError] = useState<string | null>(null);
   const [convertOpen, setConvertOpen] = useState(false);
+  const [convertError, setConvertError] = useState<string | null>(null);
   const [targetDate, setTargetDate] = useState(() => plusDays(todayIso(), 5));
 
   function handleConvert() {
+    setConvertError(null);
     startTransition(async () => {
       const res = await convertQuote(data.id, targetDate);
-      if (!res.success) alert(res.error);
+      if (!res.success) setConvertError(res.error);
       else {
         setConvertOpen(false);
         router.refresh();
@@ -109,10 +112,11 @@ export function QuoteDetail({ data, logs }: { data: QuoteDetailData; logs: Activ
   }
 
   function handleCancel() {
+    setCancelError(null);
     startTransition(async () => {
       const res = await cancelQuote(data.id, cancelReason);
       if (!res.success) {
-        alert(res.error);
+        setCancelError(res.error);
       } else {
         setCancelOpen(false);
         router.refresh();
@@ -136,12 +140,25 @@ export function QuoteDetail({ data, logs }: { data: QuoteDetailData; logs: Activ
               </Link>
             )}
             {data.canConvert && (
-              <Button disabled={isPending} onClick={() => setConvertOpen(true)}>
+              <Button
+                disabled={isPending}
+                onClick={() => {
+                  setConvertError(null);
+                  setConvertOpen(true);
+                }}
+              >
                 Convert to Order
               </Button>
             )}
             {data.canCancel && (
-              <Button variant="ghost" className="text-(--color-danger)" onClick={() => setCancelOpen(true)}>
+              <Button
+                variant="ghost"
+                className="text-(--color-danger)"
+                onClick={() => {
+                  setCancelError(null);
+                  setCancelOpen(true);
+                }}
+              >
                 Cancel
               </Button>
             )}
@@ -244,7 +261,13 @@ export function QuoteDetail({ data, logs }: { data: QuoteDetailData; logs: Activ
         </Card>
       </div>
 
-      <Dialog open={convertOpen} onOpenChange={setConvertOpen}>
+      <Dialog
+        open={convertOpen}
+        onOpenChange={(next) => {
+          setConvertOpen(next);
+          if (!next) setConvertError(null);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Convert to Order</DialogTitle>
@@ -253,6 +276,7 @@ export function QuoteDetail({ data, logs }: { data: QuoteDetailData; logs: Activ
             </DialogDescription>
           </DialogHeader>
           <DatePicker label="Target Date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
+          {convertError && <p className="text-sm text-(--color-danger)">{convertError}</p>}
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="secondary">
@@ -266,7 +290,13 @@ export function QuoteDetail({ data, logs }: { data: QuoteDetailData; logs: Activ
         </DialogContent>
       </Dialog>
 
-      <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
+      <Dialog
+        open={cancelOpen}
+        onOpenChange={(next) => {
+          setCancelOpen(next);
+          if (!next) setCancelError(null);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Cancel Quote</DialogTitle>
@@ -278,6 +308,7 @@ export function QuoteDetail({ data, logs }: { data: QuoteDetailData; logs: Activ
             value={cancelReason}
             onChange={(e) => setCancelReason(e.target.value)}
           />
+          {cancelError && <p className="text-sm text-(--color-danger)">{cancelError}</p>}
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="secondary">

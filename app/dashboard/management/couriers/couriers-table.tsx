@@ -6,6 +6,7 @@ import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
+import { useNotifications } from "@/components/providers/notification-provider";
 import { CourierForm } from "./courier-form";
 import { setCourierActive } from "./actions";
 
@@ -23,6 +24,7 @@ type Props = {
 
 export function CouriersTable({ data, canWrite }: Props) {
   const router = useRouter();
+  const { notify } = useNotifications();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<CourierRow | null>(null);
 
@@ -42,7 +44,7 @@ export function CouriersTable({ data, canWrite }: Props) {
 
   async function handleToggleActive(row: CourierRow) {
     const res = await setCourierActive(row.id, !row.is_active);
-    if (!res.success) alert(res.error);
+    if (!res.success) notify(res.error, "error");
     else refresh();
   }
 

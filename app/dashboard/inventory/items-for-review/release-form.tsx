@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   Dialog,
   DialogContent,
@@ -31,9 +31,11 @@ type Props = {
 
 export function ReleaseForm({ open, onOpenChange, row, onReleased }: Props) {
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
       const res = await releaseOnHoldStock(formData);
@@ -41,15 +43,20 @@ export function ReleaseForm({ open, onOpenChange, row, onReleased }: Props) {
         onReleased();
         onOpenChange(false);
       } else {
-        alert(res.error);
+        setError(res.error);
       }
     });
+  }
+
+  function handleOpenChange(next: boolean) {
+    if (!next) setError(null);
+    onOpenChange(next);
   }
 
   if (!row) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <DialogHeader>
@@ -84,6 +91,8 @@ export function ReleaseForm({ open, onOpenChange, row, onReleased }: Props) {
             rows={3}
             placeholder="Reason for release (optional)…"
           />
+
+          {error && <p className="text-sm text-(--color-danger)">{error}</p>}
 
           <DialogFooter>
             <DialogClose asChild>

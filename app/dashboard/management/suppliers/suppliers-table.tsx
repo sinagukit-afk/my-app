@@ -1,11 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { useNotifications } from "@/components/providers/notification-provider";
 import { SupplierForm } from "./supplier-form";
 import { setSupplierActive, deleteSupplier } from "./actions";
 
@@ -28,8 +38,12 @@ type Props = {
 
 export function SuppliersTable({ data, canWrite, canDelete }: Props) {
   const router = useRouter();
+  const { notify } = useNotifications();
+  const [isPending, startTransition] = useTransition();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<SupplierRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SupplierRow | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   function openAdd() {
     setEditing(null);
@@ -47,15 +61,22 @@ export function SuppliersTable({ data, canWrite, canDelete }: Props) {
 
   async function handleToggleActive(row: SupplierRow) {
     const res = await setSupplierActive(row.id, !row.is_active);
-    if (!res.success) alert(res.error);
+    if (!res.success) notify(res.error, "error");
     else refresh();
   }
 
-  async function handleDelete(row: SupplierRow) {
-    if (!confirm(`Delete supplier "${row.name}"? This cannot be undone.`)) return;
-    const res = await deleteSupplier(row.id);
-    if (!res.success) alert(res.error);
-    else refresh();
+  function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleteError(null);
+    startTransition(async () => {
+      const res = await deleteSupplier(deleteTarget.id);
+      if (res.success) {
+        setDeleteTarget(null);
+        refresh();
+      } else {
+        setDeleteError(res.error);
+      }
+    });
   }
 
   const columns: Column<SupplierRow>[] = [
@@ -112,7 +133,15 @@ export function SuppliersTable({ data, canWrite, canDelete }: Props) {
             </Button>
           )}
           {canDelete && (
-            <Button variant="ghost" size="sm" className="text-(--color-danger)" onClick={() => handleDelete(row)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-(--color-danger)"
+              onClick={() => {
+                setDeleteTarget(row);
+                setDeleteError(null);
+              }}
+            >
               Delete
             </Button>
           )}
@@ -145,6 +174,36 @@ export function SuppliersTable({ data, canWrite, canDelete }: Props) {
           onSaved={refresh}
         />
       )}
+
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(next) => {
+          if (!next) {
+            setDeleteTarget(null);
+            setDeleteError(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Supplier</DialogTitle>
+            <DialogDescription>
+              Delete supplier &quot;{deleteTarget?.name}&quot;? This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError && <p className="text-sm text-(--color-danger)">{deleteError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" variant="danger" onClick={handleDelete} disabled={isPending}>
+              {isPending ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   Dialog,
   DialogContent,
@@ -24,10 +24,12 @@ type Props = {
 
 export function StoreForm({ open, onOpenChange, store, onSaved }: Props) {
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const isEdit = Boolean(store);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
       const res: ActionResult = isEdit
@@ -38,7 +40,7 @@ export function StoreForm({ open, onOpenChange, store, onSaved }: Props) {
         onSaved();
         onOpenChange(false);
       } else {
-        alert(res.error);
+        setError(res.error);
       }
     });
   }
@@ -69,6 +71,8 @@ export function StoreForm({ open, onOpenChange, store, onSaved }: Props) {
               Loyverse has no API to update store details.
             </p>
           )}
+
+          {error && <p className="text-sm text-(--color-danger)">{error}</p>}
 
           <DialogFooter>
             <DialogClose asChild>

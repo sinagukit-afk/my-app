@@ -163,6 +163,7 @@ export function ItemForm({
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   const [itemType, setItemType] = useState<"simple" | "composite">(initial?.item_type ?? "simple");
   const [trackStock, setTrackStock] = useState(initial?.track_stock ?? false);
@@ -247,19 +248,20 @@ export function ItemForm({
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     const formData = new FormData(e.currentTarget);
 
     if (rows.length === 0) {
-      alert("Add at least one variant.");
+      setError("Add at least one variant.");
       return;
     }
     for (const r of rows) {
       if (!r.sku.trim()) {
-        alert("Every variant needs a SKU.");
+        setError("Every variant needs a SKU.");
         return;
       }
       if (r.pricing_type === "FIXED" && !r.default_price) {
-        alert(`Default price is required for SKU "${r.sku}" (Fixed pricing).`);
+        setError(`Default price is required for SKU "${r.sku}" (Fixed pricing).`);
         return;
       }
     }
@@ -267,11 +269,11 @@ export function ItemForm({
       for (const r of rows) {
         const validComponents = r.components.filter((c) => c.component_variant_id);
         if (validComponents.length === 0) {
-          alert(`Composite variant "${r.sku}" needs at least one component.`);
+          setError(`Composite variant "${r.sku}" needs at least one component.`);
           return;
         }
         if (validComponents.some((c) => ownVariantIds.has(c.component_variant_id))) {
-          alert("A component can't be one of this item's own variants.");
+          setError("A component can't be one of this item's own variants.");
           return;
         }
       }
@@ -317,7 +319,7 @@ export function ItemForm({
       if (res.success) {
         router.push("/dashboard/management/items");
       } else {
-        alert(res.error);
+        setError(res.error);
       }
     });
   }
@@ -589,7 +591,8 @@ export function ItemForm({
         </CardContent>
       </Card>
 
-      <CardFooter className="flex justify-end gap-2 px-0">
+      <CardFooter className="flex items-center justify-end gap-2 px-0">
+        {error && <p className="mr-auto text-sm text-(--color-danger)">{error}</p>}
         <Button type="submit" disabled={isPending}>
           {isPending ? "Saving…" : mode === "create" ? "Create Item" : "Save Changes"}
         </Button>

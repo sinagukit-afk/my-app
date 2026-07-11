@@ -71,9 +71,11 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentTypeId, setPaymentTypeId] = useState("");
   const [referenceNo, setReferenceNo] = useState("");
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   const [closeOpen, setCloseOpen] = useState(false);
   const [closeNote, setCloseNote] = useState("");
+  const [closeError, setCloseError] = useState<string | null>(null);
 
   const totalPaid = useMemo(() => data.payments.reduce((sum, p) => sum + p.amount, 0), [data.payments]);
   const remainingBalance = Math.max(0, data.totalMoney - totalPaid);
@@ -83,9 +85,10 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
   const canClose = data.canClosePayment && !data.isClosed && payStatus !== "Unpaid";
 
   function handleAddPayment() {
+    setPaymentError(null);
     const amount = Number(paymentAmount);
     if (!(amount > 0)) {
-      alert("Enter a valid payment amount.");
+      setPaymentError("Enter a valid payment amount.");
       return;
     }
     startTransition(async () => {
@@ -96,7 +99,7 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
         referenceNo: referenceNo.trim() || null,
       });
       if (!res.success) {
-        alert(res.error);
+        setPaymentError(res.error);
       } else {
         setPaymentOpen(false);
         setPaymentAmount("");
@@ -108,14 +111,15 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
   }
 
   function handleClosePayment() {
+    setCloseError(null);
     if (noteRequired && !closeNote.trim()) {
-      alert("A note is required to close a partially paid order.");
+      setCloseError("A note is required to close a partially paid order.");
       return;
     }
     startTransition(async () => {
       const res = await closeOrderPayment(data.id, data.orderNumber, closeNote.trim() || null);
       if (!res.success) {
-        alert(res.error);
+        setCloseError(res.error);
       } else {
         setCloseOpen(false);
         setCloseNote("");
@@ -197,7 +201,13 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
         </CardContent>
       </Card>
 
-      <Dialog open={paymentOpen} onOpenChange={setPaymentOpen}>
+      <Dialog
+        open={paymentOpen}
+        onOpenChange={(next) => {
+          setPaymentOpen(next);
+          if (!next) setPaymentError(null);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Payment</DialogTitle>
@@ -223,6 +233,7 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
               onChange={(e) => setReferenceNo(e.target.value)}
             />
           </div>
+          {paymentError && <p className="text-sm text-(--color-danger)">{paymentError}</p>}
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="secondary">
@@ -236,7 +247,13 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
         </DialogContent>
       </Dialog>
 
-      <Dialog open={closeOpen} onOpenChange={setCloseOpen}>
+      <Dialog
+        open={closeOpen}
+        onOpenChange={(next) => {
+          setCloseOpen(next);
+          if (!next) setCloseError(null);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Close Payment</DialogTitle>
@@ -256,6 +273,7 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
               placeholder={noteRequired ? "Why is this being closed while only partially paid?" : undefined}
             />
           </div>
+          {closeError && <p className="text-sm text-(--color-danger)">{closeError}</p>}
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="secondary">

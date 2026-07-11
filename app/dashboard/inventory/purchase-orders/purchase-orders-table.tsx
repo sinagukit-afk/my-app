@@ -1,11 +1,21 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 import { deletePurchaseOrder } from "./actions";
 
 export type PurchaseOrderRow = {
@@ -36,16 +46,26 @@ const STATUS_VARIANT: Record<string, "neutral" | "success" | "warning" | "danger
 
 export function PurchaseOrdersTable({ data, canWrite, canDelete }: Props) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [deleteTarget, setDeleteTarget] = useState<PurchaseOrderRow | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   function refresh() {
     router.refresh();
   }
 
-  async function handleDelete(row: PurchaseOrderRow) {
-    if (!confirm(`Delete purchase order "${row.reference}"? This cannot be undone.`)) return;
-    const res = await deletePurchaseOrder(row.id);
-    if (!res.success) alert(res.error);
-    else refresh();
+  function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleteError(null);
+    startTransition(async () => {
+      const res = await deletePurchaseOrder(deleteTarget.id);
+      if (res.success) {
+        setDeleteTarget(null);
+        refresh();
+      } else {
+        setDeleteError(res.error);
+      }
+    });
   }
 
   const columns: Column<PurchaseOrderRow>[] = [
@@ -103,7 +123,15 @@ export function PurchaseOrdersTable({ data, canWrite, canDelete }: Props) {
             </Button>
           </Link>
           {canDelete && row.status === "draft" && (
-            <Button variant="ghost" size="sm" className="text-(--color-danger)" onClick={() => handleDelete(row)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-(--color-danger)"
+              onClick={() => {
+                setDeleteTarget(row);
+                setDeleteError(null);
+              }}
+            >
               Delete
             </Button>
           )}
@@ -133,6 +161,36 @@ export function PurchaseOrdersTable({ data, canWrite, canDelete }: Props) {
         emptyMessage="No purchase orders found"
         emptyDescription="Create your first purchase order to get started."
       />
+
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(next) => {
+          if (!next) {
+            setDeleteTarget(null);
+            setDeleteError(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Purchase Order</DialogTitle>
+            <DialogDescription>
+              Delete purchase order &quot;{deleteTarget?.reference}&quot;? This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError && <p className="text-sm text-(--color-danger)">{deleteError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" variant="danger" onClick={handleDelete} disabled={isPending}>
+              {isPending ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

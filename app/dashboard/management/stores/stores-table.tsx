@@ -1,11 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { useNotifications } from "@/components/providers/notification-provider";
 import { StoreForm } from "./store-form";
 import { setStoreActive, deleteStore } from "./actions";
 
@@ -27,8 +37,12 @@ type Props = {
 
 export function StoresTable({ data, canWrite, canDelete }: Props) {
   const router = useRouter();
+  const { notify } = useNotifications();
+  const [isPending, startTransition] = useTransition();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<StoreRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<StoreRow | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   function openAdd() {
     setEditing(null);
@@ -46,15 +60,22 @@ export function StoresTable({ data, canWrite, canDelete }: Props) {
 
   async function handleToggleActive(row: StoreRow) {
     const res = await setStoreActive(row.id, !row.is_active);
-    if (!res.success) alert(res.error);
+    if (!res.success) notify(res.error, "error");
     else refresh();
   }
 
-  async function handleDelete(row: StoreRow) {
-    if (!confirm(`Delete store "${row.name}"? This cannot be undone.`)) return;
-    const res = await deleteStore(row.id);
-    if (!res.success) alert(res.error);
-    else refresh();
+  function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleteError(null);
+    startTransition(async () => {
+      const res = await deleteStore(deleteTarget.id);
+      if (res.success) {
+        setDeleteTarget(null);
+        refresh();
+      } else {
+        setDeleteError(res.error);
+      }
+    });
   }
 
   const columns: Column<StoreRow>[] = [
@@ -110,7 +131,15 @@ export function StoresTable({ data, canWrite, canDelete }: Props) {
             </Button>
           )}
           {canDelete && (
-            <Button variant="ghost" size="sm" className="text-(--color-danger)" onClick={() => handleDelete(row)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-(--color-danger)"
+              onClick={() => {
+                setDeleteTarget(row);
+                setDeleteError(null);
+              }}
+            >
               Delete
             </Button>
           )}
@@ -138,6 +167,36 @@ export function StoresTable({ data, canWrite, canDelete }: Props) {
       {canWrite && (
         <StoreForm open={formOpen} onOpenChange={setFormOpen} store={editing} onSaved={refresh} />
       )}
+
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(next) => {
+          if (!next) {
+            setDeleteTarget(null);
+            setDeleteError(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Store</DialogTitle>
+            <DialogDescription>
+              Delete store &quot;{deleteTarget?.name}&quot;? This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError && <p className="text-sm text-(--color-danger)">{deleteError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" variant="danger" onClick={handleDelete} disabled={isPending}>
+              {isPending ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -39,10 +39,12 @@ type Props = {
 export function CustomerForm({ open, onOpenChange, customer, onSaved }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const isEdit = Boolean(customer);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
       if (isEdit) {
@@ -51,7 +53,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSaved }: Props) {
           onSaved();
           onOpenChange(false);
         } else {
-          alert(res.error);
+          setError(res.error);
         }
         return;
       }
@@ -62,7 +64,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSaved }: Props) {
         onOpenChange(false);
         router.push(`/dashboard/management/customers/${res.id}`);
       } else {
-        alert(res.error);
+        setError(res.error);
       }
     });
   }
@@ -98,6 +100,8 @@ export function CustomerForm({ open, onOpenChange, customer, onSaved }: Props) {
           </div>
           <Input label="Postal Code" name="postal_code" defaultValue={customer?.postal_code ?? ""} />
           <TextArea label="Notes" name="note" rows={3} defaultValue={customer?.note ?? ""} />
+
+          {error && <p className="text-sm text-(--color-danger)">{error}</p>}
 
           <DialogFooter>
             <DialogClose asChild>

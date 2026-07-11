@@ -9,6 +9,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { useNotifications } from "@/components/providers/notification-provider";
+import {
   PRODUCTION_ORDER_STATUS_LABEL,
   PRODUCTION_ORDER_STATUS_VARIANT,
   type ProductionOrderStatus,
@@ -67,24 +77,34 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 
 export function ProductionOrderDetail({ data, logs }: { data: ProductionOrderDetailData; logs: ActivityLogRow[] }) {
   const router = useRouter();
+  const { notify } = useNotifications();
   const [isPending, startTransition] = useTransition();
   const [addQty, setAddQty] = useState(0);
   const remaining = data.quantity - data.completedQty;
 
+  const [completeOpen, setCompleteOpen] = useState(false);
+  const [completeError, setCompleteError] = useState<string | null>(null);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+
   function handleStart() {
     startTransition(async () => {
       const res = await startProductionOrder(data.id);
-      if (!res.success) alert(res.error);
+      if (!res.success) notify(res.error, "error");
       else router.refresh();
     });
   }
 
   function handleComplete() {
-    if (!confirm("Mark this Production Order completed? This sets Completed Qty to the full quantity on its order lines.")) return;
+    setCompleteError(null);
     startTransition(async () => {
       const res = await completeProductionOrder(data.id);
-      if (!res.success) alert(res.error);
-      else router.refresh();
+      if (res.success) {
+        setCompleteOpen(false);
+        router.refresh();
+      } else {
+        setCompleteError(res.error);
+      }
     });
   }
 
@@ -92,7 +112,7 @@ export function ProductionOrderDetail({ data, logs }: { data: ProductionOrderDet
     if (!(addQty > 0)) return;
     startTransition(async () => {
       const res = await addProductionCompletedQty(data.id, addQty);
-      if (!res.success) alert(res.error);
+      if (!res.success) notify(res.error, "error");
       else {
         setAddQty(0);
         router.refresh();
@@ -101,16 +121,15 @@ export function ProductionOrderDetail({ data, logs }: { data: ProductionOrderDet
   }
 
   function handleCancel() {
-    if (
-      !confirm(
-        "Cancel this Production Order? The uncompleted quantity is released back to Available; the completed quantity is moved to On Hold."
-      )
-    )
-      return;
+    setCancelError(null);
     startTransition(async () => {
       const res = await cancelProductionOrder(data.id);
-      if (!res.success) alert(res.error);
-      else router.refresh();
+      if (res.success) {
+        setCancelOpen(false);
+        router.refresh();
+      } else {
+        setCancelError(res.error);
+      }
     });
   }
 
@@ -127,7 +146,7 @@ export function ProductionOrderDetail({ data, logs }: { data: ProductionOrderDet
               </Button>
             )}
             {data.canComplete && (
-              <Button disabled={isPending} onClick={handleComplete}>
+              <Button disabled={isPending} onClick={() => setCompleteOpen(true)}>
                 Mark as Complete
               </Button>
             )}
@@ -136,7 +155,7 @@ export function ProductionOrderDetail({ data, logs }: { data: ProductionOrderDet
                 variant="secondary"
                 className="text-(--color-danger)"
                 disabled={isPending}
-                onClick={handleCancel}
+                onClick={() => setCancelOpen(true)}
               >
                 Cancel Order
               </Button>
@@ -265,6 +284,63 @@ export function ProductionOrderDetail({ data, logs }: { data: ProductionOrderDet
           </CardContent>
         </Card>
       </div>
+
+      <Dialog
+        open={completeOpen}
+        onOpenChange={(next) => {
+          setCompleteOpen(next);
+          if (!next) setCompleteError(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark as Complete</DialogTitle>
+            <DialogDescription>
+              Mark this Production Order completed? This sets Completed Qty to the full quantity on its order lines.
+            </DialogDescription>
+          </DialogHeader>
+          {completeError && <p className="text-sm text-(--color-danger)">{completeError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" onClick={handleComplete} disabled={isPending}>
+              {isPending ? "Saving…" : "Mark as Complete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={cancelOpen}
+        onOpenChange={(next) => {
+          setCancelOpen(next);
+          if (!next) setCancelError(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Order</DialogTitle>
+            <DialogDescription>
+              Cancel this Production Order? The uncompleted quantity is released back to Available; the completed
+              quantity is moved to On Hold.
+            </DialogDescription>
+          </DialogHeader>
+          {cancelError && <p className="text-sm text-(--color-danger)">{cancelError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" variant="danger" onClick={handleCancel} disabled={isPending}>
+              {isPending ? "Cancelling…" : "Cancel Order"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

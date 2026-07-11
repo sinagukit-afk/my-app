@@ -35,6 +35,7 @@ type Props = {
 export function ItemForm({ open, onOpenChange, purchaseOrderId, reference, variantOptions, onSaved }: Props) {
   const [isPending, startTransition] = useTransition();
   const [variantId, setVariantId] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const selected = useMemo(
     () => variantOptions.find((v) => v.id === variantId) ?? null,
@@ -43,6 +44,7 @@ export function ItemForm({ open, onOpenChange, purchaseOrderId, reference, varia
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     const formData = new FormData(e.currentTarget);
     formData.set("item_name_snapshot", selected?.label ?? "");
     startTransition(async () => {
@@ -52,13 +54,18 @@ export function ItemForm({ open, onOpenChange, purchaseOrderId, reference, varia
         onOpenChange(false);
         setVariantId("");
       } else {
-        alert(res.error);
+        setError(res.error);
       }
     });
   }
 
+  function handleOpenChange(next: boolean) {
+    if (!next) setError(null);
+    onOpenChange(next);
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <DialogHeader>
@@ -93,6 +100,8 @@ export function ItemForm({ open, onOpenChange, purchaseOrderId, reference, varia
           </div>
           <CurrencyInput label="Discount" name="discount_amount" defaultValue={0} />
           <p className="text-xs text-(--color-text-muted)">Flat discount applied to this line&apos;s total.</p>
+
+          {error && <p className="text-sm text-(--color-danger)">{error}</p>}
 
           <DialogFooter>
             <DialogClose asChild>

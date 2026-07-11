@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   Dialog,
   DialogContent,
@@ -25,10 +25,12 @@ type Props = {
 
 export function SupplierForm({ open, onOpenChange, supplier, onSaved }: Props) {
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const isEdit = Boolean(supplier);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
       const res: ActionResult = isEdit
@@ -39,7 +41,7 @@ export function SupplierForm({ open, onOpenChange, supplier, onSaved }: Props) {
         onSaved();
         onOpenChange(false);
       } else {
-        alert(res.error);
+        setError(res.error);
       }
     });
   }
@@ -80,6 +82,8 @@ export function SupplierForm({ open, onOpenChange, supplier, onSaved }: Props) {
           </div>
           <Input label="Address" name="address" defaultValue={supplier?.address ?? ""} />
           <TextArea label="Notes" name="note" defaultValue={supplier?.note ?? ""} rows={3} />
+
+          {error && <p className="text-sm text-(--color-danger)">{error}</p>}
 
           <DialogFooter>
             <DialogClose asChild>

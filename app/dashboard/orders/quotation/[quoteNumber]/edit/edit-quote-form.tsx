@@ -50,14 +50,16 @@ export function EditQuoteForm({
   const [rows, setRows] = useState<QuoteLineRow[]>(initialRows);
   const [quoteDateValue, setQuoteDateValue] = useState(quoteDate);
   const [validUntilValue, setValidUntilValue] = useState(validUntil);
+  const [error, setError] = useState<string | null>(null);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     const formData = new FormData(e.currentTarget);
 
     const items = resolveQuoteLines(rows, variantOptions, discounts, modifierGroups);
     if (items.length === 0) {
-      alert("Add at least one line item with a quantity greater than zero.");
+      setError("Add at least one line item with a quantity greater than zero.");
       return;
     }
 
@@ -70,7 +72,7 @@ export function EditQuoteForm({
       if (res.success) {
         router.push("/dashboard/orders/quotation");
       } else {
-        alert(res.error);
+        setError(res.error);
       }
     });
   }
@@ -115,10 +117,13 @@ export function EditQuoteForm({
         modifierGroups={modifierGroups}
       />
 
-      <div className="flex justify-end gap-2">
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "Saving…" : "Save Changes"}
-        </Button>
+      <div className="space-y-2">
+        {error && <p className="text-sm text-(--color-danger)">{error}</p>}
+        <div className="flex justify-end gap-2">
+          <Button type="submit" disabled={isPending}>
+            {isPending ? "Saving…" : "Save Changes"}
+          </Button>
+        </div>
       </div>
     </form>
   );

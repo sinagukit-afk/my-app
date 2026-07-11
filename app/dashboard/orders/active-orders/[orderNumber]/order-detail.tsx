@@ -9,6 +9,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { useNotifications } from "@/components/providers/notification-provider";
+import {
   startProduction,
   overrideReservedQty,
   cancelOrder,
@@ -108,6 +118,7 @@ function lineTotal(item: OrderDetailItem) {
 
 export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: ActivityLogRow[] }) {
   const router = useRouter();
+  const { notify } = useNotifications();
   const [isPending, startTransition] = useTransition();
 
   const [reservedQty, setReservedQty] = useState<Record<string, number>>(
@@ -115,12 +126,23 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
   );
   const reservedQtyDirty = data.items.some((i) => reservedQty[i.id] !== i.reservedQty);
 
+  const [startProductionOpen, setStartProductionOpen] = useState(false);
+  const [startProductionError, setStartProductionError] = useState<string | null>(null);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [holdOpen, setHoldOpen] = useState(false);
+  const [holdError, setHoldError] = useState<string | null>(null);
+
   function handleStartProduction() {
-    if (!confirm("Move this order into production?")) return;
+    setStartProductionError(null);
     startTransition(async () => {
       const res = await startProduction(data.id);
-      if (!res.success) alert(res.error);
-      else router.refresh();
+      if (res.success) {
+        setStartProductionOpen(false);
+        router.refresh();
+      } else {
+        setStartProductionError(res.error);
+      }
     });
   }
 
@@ -131,31 +153,43 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
     if (updates.length === 0) return;
     startTransition(async () => {
       const res = await overrideReservedQty(data.id, updates);
-      if (!res.success) alert(res.error);
-      else router.refresh();
-    });
-  }
-
-  function runStatusAction(action: () => Promise<{ success: boolean; error?: string }>) {
-    startTransition(async () => {
-      const res = await action();
-      if (!res.success) alert(res.error);
+      if (!res.success) notify(res.error, "error");
       else router.refresh();
     });
   }
 
   function handleCancelOrder() {
-    if (!confirm("Cancel this order? Reserved inventory will be released back to Available.")) return;
-    runStatusAction(() => cancelOrder(data.id));
+    setCancelError(null);
+    startTransition(async () => {
+      const res = await cancelOrder(data.id);
+      if (res.success) {
+        setCancelOpen(false);
+        router.refresh();
+      } else {
+        setCancelError(res.error);
+      }
+    });
   }
 
   function handleHoldOrder() {
-    if (!confirm("Put this order on hold? It can be resumed later.")) return;
-    runStatusAction(() => holdOrder(data.id));
+    setHoldError(null);
+    startTransition(async () => {
+      const res = await holdOrder(data.id);
+      if (res.success) {
+        setHoldOpen(false);
+        router.refresh();
+      } else {
+        setHoldError(res.error);
+      }
+    });
   }
 
   function handleResumeOrder() {
-    runStatusAction(() => resumeOrder(data.id));
+    startTransition(async () => {
+      const res = await resumeOrder(data.id);
+      if (!res.success) notify(res.error, "error");
+      else router.refresh();
+    });
   }
 
   return (
@@ -171,7 +205,7 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
               </Link>
             )}
             {data.canAdvance && (
-              <Button disabled={isPending} onClick={handleStartProduction}>
+              <Button disabled={isPending} onClick={() => setStartProductionOpen(true)}>
                 Start Production
               </Button>
             )}
@@ -181,12 +215,12 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
               </Button>
             )}
             {data.canHold && (
-              <Button variant="secondary" disabled={isPending} onClick={handleHoldOrder}>
+              <Button variant="secondary" disabled={isPending} onClick={() => setHoldOpen(true)}>
                 Put On Hold
               </Button>
             )}
             {data.canCancel && (
-              <Button variant="secondary" className="text-(--color-danger)" disabled={isPending} onClick={handleCancelOrder}>
+              <Button variant="secondary" className="text-(--color-danger)" disabled={isPending} onClick={() => setCancelOpen(true)}>
                 Cancel Order
               </Button>
             )}
@@ -414,6 +448,86 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
           </CardContent>
         </Card>
       </div>
+
+      <Dialog
+        open={startProductionOpen}
+        onOpenChange={(next) => {
+          setStartProductionOpen(next);
+          if (!next) setStartProductionError(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Start Production</DialogTitle>
+            <DialogDescription>Move this order into production?</DialogDescription>
+          </DialogHeader>
+          {startProductionError && <p className="text-sm text-(--color-danger)">{startProductionError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" onClick={handleStartProduction} disabled={isPending}>
+              {isPending ? "Starting…" : "Start Production"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={holdOpen}
+        onOpenChange={(next) => {
+          setHoldOpen(next);
+          if (!next) setHoldError(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Put On Hold</DialogTitle>
+            <DialogDescription>Put this order on hold? It can be resumed later.</DialogDescription>
+          </DialogHeader>
+          {holdError && <p className="text-sm text-(--color-danger)">{holdError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" onClick={handleHoldOrder} disabled={isPending}>
+              {isPending ? "Saving…" : "Put On Hold"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={cancelOpen}
+        onOpenChange={(next) => {
+          setCancelOpen(next);
+          if (!next) setCancelError(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Order</DialogTitle>
+            <DialogDescription>
+              Cancel this order? Reserved inventory will be released back to Available.
+            </DialogDescription>
+          </DialogHeader>
+          {cancelError && <p className="text-sm text-(--color-danger)">{cancelError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" variant="danger" onClick={handleCancelOrder} disabled={isPending}>
+              {isPending ? "Cancelling…" : "Cancel Order"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

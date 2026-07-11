@@ -44,6 +44,7 @@ function seedRows(modifier?: ModifierRow | null): OptionRowState[] {
 export function ModifierForm({ open, onOpenChange, modifier, onSaved }: Props) {
   const [isPending, startTransition] = useTransition();
   const [rows, setRows] = useState<OptionRowState[]>(() => seedRows(modifier));
+  const [error, setError] = useState<string | null>(null);
   const isEdit = Boolean(modifier);
 
   function addRow() {
@@ -60,6 +61,7 @@ export function ModifierForm({ open, onOpenChange, modifier, onSaved }: Props) {
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     const formData = new FormData(e.currentTarget);
     const optionsPayload = rows
       .filter((r) => r.name.trim())
@@ -75,7 +77,7 @@ export function ModifierForm({ open, onOpenChange, modifier, onSaved }: Props) {
         onSaved();
         onOpenChange(false);
       } else {
-        alert(res.error);
+        setError(res.error);
       }
     });
   }
@@ -153,6 +155,8 @@ export function ModifierForm({ open, onOpenChange, modifier, onSaved }: Props) {
               Loyverse and may be overwritten if this modifier is later changed there.
             </p>
           )}
+
+          {error && <p className="text-sm text-(--color-danger)">{error}</p>}
 
           <DialogFooter>
             <DialogClose asChild>

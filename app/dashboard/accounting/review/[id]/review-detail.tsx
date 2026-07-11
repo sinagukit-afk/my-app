@@ -90,7 +90,10 @@ export function ReviewDetail({ draft, accounts }: Props) {
   const [isPending, startTransition] = useTransition();
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [rejectError, setRejectError] = useState<string | null>(null);
   const [approveOpen, setApproveOpen] = useState(false);
+  const [approveError, setApproveError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const isEditable = draft.status === "pending_review";
 
@@ -144,9 +147,10 @@ export function ReviewDetail({ draft, accounts }: Props) {
   }
 
   function handleSave() {
+    setSaveError(null);
     const twoSided = buildLines().find((l) => l.debit > 0 && l.credit > 0);
     if (twoSided) {
-      alert(`Account ${twoSided.account_number} has both a debit and a credit — each line takes one or the other.`);
+      setSaveError(`Account ${twoSided.account_number} has both a debit and a credit — each line takes one or the other.`);
       return;
     }
     startTransition(async () => {
@@ -154,30 +158,32 @@ export function ReviewDetail({ draft, accounts }: Props) {
       if (res.success) {
         router.refresh();
       } else {
-        alert(res.error);
+        setSaveError(res.error);
       }
     });
   }
 
   function handleApprove() {
+    setApproveError(null);
     startTransition(async () => {
       const res = await approveDraft(draft.id);
       if (res.success) {
         router.push(`/dashboard/accounting/journal/${res.entryId}`);
       } else {
-        alert(res.error);
+        setApproveError(res.error);
       }
     });
   }
 
   function handleReject() {
+    setRejectError(null);
     startTransition(async () => {
       const res = await rejectDraft(draft.id, rejectReason);
       if (res.success) {
         setRejectOpen(false);
         router.push("/dashboard/accounting/review");
       } else {
-        alert(res.error);
+        setRejectError(res.error);
       }
     });
   }
@@ -378,20 +384,45 @@ export function ReviewDetail({ draft, accounts }: Props) {
       )}
 
       {isEditable && (
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button type="button" variant="ghost" className="text-(--color-danger)" onClick={() => setRejectOpen(true)} disabled={isPending}>
-            Reject
-          </Button>
-          <Button type="button" variant="secondary" onClick={handleSave} disabled={!canSave}>
-            {isPending ? "Saving…" : "Save Changes"}
-          </Button>
-          <Button type="button" onClick={() => setApproveOpen(true)} disabled={!balanced || isPending}>
-            Approve & Post
-          </Button>
+        <div className="space-y-2">
+          {saveError && <p className="text-sm text-(--color-danger)">{saveError}</p>}
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              className="text-(--color-danger)"
+              onClick={() => {
+                setRejectError(null);
+                setRejectOpen(true);
+              }}
+              disabled={isPending}
+            >
+              Reject
+            </Button>
+            <Button type="button" variant="secondary" onClick={handleSave} disabled={!canSave}>
+              {isPending ? "Saving…" : "Save Changes"}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setApproveError(null);
+                setApproveOpen(true);
+              }}
+              disabled={!balanced || isPending}
+            >
+              Approve & Post
+            </Button>
+          </div>
         </div>
       )}
 
-      <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
+      <Dialog
+        open={rejectOpen}
+        onOpenChange={(next) => {
+          setRejectOpen(next);
+          if (!next) setRejectError(null);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Reject Draft</DialogTitle>
@@ -406,6 +437,7 @@ export function ReviewDetail({ draft, accounts }: Props) {
             placeholder="Optional — why this draft shouldn't post"
             rows={3}
           />
+          {rejectError && <p className="text-sm text-(--color-danger)">{rejectError}</p>}
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="secondary" disabled={isPending}>
@@ -419,7 +451,13 @@ export function ReviewDetail({ draft, accounts }: Props) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={approveOpen} onOpenChange={setApproveOpen}>
+      <Dialog
+        open={approveOpen}
+        onOpenChange={(next) => {
+          setApproveOpen(next);
+          if (!next) setApproveError(null);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Approve & Post</DialogTitle>
@@ -428,6 +466,7 @@ export function ReviewDetail({ draft, accounts }: Props) {
               reversal, not an edit.
             </DialogDescription>
           </DialogHeader>
+          {approveError && <p className="text-sm text-(--color-danger)">{approveError}</p>}
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="secondary" disabled={isPending}>

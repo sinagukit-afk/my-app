@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   Dialog,
   DialogContent,
@@ -41,10 +41,12 @@ function stripPrefix(accountNumber: string | undefined): string {
 
 export function AccountForm({ open, onOpenChange, account, onSaved }: Props) {
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const isEdit = Boolean(account);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
       const res: ActionResult = isEdit
@@ -55,13 +57,19 @@ export function AccountForm({ open, onOpenChange, account, onSaved }: Props) {
         onSaved();
         onOpenChange(false);
       } else {
-        alert(res.error);
+        setError(res.error);
       }
     });
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        onOpenChange(next);
+        if (!next) setError(null);
+      }}
+    >
       <DialogContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <DialogHeader>
@@ -118,6 +126,8 @@ export function AccountForm({ open, onOpenChange, account, onSaved }: Props) {
             placeholder="Optional"
             rows={2}
           />
+
+          {error && <p className="text-sm text-(--color-danger)">{error}</p>}
 
           <DialogFooter>
             <DialogClose asChild>

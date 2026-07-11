@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   Dialog,
   DialogContent,
@@ -33,10 +33,12 @@ type Props = {
 
 export function UserForm({ open, onOpenChange, user, onSaved }: Props) {
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const isEdit = Boolean(user);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
       const res: ActionResult = isEdit
@@ -47,7 +49,7 @@ export function UserForm({ open, onOpenChange, user, onSaved }: Props) {
         onSaved();
         onOpenChange(false);
       } else {
-        alert(res.error);
+        setError(res.error);
       }
     });
   }
@@ -82,6 +84,8 @@ export function UserForm({ open, onOpenChange, user, onSaved }: Props) {
             defaultValue={user?.role ?? "encoder"}
             options={ROLE_OPTIONS}
           />
+
+          {error && <p className="text-sm text-(--color-danger)">{error}</p>}
 
           <DialogFooter>
             <DialogClose asChild>

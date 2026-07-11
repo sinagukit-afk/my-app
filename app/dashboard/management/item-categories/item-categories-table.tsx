@@ -1,11 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { useNotifications } from "@/components/providers/notification-provider";
 import { CategoryForm } from "./category-form";
 import { archiveCategory, restoreCategory } from "./actions";
 
@@ -37,8 +47,12 @@ const COLOR_SWATCH: Record<string, string> = {
 
 export function ItemCategoriesTable({ data, canWrite, canDelete }: Props) {
   const router = useRouter();
+  const { notify } = useNotifications();
+  const [isPending, startTransition] = useTransition();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<CategoryRow | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<CategoryRow | null>(null);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
 
   function openAdd() {
     setEditing(null);
@@ -54,16 +68,23 @@ export function ItemCategoriesTable({ data, canWrite, canDelete }: Props) {
     router.refresh();
   }
 
-  async function handleArchive(row: CategoryRow) {
-    if (!confirm(`Archive category "${row.name}"? It will stop showing up as an option on new items.`)) return;
-    const res = await archiveCategory(row.id);
-    if (!res.success) alert(res.error);
-    else refresh();
+  function handleArchive() {
+    if (!archiveTarget) return;
+    setArchiveError(null);
+    startTransition(async () => {
+      const res = await archiveCategory(archiveTarget.id);
+      if (res.success) {
+        setArchiveTarget(null);
+        refresh();
+      } else {
+        setArchiveError(res.error);
+      }
+    });
   }
 
   async function handleRestore(row: CategoryRow) {
     const res = await restoreCategory(row.id);
-    if (!res.success) alert(res.error);
+    if (!res.success) notify(res.error, "error");
     else refresh();
   }
 
@@ -118,7 +139,15 @@ export function ItemCategoriesTable({ data, canWrite, canDelete }: Props) {
             </Button>
           )}
           {canDelete && !row.deleted_at && (
-            <Button variant="ghost" size="sm" className="text-(--color-danger)" onClick={() => handleArchive(row)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-(--color-danger)"
+              onClick={() => {
+                setArchiveTarget(row);
+                setArchiveError(null);
+              }}
+            >
               Archive
             </Button>
           )}
@@ -151,6 +180,37 @@ export function ItemCategoriesTable({ data, canWrite, canDelete }: Props) {
       {canWrite && (
         <CategoryForm open={formOpen} onOpenChange={setFormOpen} category={editing} onSaved={refresh} />
       )}
+
+      <Dialog
+        open={!!archiveTarget}
+        onOpenChange={(next) => {
+          if (!next) {
+            setArchiveTarget(null);
+            setArchiveError(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Archive Category</DialogTitle>
+            <DialogDescription>
+              Archive category &quot;{archiveTarget?.name}&quot;? It will stop showing up as an option
+              on new items.
+            </DialogDescription>
+          </DialogHeader>
+          {archiveError && <p className="text-sm text-(--color-danger)">{archiveError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" variant="danger" onClick={handleArchive} disabled={isPending}>
+              {isPending ? "Archiving…" : "Archive"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   Dialog,
   DialogContent,
@@ -24,10 +24,12 @@ type Props = {
 
 export function CourierForm({ open, onOpenChange, courier, onSaved }: Props) {
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const isEdit = Boolean(courier);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
       const res: ActionResult = isEdit
@@ -38,7 +40,7 @@ export function CourierForm({ open, onOpenChange, courier, onSaved }: Props) {
         onSaved();
         onOpenChange(false);
       } else {
-        alert(res.error);
+        setError(res.error);
       }
     });
   }
@@ -56,6 +58,8 @@ export function CourierForm({ open, onOpenChange, courier, onSaved }: Props) {
 
           <Input label="Courier Name" name="name" defaultValue={courier?.name ?? ""} required autoFocus />
           <Input label="Contact Number" name="contact_number" defaultValue={courier?.contact_number ?? ""} />
+
+          {error && <p className="text-sm text-(--color-danger)">{error}</p>}
 
           <DialogFooter>
             <DialogClose asChild>

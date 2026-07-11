@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useNotifications } from "@/components/providers/notification-provider";
 import { UserForm } from "./user-form";
 import { setUserActive } from "./actions";
 
@@ -33,6 +34,7 @@ type Props = {
 
 export function UsersTable({ data, canManage, currentUserId }: Props) {
   const router = useRouter();
+  const { notify } = useNotifications();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<UserRow | null>(null);
 
@@ -52,7 +54,7 @@ export function UsersTable({ data, canManage, currentUserId }: Props) {
 
   async function handleToggleActive(row: UserRow) {
     const res = await setUserActive(row.id, !row.active);
-    if (!res.success) alert(res.error);
+    if (!res.success) notify(res.error, "error");
     else refresh();
   }
 

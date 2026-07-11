@@ -46,6 +46,7 @@ export function NewJournalForm({ accounts }: Props) {
   const [isPending, startTransition] = useTransition();
   // Start with two blank lines — a journal entry always needs at least two.
   const [rows, setRows] = useState<LineRow[]>([emptyRow(), emptyRow()]);
+  const [error, setError] = useState<string | null>(null);
 
   const accountOptions = useMemo(
     () => accounts.map((a) => ({ value: a.account_number, label: `${a.account_number} — ${a.name}` })),
@@ -77,6 +78,7 @@ export function NewJournalForm({ accounts }: Props) {
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
 
     const lines: JournalLineInput[] = filledLines.map((r) => ({
       account_number: r.accountNumber,
@@ -89,7 +91,7 @@ export function NewJournalForm({ accounts }: Props) {
     // it too, but catch it here with a clearer message before the round-trip.
     const twoSided = lines.find((l) => l.debit > 0 && l.credit > 0);
     if (twoSided) {
-      alert(`Account ${twoSided.account_number} has both a debit and a credit — each line takes one or the other.`);
+      setError(`Account ${twoSided.account_number} has both a debit and a credit — each line takes one or the other.`);
       return;
     }
 
@@ -101,7 +103,7 @@ export function NewJournalForm({ accounts }: Props) {
       if (res.success) {
         router.push(`/dashboard/accounting/journal/${res.id}`);
       } else {
-        alert(res.error);
+        setError(res.error);
       }
     });
   }
@@ -209,13 +211,16 @@ export function NewJournalForm({ accounts }: Props) {
         </CardFooter>
       </Card>
 
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="secondary" onClick={() => router.push("/dashboard/accounting/journal")} disabled={isPending}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={!canSubmit}>
-          {isPending ? "Posting…" : "Post Entry"}
-        </Button>
+      <div className="space-y-2">
+        {error && <p className="text-sm text-(--color-danger)">{error}</p>}
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={() => router.push("/dashboard/accounting/journal")} disabled={isPending}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={!canSubmit}>
+            {isPending ? "Posting…" : "Post Entry"}
+          </Button>
+        </div>
       </div>
     </form>
   );

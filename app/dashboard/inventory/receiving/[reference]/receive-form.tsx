@@ -35,9 +35,11 @@ export function ReceiveForm({ purchaseOrderId, reference, items, paymentTypeOpti
   );
   const [paymentTypeId, setPaymentTypeId] = useState("");
   const [isCreditCard, setIsCreditCard] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     const lines = items.map((item) => ({
       po_item_id: item.id,
       quantity: Number(quantities[item.id] ?? 0) || 0,
@@ -55,7 +57,7 @@ export function ReceiveForm({ purchaseOrderId, reference, items, paymentTypeOpti
         router.push("/dashboard/inventory/receiving");
         router.refresh();
       } else {
-        alert(res.error);
+        setError(res.error);
       }
     });
   }
@@ -107,7 +109,8 @@ export function ReceiveForm({ purchaseOrderId, reference, items, paymentTypeOpti
             </div>
           </div>
         </CardContent>
-        <CardFooter>
+        <CardFooter className="flex-col items-end gap-2">
+          {error && <p className="text-sm text-(--color-danger)">{error}</p>}
           <Button type="submit" disabled={isPending}>
             {isPending ? "Posting…" : "Post Receipt"}
           </Button>

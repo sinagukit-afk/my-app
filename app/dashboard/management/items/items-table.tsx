@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DataTable, type Column } from "@/components/ui/data-table";
@@ -9,6 +9,15 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { Select } from "@/components/ui/select";
 import { FilterBar } from "@/components/business/filter-bar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 import { archiveItem } from "./actions";
 
 export type ItemRow = {
@@ -58,15 +67,25 @@ type Props = {
 
 export function ItemsTable({ data, canWrite }: Props) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [statusFilter, setStatusFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
+  const [archiveTarget, setArchiveTarget] = useState<ItemRow | null>(null);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
 
-  async function handleArchive(row: ItemRow) {
-    if (!confirm(`Archive "${row.name}"? It will be hidden from the active catalog and no longer sync to Loyverse.`)) return;
-    const res = await archiveItem(row.id);
-    if (!res.success) alert(res.error);
-    else router.refresh();
+  function handleArchive() {
+    if (!archiveTarget) return;
+    setArchiveError(null);
+    startTransition(async () => {
+      const res = await archiveItem(archiveTarget.id);
+      if (res.success) {
+        setArchiveTarget(null);
+        router.refresh();
+      } else {
+        setArchiveError(res.error);
+      }
+    });
   }
 
   const categories = useMemo(
@@ -216,7 +235,10 @@ export function ItemsTable({ data, canWrite }: Props) {
               variant="ghost"
               size="sm"
               className="text-(--color-danger)"
-              onClick={() => handleArchive(row)}
+              onClick={() => {
+                setArchiveTarget(row);
+                setArchiveError(null);
+              }}
             >
               Archive
             </Button>
@@ -276,6 +298,37 @@ export function ItemsTable({ data, canWrite }: Props) {
         emptyMessage="No items found"
         emptyDescription="Adjust the filters or search to find what you're looking for."
       />
+
+      <Dialog
+        open={!!archiveTarget}
+        onOpenChange={(next) => {
+          if (!next) {
+            setArchiveTarget(null);
+            setArchiveError(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Archive Item</DialogTitle>
+            <DialogDescription>
+              Archive &quot;{archiveTarget?.name}&quot;? It will be hidden from the active catalog
+              and no longer sync to Loyverse.
+            </DialogDescription>
+          </DialogHeader>
+          {archiveError && <p className="text-sm text-(--color-danger)">{archiveError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" variant="danger" onClick={handleArchive} disabled={isPending}>
+              {isPending ? "Archiving…" : "Archive"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

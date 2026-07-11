@@ -35,12 +35,14 @@ type Props = {
 export function ManualIncomingForm({ open, onOpenChange, suppliers, items, paymentTypeOptions, onSaved }: Props) {
   const [isPending, startTransition] = useTransition();
   const [selectedItemId, setSelectedItemId] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const selectedItem = items.find((i) => i.id === selectedItemId);
   const variants = selectedItem?.variants ?? [];
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
       const res: ActionResult = await createManualIncoming(formData);
@@ -48,13 +50,16 @@ export function ManualIncomingForm({ open, onOpenChange, suppliers, items, payme
         onSaved();
         onOpenChange(false);
       } else {
-        alert(res.error);
+        setError(res.error);
       }
     });
   }
 
   function handleOpenChange(open: boolean) {
-    if (!open) setSelectedItemId("");
+    if (!open) {
+      setSelectedItemId("");
+      setError(null);
+    }
     onOpenChange(open);
   }
 
@@ -188,6 +193,8 @@ export function ManualIncomingForm({ open, onOpenChange, suppliers, items, payme
 
           {/* Notes */}
           <TextArea label="Notes" name="notes" rows={3} placeholder="Optional notes…" />
+
+          {error && <p className="text-sm text-(--color-danger)">{error}</p>}
 
           <DialogFooter>
             <DialogClose asChild>

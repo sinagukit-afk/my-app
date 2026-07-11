@@ -127,6 +127,14 @@ export function OrderShipments({
   const [isPending, startTransition] = useTransition();
   const [formOpen, setFormOpen] = useState(false);
   const [editingShipment, setEditingShipment] = useState<OrderShipmentRow | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const [shipTarget, setShipTarget] = useState<string | null>(null);
+  const [shipError, setShipError] = useState<string | null>(null);
+  const [deliverTarget, setDeliverTarget] = useState<string | null>(null);
+  const [deliverError, setDeliverError] = useState<string | null>(null);
+  const [pickupTarget, setPickupTarget] = useState<string | null>(null);
+  const [pickupError, setPickupError] = useState<string | null>(null);
 
   const hasCustomer = customer != null;
 
@@ -180,6 +188,7 @@ export function OrderShipments({
     setNote("");
     setLineQtys({});
     setPackagingRows([emptyPackagingRow()]);
+    setFormError(null);
   }
 
   function openAddForm() {
@@ -189,6 +198,7 @@ export function OrderShipments({
   }
 
   function openEditForm(s: OrderShipmentRow) {
+    setFormError(null);
     setEditingShipment(s);
     setFulfillmentType(s.fulfillmentType);
     setShipsToCustomer(s.fulfillmentType === "pickup" ? hasCustomer : (s.shipsToCustomer ?? hasCustomer));
@@ -226,12 +236,13 @@ export function OrderShipments({
   }
 
   function handleSubmitShipment() {
+    setFormError(null);
     const items = activeItems
       .map((si) => ({ orderItemId: si.orderItemId, quantityShipped: Number(lineQtys[si.orderItemId]) || 0 }))
       .filter((i) => i.quantityShipped > 0);
 
     if (items.length === 0) {
-      alert("Enter a quantity for at least one product line.");
+      setFormError("Enter a quantity for at least one product line.");
       return;
     }
 
@@ -243,7 +254,7 @@ export function OrderShipments({
     const isManualReceiver = !isPickup && !shipsToCustomer;
 
     if (isManualReceiver && !receiverName.trim()) {
-      alert("Receiver name is required when this shipment doesn't go to the customer.");
+      setFormError("Receiver name is required when this shipment doesn't go to the customer.");
       return;
     }
 
@@ -271,7 +282,7 @@ export function OrderShipments({
         ? await updateShipment(orderId, editingShipment.id, input)
         : await createShipment(orderId, input);
       if (!res.success) {
-        alert(res.error);
+        setFormError(res.error);
       } else {
         setFormOpen(false);
         setEditingShipment(null);
@@ -281,30 +292,45 @@ export function OrderShipments({
     });
   }
 
-  function handleMarkShipped(shipmentId: string) {
-    if (!confirm("Mark this shipment as shipped? This will deduct stock.")) return;
+  function handleMarkShipped() {
+    if (!shipTarget) return;
+    setShipError(null);
     startTransition(async () => {
-      const res = await markShipmentShipped(orderId, shipmentId);
-      if (!res.success) alert(res.error);
-      else onChanged();
+      const res = await markShipmentShipped(orderId, shipTarget);
+      if (res.success) {
+        setShipTarget(null);
+        onChanged();
+      } else {
+        setShipError(res.error);
+      }
     });
   }
 
-  function handleMarkDelivered(shipmentId: string) {
-    if (!confirm("Mark this shipment as delivered?")) return;
+  function handleMarkDelivered() {
+    if (!deliverTarget) return;
+    setDeliverError(null);
     startTransition(async () => {
-      const res = await markShipmentDelivered(orderId, shipmentId);
-      if (!res.success) alert(res.error);
-      else onChanged();
+      const res = await markShipmentDelivered(orderId, deliverTarget);
+      if (res.success) {
+        setDeliverTarget(null);
+        onChanged();
+      } else {
+        setDeliverError(res.error);
+      }
     });
   }
 
-  function handleMarkPickedUp(shipmentId: string) {
-    if (!confirm("Mark this shipment as picked up? This will deduct stock.")) return;
+  function handleMarkPickedUp() {
+    if (!pickupTarget) return;
+    setPickupError(null);
     startTransition(async () => {
-      const res = await markShipmentPickedUp(orderId, shipmentId);
-      if (!res.success) alert(res.error);
-      else onChanged();
+      const res = await markShipmentPickedUp(orderId, pickupTarget);
+      if (res.success) {
+        setPickupTarget(null);
+        onChanged();
+      } else {
+        setPickupError(res.error);
+      }
     });
   }
 
@@ -417,17 +443,38 @@ export function OrderShipments({
                   </Button>
                 )}
                 {s.status === "preparing" && s.fulfillmentType === "pickup" && (
-                  <Button size="sm" disabled={isPending} onClick={() => handleMarkPickedUp(s.id)}>
+                  <Button
+                    size="sm"
+                    disabled={isPending}
+                    onClick={() => {
+                      setPickupError(null);
+                      setPickupTarget(s.id);
+                    }}
+                  >
                     Mark as Picked Up
                   </Button>
                 )}
                 {s.status === "preparing" && s.fulfillmentType === "delivery" && (
-                  <Button size="sm" disabled={isPending} onClick={() => handleMarkShipped(s.id)}>
+                  <Button
+                    size="sm"
+                    disabled={isPending}
+                    onClick={() => {
+                      setShipError(null);
+                      setShipTarget(s.id);
+                    }}
+                  >
                     Mark Shipped
                   </Button>
                 )}
                 {s.status === "shipped" && (
-                  <Button size="sm" disabled={isPending} onClick={() => handleMarkDelivered(s.id)}>
+                  <Button
+                    size="sm"
+                    disabled={isPending}
+                    onClick={() => {
+                      setDeliverError(null);
+                      setDeliverTarget(s.id);
+                    }}
+                  >
                     Mark Delivered
                   </Button>
                 )}
@@ -441,7 +488,10 @@ export function OrderShipments({
         open={formOpen}
         onOpenChange={(open) => {
           setFormOpen(open);
-          if (!open) setEditingShipment(null);
+          if (!open) {
+            setEditingShipment(null);
+            setFormError(null);
+          }
         }}
       >
         <DialogContent className="max-h-[85vh] overflow-y-auto">
@@ -607,6 +657,7 @@ export function OrderShipments({
               </Button>
             </div>
           </div>
+          {formError && <p className="text-sm text-(--color-danger)">{formError}</p>}
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="secondary">
@@ -615,6 +666,90 @@ export function OrderShipments({
             </DialogClose>
             <Button type="button" disabled={isPending} onClick={handleSubmitShipment}>
               {isPending ? "Saving…" : editingShipment ? "Save Changes" : "Save Shipment"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!shipTarget}
+        onOpenChange={(next) => {
+          if (!next) {
+            setShipTarget(null);
+            setShipError(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark Shipped</DialogTitle>
+            <DialogDescription>Mark this shipment as shipped? This will deduct stock.</DialogDescription>
+          </DialogHeader>
+          {shipError && <p className="text-sm text-(--color-danger)">{shipError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" onClick={handleMarkShipped} disabled={isPending}>
+              {isPending ? "Saving…" : "Mark Shipped"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!deliverTarget}
+        onOpenChange={(next) => {
+          if (!next) {
+            setDeliverTarget(null);
+            setDeliverError(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark Delivered</DialogTitle>
+            <DialogDescription>Mark this shipment as delivered?</DialogDescription>
+          </DialogHeader>
+          {deliverError && <p className="text-sm text-(--color-danger)">{deliverError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" onClick={handleMarkDelivered} disabled={isPending}>
+              {isPending ? "Saving…" : "Mark Delivered"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!pickupTarget}
+        onOpenChange={(next) => {
+          if (!next) {
+            setPickupTarget(null);
+            setPickupError(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark as Picked Up</DialogTitle>
+            <DialogDescription>Mark this shipment as picked up? This will deduct stock.</DialogDescription>
+          </DialogHeader>
+          {pickupError && <p className="text-sm text-(--color-danger)">{pickupError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" onClick={handleMarkPickedUp} disabled={isPending}>
+              {isPending ? "Saving…" : "Mark as Picked Up"}
             </Button>
           </DialogFooter>
         </DialogContent>

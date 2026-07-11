@@ -1,12 +1,22 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { PageHeader } from "@/components/ui/page-header";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { useNotifications } from "@/components/providers/notification-provider";
 import { AccountForm } from "./account-form";
 import { setAccountActive } from "./actions";
 
@@ -34,9 +44,13 @@ const CATEGORY_BADGE: Record<string, { label: string; variant: "default" | "succ
 
 export function ChartOfAccountsTable({ data, canWrite }: Props) {
   const router = useRouter();
+  const { notify } = useNotifications();
+  const [isPending, startTransition] = useTransition();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<AccountRow | null>(null);
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [deactivateTarget, setDeactivateTarget] = useState<AccountRow | null>(null);
+  const [deactivateError, setDeactivateError] = useState<string | null>(null);
 
   const filtered = useMemo(
     () => (categoryFilter ? data.filter((r) => r.category === categoryFilter) : data),
@@ -57,16 +71,23 @@ export function ChartOfAccountsTable({ data, canWrite }: Props) {
     router.refresh();
   }
 
-  async function handleDeactivate(row: AccountRow) {
-    if (!confirm(`Deactivate account "${row.account_number} — ${row.name}"? It will stop showing up as an option on new journal entries.`)) return;
-    const res = await setAccountActive(row.id, false);
-    if (!res.success) alert(res.error);
-    else refresh();
+  function handleDeactivate() {
+    if (!deactivateTarget) return;
+    setDeactivateError(null);
+    startTransition(async () => {
+      const res = await setAccountActive(deactivateTarget.id, false);
+      if (res.success) {
+        setDeactivateTarget(null);
+        refresh();
+      } else {
+        setDeactivateError(res.error);
+      }
+    });
   }
 
   async function handleReactivate(row: AccountRow) {
     const res = await setAccountActive(row.id, true);
-    if (!res.success) alert(res.error);
+    if (!res.success) notify(res.error, "error");
     else refresh();
   }
 
@@ -118,7 +139,15 @@ export function ChartOfAccountsTable({ data, canWrite }: Props) {
             </Button>
           )}
           {canWrite && row.is_active && (
-            <Button variant="ghost" size="sm" className="text-(--color-danger)" onClick={() => handleDeactivate(row)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-(--color-danger)"
+              onClick={() => {
+                setDeactivateTarget(row);
+                setDeactivateError(null);
+              }}
+            >
               Deactivate
             </Button>
           )}
@@ -168,6 +197,37 @@ export function ChartOfAccountsTable({ data, canWrite }: Props) {
       {canWrite && (
         <AccountForm open={formOpen} onOpenChange={setFormOpen} account={editing} onSaved={refresh} />
       )}
+
+      <Dialog
+        open={!!deactivateTarget}
+        onOpenChange={(next) => {
+          if (!next) {
+            setDeactivateTarget(null);
+            setDeactivateError(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Deactivate Account</DialogTitle>
+            <DialogDescription>
+              Deactivate account &quot;{deactivateTarget?.account_number} — {deactivateTarget?.name}&quot;? It will
+              stop showing up as an option on new journal entries.
+            </DialogDescription>
+          </DialogHeader>
+          {deactivateError && <p className="text-sm text-(--color-danger)">{deactivateError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" variant="danger" onClick={handleDeactivate} disabled={isPending}>
+              {isPending ? "Deactivating…" : "Deactivate"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
