@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils/cn";
 
 export interface FilterOption {
@@ -13,30 +14,17 @@ export interface FilterBarProps {
   value: string;
   onChange: (value: string) => void;
   className?: string;
+  "aria-label"?: string;
 }
 
-export function FilterBar({ options, value, onChange, className }: FilterBarProps) {
+export function FilterBar({ options, value, onChange, className, "aria-label": ariaLabel }: FilterBarProps) {
   return (
-    <div className={cn("flex flex-wrap items-center gap-1.5", className)} role="group" aria-label="Filter options">
-      {options.map((opt) => {
-        const active = opt.value === value;
-        return (
-          <button
-            key={opt.value}
-            type="button"
-            onClick={() => onChange(opt.value)}
-            aria-pressed={active}
-            className={cn(
-              "h-8 rounded-md px-3 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary)",
-              active
-                ? "bg-(--color-primary) text-(--color-primary-fg)"
-                : "border border-(--color-border) bg-(--color-surface) text-(--color-text-muted) hover:bg-(--color-bg) hover:text-(--color-text)"
-            )}
-          >
-            {opt.label}
-          </button>
-        );
-      })}
-    </div>
+    <Select
+      aria-label={ariaLabel ?? "Filter"}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      options={options}
+      className={cn("w-44", className)}
+    />
   );
 }
