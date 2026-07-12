@@ -20,6 +20,14 @@ export interface FieldSchema {
   /** If true and this field is still empty after the local pass, the AI fallback is triggered. */
   required?: boolean;
   /**
+   * Extra guidance passed to the AI provider as this field's JSON-schema
+   * "description", on top of its key/label — for fields where the key name
+   * alone isn't enough to disambiguate (e.g. a "receiverName" field on a
+   * shipping label that also has a similarly-printed sender/return-address
+   * block the model could confuse it with).
+   */
+  description?: string;
+  /**
    * For a "currency" field: instead of asking the AI to read a per-unit rate
    * directly (which it may confuse with a printed lump/pack price, e.g.
    * "50 pcs ... ₱650" is a total, not a ₱650-per-piece rate), ask it for the

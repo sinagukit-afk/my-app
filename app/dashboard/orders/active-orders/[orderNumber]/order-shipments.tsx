@@ -26,6 +26,11 @@ import {
   markShipmentPickedUp,
 } from "../actions";
 import { randomId } from "@/lib/utils/random-id";
+import { AutoFillPanel } from "@/components/ai-autofill/auto-fill-panel";
+import { AiFieldHighlight } from "@/components/ai-autofill/ai-field-highlight";
+import { useAiFilledKeys } from "@/components/ai-autofill/use-ai-filled-keys";
+import { shippingLabelSchema } from "@/lib/ai-autofill/schemas";
+import type { DropdownOptionsByField, ExtractionResult } from "@/lib/ai-autofill/types";
 
 export type ShippableOrderItem = {
   orderItemId: string;
@@ -155,6 +160,59 @@ export function OrderShipments({
   const [note, setNote] = useState("");
   const [lineQtys, setLineQtys] = useState<Record<string, string>>({});
   const [packagingRows, setPackagingRows] = useState<PackagingRow[]>([emptyPackagingRow()]);
+  const { aiFilledKeys, markFilled, clear: clearAiField, clearAll: clearAiFields } = useAiFilledKeys();
+
+  const dropdownOptions: DropdownOptionsByField = useMemo(
+    () => ({ courierId: courierOptions.map((c) => ({ value: c.id, label: c.name })) }),
+    [courierOptions]
+  );
+
+  function handleExtracted(result: ExtractionResult) {
+    const header = result.header;
+
+    if (typeof header.courierId === "string" || (typeof header.trackingNumber === "string" && header.trackingNumber)) {
+      setFulfillmentType("delivery");
+    }
+    if (typeof header.courierId === "string") setCourierId(header.courierId);
+    if (typeof header.trackingNumber === "string" && header.trackingNumber) setTrackingNumber(header.trackingNumber);
+    if (typeof header.shippingCost === "number") setShippingCost(String(header.shippingCost));
+
+    const hasReceiverInfo = [
+      header.receiverName,
+      header.receiverAddressLine1,
+      header.receiverBarangay,
+      header.receiverCity,
+      header.receiverProvince,
+    ].some((v) => typeof v === "string" && v);
+
+    if (hasReceiverInfo) {
+      // A photographed shipping label documents the actual receiver for this
+      // shipment — default to the manual-receiver fields even if the order has
+      // a registered customer, so the extracted address is visible for review.
+      setShipsToCustomer(false);
+      if (typeof header.receiverName === "string" && header.receiverName) setReceiverName(header.receiverName);
+      if (typeof header.receiverPhone === "string" && header.receiverPhone) setReceiverPhone(header.receiverPhone);
+      if (typeof header.receiverAddressLine1 === "string" && header.receiverAddressLine1) setReceiverAddressLine1(header.receiverAddressLine1);
+      if (typeof header.receiverBarangay === "string" && header.receiverBarangay) setReceiverBarangay(header.receiverBarangay);
+      if (typeof header.receiverCity === "string" && header.receiverCity) setReceiverCity(header.receiverCity);
+      if (typeof header.receiverProvince === "string" && header.receiverProvince) setReceiverProvince(header.receiverProvince);
+      if (typeof header.receiverPostalCode === "string" && header.receiverPostalCode) setReceiverPostalCode(header.receiverPostalCode);
+    }
+
+    const noteLines: string[] = [];
+    if (typeof header.goodsDescription === "string" && header.goodsDescription) noteLines.push(`Goods: ${header.goodsDescription}`);
+    if (typeof header.weight === "number") noteLines.push(`Weight: ${header.weight} kg`);
+    if (typeof header.courierOrderNo === "string" && header.courierOrderNo) noteLines.push(`Courier Order No.: ${header.courierOrderNo}`);
+    if (noteLines.length > 0) setNote(noteLines.join(" | "));
+
+    const directKeys = Object.entries(header)
+      .filter(
+        ([key, value]) =>
+          value !== null && value !== undefined && value !== "" && !["weight", "goodsDescription", "courierOrderNo"].includes(key)
+      )
+      .map(([key]) => key);
+    markFilled(noteLines.length > 0 ? [...directKeys, "note"] : directKeys);
+  }
 
   function handleFulfillmentChange(value: "pickup" | "delivery") {
     setFulfillmentType(value);
@@ -190,6 +248,7 @@ export function OrderShipments({
     setLineQtys({});
     setPackagingRows([emptyPackagingRow()]);
     setFormError(null);
+    clearAiFields();
   }
 
   function openAddForm() {
@@ -504,6 +563,7 @@ export function OrderShipments({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            <AutoFillPanel schema={shippingLabelSchema} dropdownOptions={dropdownOptions} onExtracted={handleExtracted} />
             <Select
               label="Fulfillment Method"
               value={fulfillmentType}
@@ -535,62 +595,116 @@ export function OrderShipments({
                 ) : (
                   <div className="space-y-4 border-t border-(--color-border) pt-4">
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <Input
-                        label="Receiver Name"
-                        value={receiverName}
-                        onChange={(e) => setReceiverName(e.target.value)}
-                        required
-                      />
-                      <Input
-                        label="Receiver Phone"
-                        value={receiverPhone}
-                        onChange={(e) => setReceiverPhone(e.target.value)}
-                      />
+                      <AiFieldHighlight active={aiFilledKeys.has("receiverName")}>
+                        <Input
+                          label="Receiver Name"
+                          value={receiverName}
+                          onChange={(e) => {
+                            setReceiverName(e.target.value);
+                            clearAiField("receiverName");
+                          }}
+                          required
+                        />
+                      </AiFieldHighlight>
+                      <AiFieldHighlight active={aiFilledKeys.has("receiverPhone")}>
+                        <Input
+                          label="Receiver Phone"
+                          value={receiverPhone}
+                          onChange={(e) => {
+                            setReceiverPhone(e.target.value);
+                            clearAiField("receiverPhone");
+                          }}
+                        />
+                      </AiFieldHighlight>
                     </div>
-                    <Input
-                      label="Address Line 1"
-                      placeholder="Building no., street, house no."
-                      value={receiverAddressLine1}
-                      onChange={(e) => setReceiverAddressLine1(e.target.value)}
-                    />
+                    <AiFieldHighlight active={aiFilledKeys.has("receiverAddressLine1")}>
+                      <Input
+                        label="Address Line 1"
+                        placeholder="Building no., street, house no."
+                        value={receiverAddressLine1}
+                        onChange={(e) => {
+                          setReceiverAddressLine1(e.target.value);
+                          clearAiField("receiverAddressLine1");
+                        }}
+                      />
+                    </AiFieldHighlight>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                      <Input label="Barangay" value={receiverBarangay} onChange={(e) => setReceiverBarangay(e.target.value)} />
-                      <Input
-                        label="City / Municipality"
-                        value={receiverCity}
-                        onChange={(e) => setReceiverCity(e.target.value)}
-                      />
-                      <Input
-                        label="Province"
-                        value={receiverProvince}
-                        onChange={(e) => setReceiverProvince(e.target.value)}
-                      />
+                      <AiFieldHighlight active={aiFilledKeys.has("receiverBarangay")}>
+                        <Input
+                          label="Barangay"
+                          value={receiverBarangay}
+                          onChange={(e) => {
+                            setReceiverBarangay(e.target.value);
+                            clearAiField("receiverBarangay");
+                          }}
+                        />
+                      </AiFieldHighlight>
+                      <AiFieldHighlight active={aiFilledKeys.has("receiverCity")}>
+                        <Input
+                          label="City / Municipality"
+                          value={receiverCity}
+                          onChange={(e) => {
+                            setReceiverCity(e.target.value);
+                            clearAiField("receiverCity");
+                          }}
+                        />
+                      </AiFieldHighlight>
+                      <AiFieldHighlight active={aiFilledKeys.has("receiverProvince")}>
+                        <Input
+                          label="Province"
+                          value={receiverProvince}
+                          onChange={(e) => {
+                            setReceiverProvince(e.target.value);
+                            clearAiField("receiverProvince");
+                          }}
+                        />
+                      </AiFieldHighlight>
                     </div>
-                    <Input
-                      label="Postal Code"
-                      value={receiverPostalCode}
-                      onChange={(e) => setReceiverPostalCode(e.target.value)}
-                    />
+                    <AiFieldHighlight active={aiFilledKeys.has("receiverPostalCode")}>
+                      <Input
+                        label="Postal Code"
+                        value={receiverPostalCode}
+                        onChange={(e) => {
+                          setReceiverPostalCode(e.target.value);
+                          clearAiField("receiverPostalCode");
+                        }}
+                      />
+                    </AiFieldHighlight>
                   </div>
                 )}
-                <Select
-                  label="Courier"
-                  placeholder="Select courier…"
-                  value={courierId}
-                  onChange={(e) => setCourierId(e.target.value)}
-                  options={courierOptions.map((c) => ({ value: c.id, label: c.name }))}
-                />
-                <Input
-                  label="Tracking Number"
-                  value={trackingNumber}
-                  onChange={(e) => setTrackingNumber(e.target.value)}
-                />
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <CurrencyInput
-                    label="Shipping Cost (paid to courier)"
-                    value={shippingCost}
-                    onChange={(e) => setShippingCost(e.target.value)}
+                <AiFieldHighlight active={aiFilledKeys.has("courierId")}>
+                  <Select
+                    label="Courier"
+                    placeholder="Select courier…"
+                    value={courierId}
+                    onChange={(e) => {
+                      setCourierId(e.target.value);
+                      clearAiField("courierId");
+                    }}
+                    options={courierOptions.map((c) => ({ value: c.id, label: c.name }))}
                   />
+                </AiFieldHighlight>
+                <AiFieldHighlight active={aiFilledKeys.has("trackingNumber")}>
+                  <Input
+                    label="Tracking Number"
+                    value={trackingNumber}
+                    onChange={(e) => {
+                      setTrackingNumber(e.target.value);
+                      clearAiField("trackingNumber");
+                    }}
+                  />
+                </AiFieldHighlight>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <AiFieldHighlight active={aiFilledKeys.has("shippingCost")}>
+                    <CurrencyInput
+                      label="Shipping Cost (paid to courier)"
+                      value={shippingCost}
+                      onChange={(e) => {
+                        setShippingCost(e.target.value);
+                        clearAiField("shippingCost");
+                      }}
+                    />
+                  </AiFieldHighlight>
                   <CurrencyInput
                     label="Shipping Fee Charged (to customer)"
                     value={shippingFeeCharged}
@@ -599,7 +713,16 @@ export function OrderShipments({
                 </div>
               </>
             )}
-            <Input label="Notes (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
+            <AiFieldHighlight active={aiFilledKeys.has("note")}>
+              <Input
+                label="Notes (optional)"
+                value={note}
+                onChange={(e) => {
+                  setNote(e.target.value);
+                  clearAiField("note");
+                }}
+              />
+            </AiFieldHighlight>
 
             <div className="space-y-2 border-t border-(--color-border) pt-3">
               <p className="text-sm font-medium text-(--color-text)">Product Lines</p>

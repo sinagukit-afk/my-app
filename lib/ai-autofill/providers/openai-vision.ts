@@ -17,10 +17,8 @@ const DEFAULT_MODEL = "gpt-4o-mini";
  * at the app layer instead of relying on the model's enum recall.
  */
 function fieldJsonSchema(field: FieldSchema) {
-  if (field.type === "number" || field.type === "currency") {
-    return { type: ["number", "null"] };
-  }
-  return { type: ["string", "null"] };
+  const base = field.type === "number" || field.type === "currency" ? { type: ["number", "null"] } : { type: ["string", "null"] };
+  return field.description ? { ...base, description: field.description } : base;
 }
 
 function buildResponseSchema(schema: DocumentSchema) {
