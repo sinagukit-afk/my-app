@@ -258,3 +258,72 @@ larger. The residual ATM-vs-Square-style alias confusion (very similar keyword w
 across near-identical variants) wasn't chased further — every AI-filled row stays
 ring-highlighted and editable specifically so this class of miss gets caught before
 submit, not silently trusted.
+
+---
+
+### PUR-2.2 — Extended AI Auto-Fill to Manual Incoming + converted it to a multi-row page ✅ DONE
+
+**Status:** Complete 2026-07-12 (same day as PUR-2/PUR-2.1, follow-up session).
+
+**Ask (Sinag):** wire AI Form Auto-Fill (with the same item-alias keyword matching as
+Inventory PO) into "Log Manual Incoming", and add multi-row line-item creation to it,
+matching how Inventory PO's "New Purchase Order" already works.
+
+**What was built:**
+- New `manual_incoming` document schema (`lib/ai-autofill/schemas/manual-incoming.ts`) —
+  header fields `supplier_id`/`date_received`/`note`, line items `variant_id` (dropdown)
+  / `quantity` / `unit_price` (with `totalDividedBy: "quantity"`, same pack-price guard
+  as `inventory_purchase`, since these are the same kind of delivery/marketplace
+  screenshot). Registered in `lib/ai-autofill/schemas/index.ts` and
+  `lib/ai-autofill/types.ts`'s `DocumentType` union. No changes needed to
+  `openai-vision.ts` or the `/api/ai-autofill/extract` route — both are already fully
+  schema-driven from D045/D046.
+- **The old `manual-incoming-form.tsx` dialog was deleted and replaced with a full page**
+  at `app/dashboard/purchasing/receiving/new/` (`page.tsx` + `new-manual-incoming-form.tsx`),
+  built as a line-item-rows form following the exact same pattern as Inventory PO's
+  `new-po-form.tsx` — `AutoFillPanel`, `AiFieldHighlight`/`useAiFilledKeys` on the header
+  fields, a `rows` array with Add Row/Remove, and AI-extracted items replacing the whole
+  `rows` array on a successful extraction. Reasoned this was truer to "same as creating
+  new Inventory PO" than trying to cram an image-upload panel and a growing item table
+  into the existing `max-w-lg` `Dialog` — Expense PO/Asset PO/Inventory PO's own "New X"
+  screens are all full pages for the same reason, not dialogs, so Manual Incoming was the
+  odd one out. `receiving-header.tsx` now just links to `/receiving/new`;
+  `receiving/page.tsx` dropped the supplier/item/payment-type queries it only fetched for
+  the old dialog's props.
+- The item dropdown lists individual **variants** flattened (`"{Item} — {Option}"`, same
+  as Inventory PO's `variantOptions`), not a two-level item-then-variant picker like the
+  old dialog had — each row independently resolves its own `item_id` (required, not
+  null, on `incoming_items`) from the selected variant's parent item at submit time.
+  `item_name_snapshot` is deliberately kept as the bare item name (not the combined
+  "Item — Option" label Inventory PO uses for its own snapshot) because
+  `receiving-log-table.tsx` already renders `variant_label` as a separate line under the
+  item name — combining them would have duplicated the variant text.
+- New action `createManualIncomingWithItems` (`actions.ts`) replaces the old single-row
+  `createManualIncoming` — takes shared header fields once (supplier, date received,
+  payment method, credit-card flag, notes — payment method is "captured once per
+  receiving action, not per line" per D-ACCT7.2's own framing) plus an `items_json` array,
+  and does one `.insert([...])` of multiple `incoming_items` rows. Verified via direct SQL
+  inspection of `incoming_items`' two triggers before writing this
+  (`set_incoming_item_reference_trigger` computes each row's `reference` off a live
+  `count(*)` at BEFORE-ROW time, `incoming_items_apply_inventory_movement` moves stock
+  AFTER-ROW) — both are `FOR EACH ROW`, so a multi-row insert in one statement is
+  equivalent to submitting the old single-row dialog N times, just batched: each row gets
+  its own sequential reference and its own inventory movement/`business_events` row, with
+  no schema or trigger changes required.
+
+**Verification (browser preview, Claude admin test account):** filled the new page with
+2 line items (Ref Magnet Beechwood ATM ×5 @ ₱14, Keychain Metal Rectangle ×2 @ ₱30),
+supplier "Test", a note; confirmed the subtotal computed live (₱130.00) before submit.
+Submitted once — both rows landed in the Receiving Log with distinct sequential
+references (`SRI26-0712-0024`/`-0025`), correct item/variant/qty/price snapshots, shared
+supplier and note, and `payment_type_id`/`is_credit_card` both correctly left at their
+unset defaults. Confirmed directly in the DB (`incoming_items`, `inventory_movements`,
+`inventory_levels`) that both rows' stock moves applied correctly, then reversed the
+stock deltas and deleted the two test rows plus their `inventory_movements`/
+`business_events` rows via SQL — no soft-delete column on `incoming_items`, same cleanup
+approach as PUR-2.1's test PO. `npx tsc --noEmit` and `npm run build` both clean.
+
+**Not done / out of scope:** no cost-variance warning like Inventory PO's
+`costVarianceWarning()` — Manual Incoming has no "registered cost" comparison surfaced
+elsewhere in this flow and it wasn't asked for; add it later only if it turns out to be
+wanted here too.
