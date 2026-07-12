@@ -4,6 +4,7 @@ import { supplierInvoiceSchema } from "./supplier-invoice";
 import { deliveryReceiptSchema } from "./delivery-receipt";
 import { shippingLabelSchema } from "./shipping-label";
 import { officialReceiptSchema } from "./official-receipt";
+import { inventoryPurchaseSchema } from "./inventory-purchase";
 
 export const documentSchemas: Record<DocumentType, DocumentSchema> = {
   receipt: receiptSchema,
@@ -11,6 +12,7 @@ export const documentSchemas: Record<DocumentType, DocumentSchema> = {
   delivery_receipt: deliveryReceiptSchema,
   shipping_label: shippingLabelSchema,
   official_receipt: officialReceiptSchema,
+  inventory_purchase: inventoryPurchaseSchema,
 };
 
 export {
@@ -19,4 +21,5 @@ export {
   deliveryReceiptSchema,
   shippingLabelSchema,
   officialReceiptSchema,
+  inventoryPurchaseSchema,
 };

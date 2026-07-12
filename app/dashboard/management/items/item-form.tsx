@@ -52,6 +52,7 @@ export type ItemFormInitial = {
   name: string;
   category_id: string | null;
   description: string | null;
+  ai_match_keywords: string | null;
   item_type: "simple" | "composite";
   sold_by: "each" | "weight";
   is_available_for_sale: boolean;
@@ -352,6 +353,19 @@ export function ItemForm({
           </div>
 
           <TextArea label="Description" name="description" defaultValue={initial?.description ?? ""} rows={2} />
+
+          <TextArea
+            label="AI Match Keywords (optional)"
+            name="ai_match_keywords"
+            defaultValue={initial?.ai_match_keywords ?? ""}
+            rows={2}
+            placeholder="e.g. beech wood craft, pinewood blank, ref magnet wood — comma separated"
+          />
+          <p className="-mt-3 text-xs text-(--color-text-muted)">
+            Alternate names or phrasing this item might appear as on a supplier invoice or delivery photo.
+            Helps AI Auto-Fill match it even if the picture doesn&apos;t use this item&apos;s exact registered
+            name. Not shown in Loyverse.
+          </p>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Select

@@ -36,7 +36,7 @@ export default async function EditItemPage({ params }: { params: Promise<{ id: s
   const { data: item } = await supabase
     .from("items")
     .select(
-      `id, name, category_id, description, item_type, sold_by, is_available_for_sale, track_stock,
+      `id, name, category_id, description, ai_match_keywords, item_type, sold_by, is_available_for_sale, track_stock,
        primary_supplier_id, option1_name, option2_name, option3_name`
     )
     .eq("id", id)
@@ -126,6 +126,7 @@ export default async function EditItemPage({ params }: { params: Promise<{ id: s
         name: item.name,
         category_id: item.category_id,
         description: item.description,
+        ai_match_keywords: item.ai_match_keywords,
         item_type: item.item_type as "simple" | "composite",
         sold_by: item.sold_by as "each" | "weight",
         is_available_for_sale: item.is_available_for_sale,

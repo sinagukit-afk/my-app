@@ -1421,6 +1421,7 @@ export type Database = {
       }
       items: {
         Row: {
+          ai_match_keywords: string | null
           category_id: string | null
           created_at: string
           deleted_at: string | null
@@ -1445,6 +1446,7 @@ export type Database = {
           use_production: boolean
         }
         Insert: {
+          ai_match_keywords?: string | null
           category_id?: string | null
           created_at?: string
           deleted_at?: string | null
@@ -1469,6 +1471,7 @@ export type Database = {
           use_production?: boolean
         }
         Update: {
+          ai_match_keywords?: string | null
           category_id?: string | null
           created_at?: string
           deleted_at?: string | null
@@ -4955,6 +4958,7 @@ export type Database = {
           p_variants: Json
         }
         Returns: {
+          ai_match_keywords: string | null
           category_id: string | null
           created_at: string
           deleted_at: string | null

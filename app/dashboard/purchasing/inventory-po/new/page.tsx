@@ -26,20 +26,22 @@ export default async function NewPurchaseOrderPage() {
 
   const { data: itemData } = await supabase
     .from("items")
-    .select("name, item_variants(id, sku, option1_value, cost)")
+    .select("name, description, ai_match_keywords, item_variants(id, sku, option1_value, cost)")
     .eq("track_stock", true)
     .is("deleted_at", null)
     .is("item_variants.deleted_at", null)
     .order("name");
 
-  const variantOptions: VariantOption[] = (itemData ?? []).flatMap((item) =>
-    (item.item_variants ?? []).map((v) => ({
+  const variantOptions: VariantOption[] = (itemData ?? []).flatMap((item) => {
+    const keywords = [item.description, item.ai_match_keywords].filter(Boolean).join(", ") || undefined;
+    return (item.item_variants ?? []).map((v) => ({
       id: v.id,
       label: v.option1_value ? `${item.name} — ${v.option1_value}` : item.name,
       sku: v.sku,
       cost: v.cost,
-    }))
-  );
+      keywords,
+    }));
+  });
 
   return <NewPurchaseOrderForm suppliers={supplierData ?? []} variantOptions={variantOptions} />;
 }

@@ -34,6 +34,24 @@ function similarity(a: string, b: string): number {
 }
 
 /**
+ * Best similarity between `needle` and an option's label, plus each
+ * individually normalized keyword/alias if the option has any — a supplier
+ * document naming an item "Beech Wood Craft" should still match an option
+ * labeled "Pinewood/Beechwood Blank Craft" if that alias is listed.
+ */
+function bestOptionScore(needle: string, option: DropdownOption): number {
+  let score = similarity(needle, normalize(option.label));
+  if (option.keywords) {
+    for (const alias of option.keywords.split(/[,;\n]/)) {
+      const normalizedAlias = normalize(alias);
+      if (!normalizedAlias) continue;
+      score = Math.max(score, similarity(needle, normalizedAlias));
+    }
+  }
+  return score;
+}
+
+/**
  * Matches free text against a fixed set of dropdown options. Returns the
  * option's value, or null if nothing clears the confidence threshold — the
  * AI/OCR module must never invent a value that isn't one of `options`.
@@ -45,7 +63,7 @@ export function matchDropdownOption(rawText: string | null | undefined, options:
 
   let best: { value: string; score: number } | null = null;
   for (const option of options) {
-    const score = similarity(needle, normalize(option.label));
+    const score = bestOptionScore(needle, option);
     if (!best || score > best.score) {
       best = { value: option.value, score };
     }

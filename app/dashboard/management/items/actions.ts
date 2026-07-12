@@ -35,6 +35,7 @@ export async function upsertItem(formData: FormData): Promise<UpsertItemResult> 
   const name = (formData.get('name') as string)?.trim()
   const category_id = (formData.get('category_id') as string) || null
   const description = (formData.get('description') as string)?.trim() || null
+  const ai_match_keywords = (formData.get('ai_match_keywords') as string)?.trim() || null
   const item_type = formData.get('item_type') as string
   const sold_by = formData.get('sold_by') as string
   const is_available_for_sale = formData.get('is_available_for_sale') === 'true'
@@ -84,6 +85,11 @@ export async function upsertItem(formData: FormData): Promise<UpsertItemResult> 
   })
 
   if (error) return { success: false, error: error.message }
+
+  // Not part of upsert_item's RPC signature — this column is app-only (never
+  // pushed to Loyverse), so it's set with a plain update instead of touching
+  // the RPC's params.
+  await supabase.from('items').update({ ai_match_keywords }).eq('id', data.id)
 
   const {
     data: { user },
