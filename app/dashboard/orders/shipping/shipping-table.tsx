@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
+import { formatDate } from "@/lib/utils/format-date";
 
 export type ProductionProgressRow = {
   productionOrderNumber: string;
@@ -149,7 +150,7 @@ export function ShippingTables({ productionRows, shipmentRows }: Props) {
       key: "shippedAt",
       header: "Shipped",
       sortable: true,
-      render: (value) => (value ? new Date(value as string).toLocaleDateString() : "—"),
+      render: (value) => (value ? formatDate(value as string) : "—"),
     },
   ];
 

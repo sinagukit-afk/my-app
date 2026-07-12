@@ -5,6 +5,7 @@ import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
+import { formatDate } from "@/lib/utils/format-date";
 import {
   Dialog,
   DialogContent,
@@ -81,7 +82,7 @@ export function CompletedOrdersTable({ data }: Props) {
       key: "completedAt",
       header: "Completed",
       sortable: true,
-      render: (value) => new Date(value as string).toLocaleDateString(),
+      render: (value) => formatDate(value as string),
     },
     {
       key: "id",

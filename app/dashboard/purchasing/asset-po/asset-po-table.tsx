@@ -17,6 +17,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { deleteAssetPurchaseOrder } from "./actions";
+import { formatDate } from "@/lib/utils/format-date";
 
 export type AssetPORow = {
   id: string;
@@ -86,11 +87,11 @@ export function AssetPOTable({ data, canWrite, canDelete }: Props) {
       sortable: true,
       render: (value) => <Badge variant={STATUS_VARIANT[value as string] ?? "neutral"}>{String(value)}</Badge>,
     },
-    { key: "order_date", header: "Order Date", sortable: true },
+    { key: "order_date", header: "Order Date", sortable: true, render: (value) => formatDate(value as string) },
     {
       key: "expected_date",
       header: "Expected",
-      render: (value) => (value as string) || <span className="text-(--color-text-subtle)">—</span>,
+      render: (value) => (value ? formatDate(value as string) : <span className="text-(--color-text-subtle)">—</span>),
     },
     { key: "item_count", header: "Lines" },
     {

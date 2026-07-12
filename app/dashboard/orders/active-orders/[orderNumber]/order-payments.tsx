@@ -20,6 +20,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { addOrderPayment, closeOrderPayment } from "../actions";
+import { formatDate } from "@/lib/utils/format-date";
 
 export type OrderPaymentRow = {
   id: string;
@@ -149,7 +150,7 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
           {data.isClosed && (
             <div className="rounded-md border border-(--color-border) p-3 text-sm">
               <p className="font-medium text-(--color-text)">
-                Payment closed {data.paymentClosedAt ? new Date(data.paymentClosedAt).toLocaleString() : ""}
+                Payment closed {data.paymentClosedAt ? formatDate(data.paymentClosedAt) : ""}
                 {data.paymentClosedByName ? ` by ${data.paymentClosedByName}` : ""}
               </p>
               {data.paymentCloseNote && (
@@ -165,7 +166,7 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
           {data.payments.map((p) => (
             <div key={p.id} className="flex justify-between border-b border-(--color-border) pb-2 text-sm last:border-0">
               <span className="text-(--color-text)">
-                {p.paymentDate} · {p.paymentTypeName ?? "Unspecified"}
+                {formatDate(p.paymentDate)} · {p.paymentTypeName ?? "Unspecified"}
                 {p.referenceNo ? ` (${p.referenceNo})` : ""}
               </span>
               <span className="font-medium text-(--color-text)">{peso(p.amount)}</span>

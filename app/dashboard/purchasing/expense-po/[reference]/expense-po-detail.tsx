@@ -18,6 +18,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { TextArea } from "@/components/ui/textarea";
+import { formatDate } from "@/lib/utils/format-date";
 import { Select } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -272,7 +273,7 @@ export function ExpensePODetail({ po, items, suppliers, categories, canWrite, ca
             <CardTitle className="text-sm text-(--color-text-muted)">Order / Expected</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-(--color-text)">
-            {po.order_date} {po.expected_date ? `→ ${po.expected_date}` : ""}
+            {formatDate(po.order_date)} {po.expected_date ? `→ ${formatDate(po.expected_date)}` : ""}
           </CardContent>
         </Card>
         <Card>

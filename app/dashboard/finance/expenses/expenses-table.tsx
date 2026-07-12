@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { formatDate } from "@/lib/utils/format-date";
 
 export type ExpenseRow = {
   id: string;
@@ -45,7 +46,7 @@ export function ExpensesTable({ data }: Props) {
         </Link>
       ),
     },
-    { key: "expense_date", header: "Date", sortable: true },
+    { key: "expense_date", header: "Date", sortable: true, render: (value) => formatDate(value as string) },
     { key: "category_name", header: "Category", sortable: true },
     { key: "description", header: "Description", className: "max-w-xs truncate" },
     {

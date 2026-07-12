@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { formatDate } from "@/lib/utils/format-date";
 
 function firstOf<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
@@ -69,11 +70,11 @@ export default async function QuoteViewPage({ params }: { params: Promise<{ quot
             </div>
             <div>
               <p className="text-xs uppercase text-(--color-text-muted)">Quote Date</p>
-              <p className="text-sm text-(--color-text)">{quote.quote_date}</p>
+              <p className="text-sm text-(--color-text)">{formatDate(quote.quote_date)}</p>
             </div>
             <div>
               <p className="text-xs uppercase text-(--color-text-muted)">Valid Until</p>
-              <p className="text-sm text-(--color-text)">{quote.valid_until}</p>
+              <p className="text-sm text-(--color-text)">{formatDate(quote.valid_until)}</p>
             </div>
             <div>
               <p className="text-xs uppercase text-(--color-text-muted)">Status</p>

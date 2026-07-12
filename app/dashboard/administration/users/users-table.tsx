@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/components/providers/notification-provider";
 import { UserForm } from "./user-form";
 import { setUserActive } from "./actions";
+import { formatDate } from "@/lib/utils/format-date";
 
 export type UserRow = {
   id: string;
@@ -92,12 +93,7 @@ export function UsersTable({ data, canManage, currentUserId }: Props) {
       key: "joined",
       header: "Joined",
       sortable: true,
-      render: (value) =>
-        new Date(value as string).toLocaleDateString("en-PH", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        }),
+      render: (value) => formatDate(value as string),
     },
     ...(canManage
       ? [

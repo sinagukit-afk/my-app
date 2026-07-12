@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReverseEntryButton } from "./reverse-entry-button";
+import { formatDate } from "@/lib/utils/format-date";
 
 const SOURCE_LABELS: Record<string, string> = {
   manual: "Manual",
@@ -111,7 +112,7 @@ export default async function JournalEntryDetailPage({
           <div>
             <p className="text-(--color-text-muted)">Date</p>
             <p className="font-medium text-(--color-text)">
-              {new Date(entry.entry_date).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })}
+              {formatDate(entry.entry_date)}
             </p>
           </div>
           <div>

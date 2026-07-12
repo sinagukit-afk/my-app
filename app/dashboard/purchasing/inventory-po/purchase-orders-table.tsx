@@ -17,6 +17,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { deletePurchaseOrder } from "./actions";
+import { formatDate } from "@/lib/utils/format-date";
 
 export type PurchaseOrderRow = {
   id: string;
@@ -96,11 +97,12 @@ export function PurchaseOrdersTable({ data, canWrite, canDelete }: Props) {
       key: "order_date",
       header: "Order Date",
       sortable: true,
+      render: (value) => formatDate(value as string),
     },
     {
       key: "expected_date",
       header: "Expected",
-      render: (value) => (value as string) || <span className="text-(--color-text-subtle)">—</span>,
+      render: (value) => (value ? formatDate(value as string) : <span className="text-(--color-text-subtle)">—</span>),
     },
     {
       key: "item_count",

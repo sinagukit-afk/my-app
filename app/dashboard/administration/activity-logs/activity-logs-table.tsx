@@ -13,6 +13,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { getOrderDiffData, type OrderDiffResult } from "./actions";
+import { formatDateTime } from "@/lib/utils/format-date";
 
 export type LogRow = {
   id: string;
@@ -43,14 +44,7 @@ function formatAction(action: string): string {
 }
 
 function formatTimestamp(iso: string): string {
-  return new Date(iso).toLocaleString("en-PH", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
+  return formatDateTime(iso);
 }
 
 const COLUMNS: Column<LogRow>[] = [

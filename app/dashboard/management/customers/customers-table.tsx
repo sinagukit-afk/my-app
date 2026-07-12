@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { Select } from "@/components/ui/select";
 import { CustomerForm } from "./customer-form";
+import { formatDate } from "@/lib/utils/format-date";
 
 export type CustomerSource = {
   source: string;
@@ -111,7 +112,7 @@ export function CustomersTable({ data, canWrite }: Props) {
       header: "Last Order",
       sortable: true,
       render: (value) =>
-        value ? new Date(value as string).toLocaleDateString() : <span className="text-(--color-text-subtle)">—</span>,
+        value ? formatDate(value as string) : <span className="text-(--color-text-subtle)">—</span>,
     },
     {
       key: "id",

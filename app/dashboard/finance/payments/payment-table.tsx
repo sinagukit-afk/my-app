@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { FilterBar } from "@/components/business/filter-bar";
 import { DateRangeFilter } from "@/components/business/date-range-filter";
+import { formatDate } from "@/lib/utils/format-date";
 
 export type OrderRow = {
   orderNumber: string;
@@ -90,6 +91,7 @@ export function PaymentOrdersTable({ data, from, to }: Props) {
       key: "orderDate",
       header: "Order Date",
       sortable: true,
+      render: (value) => formatDate(value as string),
     },
     {
       key: "totalMoney",

@@ -19,6 +19,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { convertQuote, cancelQuote } from "../actions";
+import { formatDate, formatDateTime } from "@/lib/utils/format-date";
 
 export type QuoteDetailItem = {
   id: string;
@@ -128,7 +129,7 @@ export function QuoteDetail({ data, logs }: { data: QuoteDetailData; logs: Activ
     <div className="space-y-6">
       <PageHeader
         title={data.quoteNumber}
-        description={`Quote Date ${data.quoteDate} · Valid Until ${data.validUntil}`}
+        description={`Quote Date ${formatDate(data.quoteDate)} · Valid Until ${formatDate(data.validUntil)}`}
         actions={
           <div className="flex items-center gap-2">
             <Link href={`/dashboard/orders/quotation/${data.quoteNumber}/view`}>
@@ -253,7 +254,7 @@ export function QuoteDetail({ data, logs }: { data: QuoteDetailData; logs: Activ
               <div key={log.id} className="border-b border-(--color-border) pb-2 text-sm last:border-0">
                 <p className="text-(--color-text)">{log.description || log.action}</p>
                 <p className="text-xs text-(--color-text-muted)">
-                  {log.userName} · {new Date(log.createdAt).toLocaleString()}
+                  {log.userName} · {formatDateTime(log.createdAt)}
                 </p>
               </div>
             ))}

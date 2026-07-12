@@ -19,6 +19,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { DATE_RANGE_PRESETS } from "@/lib/utils/date-range-presets";
+import { formatDate } from "@/lib/utils/format-date";
 import { exportOrders } from "./actions";
 
 export type OrderRow = {
@@ -119,20 +120,22 @@ export function OrderListTable({ data, canCreate, from, to }: Props) {
       key: "orderDate",
       header: "Order Date",
       sortable: true,
+      render: (value) => formatDate(value as string),
+      exportValue: (value) => formatDate(value as string),
     },
     {
       key: "createdAt",
       header: "Created",
       sortable: true,
-      render: (value) => new Date(value as string).toLocaleString(),
-      exportValue: (value) => new Date(value as string).toLocaleString(),
+      render: (value) => formatDate(value as string),
+      exportValue: (value) => formatDate(value as string),
     },
     {
       key: "updatedAt",
       header: "Modified",
       sortable: true,
-      render: (value) => new Date(value as string).toLocaleString(),
-      exportValue: (value) => new Date(value as string).toLocaleString(),
+      render: (value) => formatDate(value as string),
+      exportValue: (value) => formatDate(value as string),
     },
     {
       key: "status",

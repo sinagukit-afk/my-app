@@ -2,6 +2,7 @@
 
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { PageHeader } from "@/components/ui/page-header";
+import { formatDate } from "@/lib/utils/format-date";
 
 export type AdjustmentRow = {
   id: string;
@@ -23,11 +24,7 @@ export function RecentAdjustments({ data }: Props) {
       key: "occurred_at",
       header: "Date",
       sortable: true,
-      render: (value) =>
-        new Date(value as string).toLocaleString("en-PH", {
-          dateStyle: "medium",
-          timeStyle: "short",
-        }),
+      render: (value) => formatDate(value as string),
     },
     {
       key: "item_name",

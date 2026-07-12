@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { AssetFormDialog, type CategoryOption, type SupplierOption } from "./asset-form-dialog";
 import { disposeFixedAsset } from "./actions";
+import { formatDate } from "@/lib/utils/format-date";
 
 export type AssetStatus = "active" | "fully_depreciated" | "disposed";
 
@@ -86,8 +87,7 @@ export function FixedAssetsTable({ data, canWrite, categories, suppliers }: Prop
       key: "purchased_date",
       header: "Purchased",
       sortable: true,
-      render: (value) =>
-        new Date(value as string).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }),
+      render: (value) => formatDate(value as string),
     },
     { key: "useful_life_months", header: "Useful Life (mo.)", sortable: true },
     { key: "cost", header: "Cost", sortable: true, render: (value) => peso(Number(value)) },

@@ -2,6 +2,7 @@
 
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
+import { formatDate } from "@/lib/utils/format-date";
 
 export type CashFlowRow = {
   date: string;
@@ -21,7 +22,7 @@ const columns: Column<CashFlowRow>[] = [
     key: "date",
     header: "Date",
     sortable: true,
-    render: (value) => new Date(value as string).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }),
+    render: (value) => formatDate(value as string),
   },
   {
     key: "type",

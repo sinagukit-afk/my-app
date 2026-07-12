@@ -18,6 +18,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useNotifications } from "@/components/providers/notification-provider";
+import { formatDate, formatDateTime } from "@/lib/utils/format-date";
 import {
   PRODUCTION_ORDER_STATUS_LABEL,
   PRODUCTION_ORDER_STATUS_VARIANT,
@@ -137,7 +138,7 @@ export function ProductionOrderDetail({ data, logs }: { data: ProductionOrderDet
     <div className="space-y-6">
       <PageHeader
         title={data.productionOrderNumber}
-        description={`Created ${new Date(data.createdAt).toLocaleDateString()}`}
+        description={`Created ${formatDate(data.createdAt)}`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {data.canStart && (
@@ -193,7 +194,7 @@ export function ProductionOrderDetail({ data, logs }: { data: ProductionOrderDet
                 <InfoRow label="Quantity" value={data.quantity} />
                 <InfoRow
                   label="Completed Qty"
-                  value={`${data.completedQty} of ${data.quantity} (as of ${new Date(data.updatedAt).toLocaleDateString()})`}
+                  value={`${data.completedQty} of ${data.quantity} (as of ${formatDate(data.updatedAt)})`}
                 />
               </div>
 
@@ -277,7 +278,7 @@ export function ProductionOrderDetail({ data, logs }: { data: ProductionOrderDet
               <div key={log.id} className="border-b border-(--color-border) pb-2 text-sm last:border-0">
                 <p className="text-(--color-text)">{log.description || log.action}</p>
                 <p className="text-xs text-(--color-text-muted)">
-                  {log.userName} · {new Date(log.createdAt).toLocaleString()}
+                  {log.userName} · {formatDateTime(log.createdAt)}
                 </p>
               </div>
             ))}

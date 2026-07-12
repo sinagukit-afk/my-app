@@ -6,6 +6,7 @@ import { DataTable, type Column } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
+import { formatDate } from "@/lib/utils/format-date";
 
 export type JournalRow = {
   id: string;
@@ -48,8 +49,7 @@ export function JournalTable({ data }: Props) {
       key: "entry_date",
       header: "Date",
       sortable: true,
-      render: (value) =>
-        new Date(value as string).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }),
+      render: (value) => formatDate(value as string),
     },
     {
       key: "description",

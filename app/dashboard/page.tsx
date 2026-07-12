@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getOnHand } from "@/lib/inventory/calculations";
+import { formatDate } from "@/lib/utils/format-date";
 
 function firstOf<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
@@ -97,7 +98,7 @@ export default async function DashboardPage() {
   const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const monthLabel = now.toLocaleDateString("en-PH", { month: "long", year: "numeric", timeZone: "UTC" });
-  const todayLabel = now.toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
+  const todayLabel = formatDate(todayStart.toISOString().slice(0, 10));
 
   const [receiptsRes, ordersRes, openQuotesRes, inventoryRes, lowStockRes, activityRes] = await Promise.all([
     supabase

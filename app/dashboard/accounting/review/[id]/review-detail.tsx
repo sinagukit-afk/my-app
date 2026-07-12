@@ -12,6 +12,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { TextArea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { formatDate } from "@/lib/utils/format-date";
 import {
   Dialog,
   DialogContent,
@@ -232,13 +233,13 @@ export function ReviewDetail({ draft, accounts }: Props) {
           <div>
             <p className="text-(--color-text-muted)">Date</p>
             <p className="font-medium text-(--color-text)">
-              {new Date(draft.entry_date).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })}
+              {formatDate(draft.entry_date)}
             </p>
           </div>
           <div>
             <p className="text-(--color-text-muted)">Posting Date</p>
             <p className="font-medium text-(--color-text)">
-              {new Date(draft.posting_date).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })}
+              {formatDate(draft.posting_date)}
             </p>
           </div>
           <div>
@@ -275,7 +276,7 @@ export function ReviewDetail({ draft, accounts }: Props) {
             <div className="sm:col-span-4 text-xs text-(--color-text-subtle)">
               Reviewed by {draft.reviewer_name}
               {draft.reviewed_at
-                ? ` on ${new Date(draft.reviewed_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}`
+                ? ` on ${formatDate(draft.reviewed_at)}`
                 : ""}
             </div>
           )}

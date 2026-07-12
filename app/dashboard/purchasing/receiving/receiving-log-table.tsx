@@ -2,6 +2,7 @@
 
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
+import { formatDate } from "@/lib/utils/format-date";
 
 export type ReceivingLogRow = {
   id: string;
@@ -38,13 +39,7 @@ export function ReceivingLogTable({ data }: Props) {
       header: "Date",
       sortable: true,
       render: (value) => (
-        <span className="text-(--color-text-muted) text-sm">
-          {new Date(value as string).toLocaleDateString("en-PH", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          })}
-        </span>
+        <span className="text-(--color-text-muted) text-sm">{formatDate(value as string)}</span>
       ),
     },
     {

@@ -16,6 +16,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useNotifications } from "@/components/providers/notification-provider";
+import { formatDate } from "@/lib/utils/format-date";
 import {
   startProduction,
   overrideReservedQty,
@@ -141,7 +142,7 @@ export function ConfirmedOrderDetail({ data }: { data: ConfirmedOrderData }) {
     <div className="space-y-6">
       <PageHeader
         title={data.orderNumber}
-        description={`Order Date ${data.createdAt.slice(0, 10)} · Target Date ${data.targetDate}`}
+        description={`Order Date ${formatDate(data.createdAt)} · Target Date ${formatDate(data.targetDate)}`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {data.canAdvance && (

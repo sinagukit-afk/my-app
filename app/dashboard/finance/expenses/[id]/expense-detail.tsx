@@ -28,6 +28,7 @@ import {
   uploadExpenseAttachment,
   getAttachmentUrl,
 } from "../actions";
+import { formatDate } from "@/lib/utils/format-date";
 
 export type ExpenseDetailData = {
   id: string;
@@ -229,7 +230,7 @@ export function ExpenseDetail({
 
       <Card>
         <CardContent className="p-4 text-sm text-(--color-text-muted)">
-          Date: {expense.expense_date} · Source:{" "}
+          Date: {formatDate(expense.expense_date)} · Source:{" "}
           {expense.source === "direct" ? (
             "Direct Entry"
           ) : (
@@ -258,7 +259,7 @@ export function ExpenseDetail({
             {payments.map((p) => (
               <div key={p.id} className="flex items-center justify-between border-b border-(--color-border) py-2 text-sm last:border-0">
                 <div>
-                  <p className="text-(--color-text)">{p.paid_date} · {p.payment_type_name ?? "—"}</p>
+                  <p className="text-(--color-text)">{formatDate(p.paid_date)} · {p.payment_type_name ?? "—"}</p>
                   {p.notes && <p className="text-xs text-(--color-text-muted)">{p.notes}</p>}
                 </div>
                 <p className="font-medium text-(--color-text)">₱{p.amount.toFixed(2)}</p>

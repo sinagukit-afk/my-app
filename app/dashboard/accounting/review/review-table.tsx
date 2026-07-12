@@ -7,6 +7,7 @@ import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { FilterBar } from "@/components/business/filter-bar";
+import { formatDate } from "@/lib/utils/format-date";
 
 export type ReviewRow = {
   id: string;
@@ -65,8 +66,7 @@ export function ReviewTable({ data }: Props) {
       key: "entry_date",
       header: "Date",
       sortable: true,
-      render: (value) =>
-        new Date(value as string).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }),
+      render: (value) => formatDate(value as string),
     },
     {
       key: "description",

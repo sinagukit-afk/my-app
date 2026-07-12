@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { OrderPayments, type OrderPaymentRow } from "@/app/dashboard/orders/active-orders/[orderNumber]/order-payments";
+import { formatDate, formatDateTime } from "@/lib/utils/format-date";
 
 const STATUS_VARIANT: Record<string, "success" | "default" | "danger" | "warning" | "neutral"> = {
   confirmed: "default",
@@ -93,11 +94,11 @@ export function PaymentOrderDetail({ data, logs }: { data: PaymentOrderData; log
           )}
           <div className="flex justify-between text-(--color-text-muted)">
             <span>Order Date</span>
-            <span className="text-(--color-text)">{data.createdAt.slice(0, 10)}</span>
+            <span className="text-(--color-text)">{formatDate(data.createdAt)}</span>
           </div>
           <div className="flex justify-between text-(--color-text-muted)">
             <span>Target Date</span>
-            <span className="text-(--color-text)">{data.targetDate}</span>
+            <span className="text-(--color-text)">{formatDate(data.targetDate)}</span>
           </div>
           {data.fulfillmentMethod && (
             <div className="flex justify-between text-(--color-text-muted)">
@@ -137,7 +138,7 @@ export function PaymentOrderDetail({ data, logs }: { data: PaymentOrderData; log
             <div key={log.id} className="border-b border-(--color-border) pb-2 text-sm last:border-0">
               <p className="text-(--color-text)">{log.description || log.action}</p>
               <p className="text-xs text-(--color-text-muted)">
-                {log.userName} · {new Date(log.createdAt).toLocaleString()}
+                {log.userName} · {formatDateTime(log.createdAt)}
               </p>
             </div>
           ))}

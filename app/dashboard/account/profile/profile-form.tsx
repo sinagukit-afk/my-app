@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { updateProfile } from "./actions";
+import { formatDate } from "@/lib/utils/format-date";
 
 type Props = {
   fullName: string | null;
@@ -48,14 +49,7 @@ export function ProfileForm({ fullName, contactNumber, birthday, username }: Pro
     setResult(null);
   }
 
-  const formattedBirthday = current.birthday
-    ? new Date(current.birthday).toLocaleDateString("en-PH", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        timeZone: "UTC",
-      })
-    : null;
+  const formattedBirthday = current.birthday ? formatDate(current.birthday) : null;
 
   return (
     <Card className="max-w-lg">

@@ -70,6 +70,7 @@ export function ShippingOrderDetail({ data }: { data: ShippingOrderData }) {
 
       <OrderShipments
         orderId={data.id}
+        orderNumber={data.orderNumber}
         shipments={data.shipments}
         shippableItems={data.shippableItems}
         packagingOptions={data.packagingOptions}

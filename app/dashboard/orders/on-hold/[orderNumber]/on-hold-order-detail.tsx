@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { useNotifications } from "@/components/providers/notification-provider";
 import { resumeOrder, cancelOrder } from "../../active-orders/actions";
+import { formatDate } from "@/lib/utils/format-date";
 import {
   OrderShipments,
   type OrderShipmentRow,
@@ -112,7 +113,7 @@ export function OnHoldOrderDetail({ data }: { data: OnHoldOrderData }) {
     <div className="space-y-6">
       <PageHeader
         title={data.orderNumber}
-        description={`Order Date ${data.createdAt.slice(0, 10)} · Target Date ${data.targetDate}`}
+        description={`Order Date ${formatDate(data.createdAt)} · Target Date ${formatDate(data.targetDate)}`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {data.canResume && (
@@ -260,6 +261,7 @@ export function OnHoldOrderDetail({ data }: { data: OnHoldOrderData }) {
       {data.shipments.length > 0 && (
         <OrderShipments
           orderId={data.id}
+          orderNumber={data.orderNumber}
           shipments={data.shipments}
           shippableItems={data.shippableItems}
           packagingOptions={data.packagingOptions}

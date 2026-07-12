@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { CustomerForm, type EditableCustomer } from "../customer-form";
+import { formatDate } from "@/lib/utils/format-date";
 
 export type LinkedSource = {
   source: string;
@@ -78,7 +79,7 @@ export function CustomerDetail({ customer, sources, history, canWrite }: Props) 
         ),
     },
     { key: "total", header: "Total", render: (value) => peso(value as number) },
-    { key: "date", header: "Date", render: (value) => new Date(value as string).toLocaleDateString() },
+    { key: "date", header: "Date", render: (value) => formatDate(value as string) },
   ];
 
   return (
@@ -157,7 +158,7 @@ export function CustomerDetail({ customer, sources, history, canWrite }: Props) 
               <div>
                 <p className="text-sm font-medium text-(--color-text)">{SOURCE_LABEL[s.source] ?? s.source}</p>
                 <p className="text-xs text-(--color-text-muted)">
-                  {s.external_username ?? "—"} · linked {new Date(s.linked_at).toLocaleDateString()}
+                  {s.external_username ?? "—"} · linked {formatDate(s.linked_at)}
                 </p>
               </div>
               <Badge variant="success">Linked</Badge>

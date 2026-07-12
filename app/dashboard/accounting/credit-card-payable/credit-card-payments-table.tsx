@@ -1,6 +1,7 @@
 "use client";
 
 import { DataTable, type Column } from "@/components/ui/data-table";
+import { formatDate } from "@/lib/utils/format-date";
 
 export type PaymentRow = {
   id: string;
@@ -20,8 +21,7 @@ const columns: Column<PaymentRow>[] = [
     key: "paid_date",
     header: "Date",
     sortable: true,
-    render: (value) =>
-      new Date(value as string).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }),
+    render: (value) => formatDate(value as string),
   },
   {
     key: "payment_type_name",

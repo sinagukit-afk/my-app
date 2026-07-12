@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProfileForm } from "./profile-form";
 import { PasswordForm } from "./password-form";
+import { formatDate } from "@/lib/utils/format-date";
 
 const ROLE_BADGE: Record<string, "default" | "success" | "warning" | "danger" | "neutral"> = {
   admin: "danger",
@@ -31,22 +32,9 @@ export default async function ProfilePage() {
   const displayName = profile?.full_name ?? profile?.email ?? user.email ?? "?";
   const initial = displayName[0].toUpperCase();
 
-  const formattedBirthday = profile?.birthday
-    ? new Date(profile.birthday).toLocaleDateString("en-PH", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        timeZone: "UTC",
-      })
-    : null;
+  const formattedBirthday = profile?.birthday ? formatDate(profile.birthday) : null;
 
-  const memberSince = profile?.created_at
-    ? new Date(profile.created_at).toLocaleDateString("en-PH", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    : null;
+  const memberSince = profile?.created_at ? formatDate(profile.created_at) : null;
 
   return (
     <div className="space-y-6">

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { PageHeader } from "@/components/ui/page-header";
 import { DateRangeFilter } from "@/components/business/date-range-filter";
+import { formatDate } from "@/lib/utils/format-date";
 
 export type OrderRow = {
   orderNumber: string;
@@ -41,18 +42,19 @@ export function OnHoldOrdersTable({ data, from, to }: Props) {
       key: "orderDate",
       header: "Order Date",
       sortable: true,
+      render: (value) => formatDate(value as string),
     },
     {
       key: "createdAt",
       header: "Created",
       sortable: true,
-      render: (value) => new Date(value as string).toLocaleString(),
+      render: (value) => formatDate(value as string),
     },
     {
       key: "updatedAt",
       header: "Modified",
       sortable: true,
-      render: (value) => new Date(value as string).toLocaleString(),
+      render: (value) => formatDate(value as string),
     },
     {
       key: "items",

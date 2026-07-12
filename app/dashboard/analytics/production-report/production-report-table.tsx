@@ -8,6 +8,7 @@ import {
   PRODUCTION_ORDER_STATUS_VARIANT,
   type ProductionOrderStatus,
 } from "@/lib/production-order-status";
+import { formatDate } from "@/lib/utils/format-date";
 
 export type { ProductionOrderStatus };
 
@@ -23,10 +24,6 @@ export type ProductionOrderRow = {
   createdAt: string;
   updatedAt: string;
 };
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" });
-}
 
 const columns: Column<ProductionOrderRow>[] = [
   { key: "productionOrderNumber", header: "Production Order No.", sortable: true },

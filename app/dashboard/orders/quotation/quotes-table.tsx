@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { FilterBar } from "@/components/business/filter-bar";
 import { DateRangeFilter } from "@/components/business/date-range-filter";
+import { formatDate } from "@/lib/utils/format-date";
 
 export type QuoteRow = {
   id: string;
@@ -69,11 +70,13 @@ export function QuotesTable({ data, canCreate, from, to }: Props) {
       key: "quoteDate",
       header: "Quote Date",
       sortable: true,
+      render: (value) => formatDate(value as string),
     },
     {
       key: "validUntil",
       header: "Valid Until",
       sortable: true,
+      render: (value) => formatDate(value as string),
     },
     {
       key: "status",

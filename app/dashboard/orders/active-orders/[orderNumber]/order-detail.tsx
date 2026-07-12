@@ -33,6 +33,7 @@ import {
   type ShipmentCustomer,
 } from "./order-shipments";
 import { OrderPayments, type OrderPaymentRow } from "./order-payments";
+import { formatDate, formatDateTime } from "@/lib/utils/format-date";
 
 export type OrderDetailItem = {
   id: string;
@@ -196,7 +197,7 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
     <div className="space-y-6">
       <PageHeader
         title={data.orderNumber}
-        description={`Order Date ${data.createdAt.slice(0, 10)} · Target Date ${data.targetDate}`}
+        description={`Order Date ${formatDate(data.createdAt)} · Target Date ${formatDate(data.targetDate)}`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {data.canEdit && (
@@ -400,6 +401,7 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
           {(data.shipments.length > 0 || data.canAddShipment) && (
             <OrderShipments
               orderId={data.id}
+              orderNumber={data.orderNumber}
               shipments={data.shipments}
               shippableItems={data.shippableItems}
               packagingOptions={data.packagingOptions}
@@ -441,7 +443,7 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
               <div key={log.id} className="border-b border-(--color-border) pb-2 text-sm last:border-0">
                 <p className="text-(--color-text)">{log.description || log.action}</p>
                 <p className="text-xs text-(--color-text-muted)">
-                  {log.userName} · {new Date(log.createdAt).toLocaleString()}
+                  {log.userName} · {formatDateTime(log.createdAt)}
                 </p>
               </div>
             ))}

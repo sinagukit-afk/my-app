@@ -9,6 +9,7 @@ import {
   PRODUCTION_ORDER_STATUS_VARIANT,
   type ProductionOrderStatus,
 } from "@/lib/production-order-status";
+import { formatDate } from "@/lib/utils/format-date";
 
 export type ProductionOrderRow = {
   id: string;
@@ -78,7 +79,7 @@ export function ProductionOrdersTable({ data }: Props) {
       key: "createdAt",
       header: "Created",
       sortable: true,
-      render: (value) => new Date(value as string).toLocaleDateString(),
+      render: (value) => formatDate(value as string),
     },
   ];
 

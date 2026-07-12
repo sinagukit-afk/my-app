@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ import { AiFieldHighlight } from "@/components/ai-autofill/ai-field-highlight";
 import { useAiFilledKeys } from "@/components/ai-autofill/use-ai-filled-keys";
 import { shippingLabelSchema } from "@/lib/ai-autofill/schemas";
 import type { DropdownOptionsByField, ExtractionResult } from "@/lib/ai-autofill/types";
+import { formatDate } from "@/lib/utils/format-date";
 
 export type ShippableOrderItem = {
   orderItemId: string;
@@ -111,6 +113,7 @@ function emptyPackagingRow(): PackagingRow {
 
 export function OrderShipments({
   orderId,
+  orderNumber,
   shipments,
   shippableItems,
   packagingOptions,
@@ -121,6 +124,7 @@ export function OrderShipments({
   onChanged,
 }: {
   orderId: string;
+  orderNumber: string;
   shipments: OrderShipmentRow[];
   shippableItems: ShippableOrderItem[];
   packagingOptions: PackagingVariantOption[];
@@ -149,10 +153,8 @@ export function OrderShipments({
   const [receiverName, setReceiverName] = useState("");
   const [receiverPhone, setReceiverPhone] = useState("");
   const [receiverAddressLine1, setReceiverAddressLine1] = useState("");
-  const [receiverBarangay, setReceiverBarangay] = useState("");
   const [receiverCity, setReceiverCity] = useState("");
   const [receiverProvince, setReceiverProvince] = useState("");
-  const [receiverPostalCode, setReceiverPostalCode] = useState("");
   const [courierId, setCourierId] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [shippingCost, setShippingCost] = useState("");
@@ -180,7 +182,6 @@ export function OrderShipments({
     const hasReceiverInfo = [
       header.receiverName,
       header.receiverAddressLine1,
-      header.receiverBarangay,
       header.receiverCity,
       header.receiverProvince,
     ].some((v) => typeof v === "string" && v);
@@ -193,10 +194,8 @@ export function OrderShipments({
       if (typeof header.receiverName === "string" && header.receiverName) setReceiverName(header.receiverName);
       if (typeof header.receiverPhone === "string" && header.receiverPhone) setReceiverPhone(header.receiverPhone);
       if (typeof header.receiverAddressLine1 === "string" && header.receiverAddressLine1) setReceiverAddressLine1(header.receiverAddressLine1);
-      if (typeof header.receiverBarangay === "string" && header.receiverBarangay) setReceiverBarangay(header.receiverBarangay);
       if (typeof header.receiverCity === "string" && header.receiverCity) setReceiverCity(header.receiverCity);
       if (typeof header.receiverProvince === "string" && header.receiverProvince) setReceiverProvince(header.receiverProvince);
-      if (typeof header.receiverPostalCode === "string" && header.receiverPostalCode) setReceiverPostalCode(header.receiverPostalCode);
     }
 
     const noteLines: string[] = [];
@@ -236,10 +235,8 @@ export function OrderShipments({
     setReceiverName("");
     setReceiverPhone("");
     setReceiverAddressLine1("");
-    setReceiverBarangay("");
     setReceiverCity("");
     setReceiverProvince("");
-    setReceiverPostalCode("");
     setCourierId("");
     setTrackingNumber("");
     setShippingCost("");
@@ -251,12 +248,6 @@ export function OrderShipments({
     clearAiFields();
   }
 
-  function openAddForm() {
-    setEditingShipment(null);
-    resetForm();
-    setFormOpen(true);
-  }
-
   function openEditForm(s: OrderShipmentRow) {
     setFormError(null);
     setEditingShipment(s);
@@ -264,11 +255,12 @@ export function OrderShipments({
     setShipsToCustomer(s.fulfillmentType === "pickup" ? hasCustomer : (s.shipsToCustomer ?? hasCustomer));
     setReceiverName(s.receiverName ?? "");
     setReceiverPhone(s.receiverPhone ?? "");
-    setReceiverAddressLine1(s.receiverAddressLine1 ?? "");
-    setReceiverBarangay(s.receiverBarangay ?? "");
+    // Older shipments may still have a separate barangay value from before the
+    // form merged it into the address line — fold it in here so editing doesn't
+    // silently drop it.
+    setReceiverAddressLine1([s.receiverAddressLine1, s.receiverBarangay].filter(Boolean).join(", "));
     setReceiverCity(s.receiverCity ?? "");
     setReceiverProvince(s.receiverProvince ?? "");
-    setReceiverPostalCode(s.receiverPostalCode ?? "");
     setCourierId(s.courierId ?? "");
     setTrackingNumber(s.trackingNumber ?? "");
     setShippingCost(s.shippingCost != null ? String(s.shippingCost) : "");
@@ -324,10 +316,10 @@ export function OrderShipments({
       receiverName: isManualReceiver ? receiverName.trim() || null : null,
       receiverPhone: isManualReceiver ? receiverPhone.trim() || null : null,
       receiverAddressLine1: isManualReceiver ? receiverAddressLine1.trim() || null : null,
-      receiverBarangay: isManualReceiver ? receiverBarangay.trim() || null : null,
+      receiverBarangay: null,
       receiverCity: isManualReceiver ? receiverCity.trim() || null : null,
       receiverProvince: isManualReceiver ? receiverProvince.trim() || null : null,
-      receiverPostalCode: isManualReceiver ? receiverPostalCode.trim() || null : null,
+      receiverPostalCode: null,
       courierId: isPickup ? null : courierId || null,
       trackingNumber: isPickup ? null : trackingNumber.trim() || null,
       shippingCost: isPickup ? null : shippingCost ? Number(shippingCost) : null,
@@ -401,7 +393,11 @@ export function OrderShipments({
           <CardTitle>Shipments</CardTitle>
           <CardDescription>Partial shipments supported — each ships and delivers independently.</CardDescription>
         </div>
-        {canAddShipment && <Button onClick={openAddForm}>Add Shipment</Button>}
+        {canAddShipment && (
+          <Button asChild>
+            <Link href={`/dashboard/orders/active-orders/${orderNumber}/shipments/new`}>Add Shipment</Link>
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         {shipments.length === 0 && <p className="text-sm text-(--color-text-muted)">No shipments yet.</p>}
@@ -475,7 +471,7 @@ export function OrderShipments({
               <div className="flex justify-between text-(--color-text-muted)">
                 <span>Picked Up</span>
                 <span className="text-(--color-text)">
-                  {s.deliveredAt ? new Date(s.deliveredAt).toLocaleString() : "—"}
+                  {s.deliveredAt ? formatDate(s.deliveredAt) : "—"}
                 </span>
               </div>
             ) : (
@@ -483,13 +479,13 @@ export function OrderShipments({
                 <div className="flex justify-between text-(--color-text-muted)">
                   <span>Shipped</span>
                   <span className="text-(--color-text)">
-                    {s.shippedAt ? new Date(s.shippedAt).toLocaleString() : "—"}
+                    {s.shippedAt ? formatDate(s.shippedAt) : "—"}
                   </span>
                 </div>
                 <div className="flex justify-between text-(--color-text-muted)">
                   <span>Delivered</span>
                   <span className="text-(--color-text)">
-                    {s.deliveredAt ? new Date(s.deliveredAt).toLocaleString() : "—"}
+                    {s.deliveredAt ? formatDate(s.deliveredAt) : "—"}
                   </span>
                 </div>
               </>
@@ -556,7 +552,7 @@ export function OrderShipments({
       >
         <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingShipment ? `Edit Shipment ${editingShipment.shipmentNumber}` : "Add Shipment"}</DialogTitle>
+            <DialogTitle>Edit Shipment {editingShipment?.shipmentNumber}</DialogTitle>
             <DialogDescription>
               Allocate product and packaging quantities for this shipment. Creating a shipment does not affect stock —
               stock is deducted when it&apos;s marked Shipped (or Picked Up).
@@ -620,7 +616,7 @@ export function OrderShipments({
                     <AiFieldHighlight active={aiFilledKeys.has("receiverAddressLine1")}>
                       <Input
                         label="Address Line 1"
-                        placeholder="Building no., street, house no."
+                        placeholder="Building no., street, barangay"
                         value={receiverAddressLine1}
                         onChange={(e) => {
                           setReceiverAddressLine1(e.target.value);
@@ -628,17 +624,7 @@ export function OrderShipments({
                         }}
                       />
                     </AiFieldHighlight>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                      <AiFieldHighlight active={aiFilledKeys.has("receiverBarangay")}>
-                        <Input
-                          label="Barangay"
-                          value={receiverBarangay}
-                          onChange={(e) => {
-                            setReceiverBarangay(e.target.value);
-                            clearAiField("receiverBarangay");
-                          }}
-                        />
-                      </AiFieldHighlight>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <AiFieldHighlight active={aiFilledKeys.has("receiverCity")}>
                         <Input
                           label="City / Municipality"
@@ -660,16 +646,6 @@ export function OrderShipments({
                         />
                       </AiFieldHighlight>
                     </div>
-                    <AiFieldHighlight active={aiFilledKeys.has("receiverPostalCode")}>
-                      <Input
-                        label="Postal Code"
-                        value={receiverPostalCode}
-                        onChange={(e) => {
-                          setReceiverPostalCode(e.target.value);
-                          clearAiField("receiverPostalCode");
-                        }}
-                      />
-                    </AiFieldHighlight>
                   </div>
                 )}
                 <AiFieldHighlight active={aiFilledKeys.has("courierId")}>

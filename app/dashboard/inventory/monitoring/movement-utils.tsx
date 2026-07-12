@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import type { Column } from "@/components/ui/data-table";
+import { formatDate } from "@/lib/utils/format-date";
 
 export function firstOf<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
@@ -90,11 +91,7 @@ export function movementColumns(): Column<MovementRow>[] {
       key: "occurred_at",
       header: "Date",
       sortable: true,
-      render: (value) =>
-        new Date(value as string).toLocaleString("en-PH", {
-          dateStyle: "medium",
-          timeStyle: "short",
-        }),
+      render: (value) => formatDate(value as string),
     },
     {
       key: "item_name",

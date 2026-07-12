@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { formatDate } from "@/lib/utils/format-date";
 
 function firstOf<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
@@ -184,7 +185,7 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
                     const paymentType = firstOf(p.payment_types);
                     return (
                       <tr key={i} className="border-b border-(--color-border) last:border-0">
-                        <td className="py-2 text-(--color-text)">{p.payment_date}</td>
+                        <td className="py-2 text-(--color-text)">{formatDate(p.payment_date)}</td>
                         <td className="py-2 text-(--color-text-muted)">{paymentType?.name ?? "Unspecified"}</td>
                         <td className="py-2 text-(--color-text-muted)">{p.reference_no ?? "—"}</td>
                         <td className="py-2 text-right text-(--color-text)">{peso(Number(p.amount))}</td>
