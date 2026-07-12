@@ -230,13 +230,16 @@ shown in a combined Receiving Log alongside the Open Purchase Orders
 list. PO receipt also bumps `available_qty`, not just legacy
 `in_stock` (INV-12). See `PROGRESS-PURCHASING.md` (RECV-1, PUR-1) and
 `PROGRESS-INVENTORY.md` (INV-12).
-🟩 AI Auto-Fill on Expense PO / Asset PO (2026-07-12) — upload/photograph
-a supplier invoice, hybrid Tesseract.js + OpenAI Vision extracts and
-pre-fills the New PO form (header + line items), every field stays
-editable, nothing auto-saves. Reusable module (`lib/ai-autofill/`,
+🟩 AI Auto-Fill on Expense PO / Asset PO / Inventory PO (2026-07-12) —
+upload/photograph a supplier invoice, hybrid Tesseract.js + OpenAI Vision
+extracts and pre-fills the New PO form (header + line items), every field
+stays editable, nothing auto-saves. Inventory PO matches against
+registered item variants, including alias/keyword matching via
+`items.ai_match_keywords`. Reusable module (`lib/ai-autofill/`,
 `components/ai-autofill/`), 4 more document schemas defined but not yet
-wired to a form. See `PROGRESS-PURCHASING.md` PUR-2 and `DECISIONS.md`
-D045.
+wired to a form. Inventory PO also gets a non-blocking warning when a
+line's unit cost is >50% off the item's registered cost. See
+`PROGRESS-PURCHASING.md` PUR-2/PUR-2.1 and `DECISIONS.md` D045/D046.
 
 ## Finance
 

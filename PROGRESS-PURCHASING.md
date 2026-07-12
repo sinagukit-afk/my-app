@@ -169,10 +169,92 @@ server-only, read only inside the Route Handler, matching the existing
   instant a field is edited (tested by overwriting Shipping Fee).
 - `npx tsc --noEmit` clean. Committed `82d070b`, pushed to `origin/main`.
 
-**Notes for next phase:** only `supplier_invoice` is wired to a form. The other 4
-schemas exist in the registry for extensibility but have no consuming form yet — natural
-next candidates are Receipt (Direct Expense Entry) and Delivery Receipt (Receiving). No
-searchable/combobox dropdown component exists anywhere in the app
-(`components/ui/select.tsx` is a plain native `<select>`) — fine for today's short
-option lists (suppliers, categories), but would need a new component before this module
-could target a long list (e.g. an inventory item picker).
+**Notes for next phase (superseded by PUR-2.1 below for the inventory-item-picker point):**
+only `supplier_invoice` is wired to a form. The other 4 schemas exist in the registry for
+extensibility but have no consuming form yet — natural next candidates are Receipt
+(Direct Expense Entry) and Delivery Receipt (Receiving). No searchable/combobox dropdown
+component exists anywhere in the app (`components/ui/select.tsx` is a plain native
+`<select>`) — fine for today's short option lists (suppliers, categories), but would need
+a new component before this module could target a long list (e.g. an inventory item
+picker).
+
+---
+
+### PUR-2.1 — Extended to Inventory PO + item-alias matching + two real accuracy fixes ✅ DONE
+
+**Status:** Complete 2026-07-12 (same day as PUR-2, follow-up session). See `DECISIONS.md`
+D046 for the cross-cutting architecture calls; this entry covers the Purchasing-side
+integration and live verification.
+
+**Ask (Sinag):** wire the same AI Form Auto-Fill concept into the Inventory Purchase
+Order form — upload a photo of a supplier delivery/order (a real Shopee order-history
+screenshot from supplier "E-Gosyo," used as the live test image throughout), have the AI
+match photographed line items against registered items even when the document's wording
+doesn't match the registered name.
+
+**What was built:**
+- New `inventory_purchase` document schema (`lib/ai-autofill/schemas/inventory-purchase.ts`)
+  reusing `supplierInvoiceSchema`'s header fields, with its own line-item shape matching
+  against `variant_id` (a dropdown) instead of a free-text description + category.
+  Wired into [new-po-form.tsx](app/dashboard/purchasing/inventory-po/new/new-po-form.tsx)
+  following the exact same controlled-state / `AiFieldHighlight` / `useAiFilledKeys`
+  pattern PUR-2 established.
+- `items.ai_match_keywords` (new nullable text column, migration
+  `add_items_ai_match_keywords`) — an alias/keywords field editable on the Item form
+  (Management > Items), deliberately kept separate from `items.description` because
+  `description` is genuinely pushed to Loyverse on save (`upsertItem` triggers
+  `loyverse-item-push`) — `ai_match_keywords` is app-only. `DropdownOption` gained an
+  optional `keywords` field that both the local fuzzy matcher and the AI prompt check, so
+  an item like "Itm-Ref Magnet Beechwood, ATM" tagged with "Pinewood Beechwood Blank
+  Craft, ATM size, rectangle, E-Gosyo Shopee" can match a document using none of its
+  registered wording.
+- **Bug fix — dropdown matching broke down past a handful of options:** D045's original
+  design (enum-of-ids constrained JSON schema) is correct for the Expense/Asset PO's
+  short supplier/category lists, but with 32 registered items the model reasoned about
+  the right item correctly and then emitted the *wrong id* from the enum (confirmed live:
+  matched a wood ref-magnet blank to "Itm-Keychain Metal, Rectangle"). Fixed by having
+  the model return the option's label text (unconstrained) and resolving that back to a
+  value via the existing `matchDropdownOption` fuzzy matcher — moves the "never invent a
+  value" guarantee from the model's enum recall to an app-layer lookup, which holds at
+  any list size. See D046 for why this doesn't regress PUR-2's short-list cases.
+- **Bug fix — bundle/pack price mistaken for a per-unit rate:** a real cart screenshot
+  ("50 pcs ... ₱650") caused the AI to use 650 as a per-piece cost while also using 50 as
+  quantity, inflating a real ₱1,980 cart to a computed ₱78,600 subtotal. Fixed with a new
+  `FieldSchema.totalDividedBy` — for `inventory_purchase`'s `unit_cost` (→ `"quantity"`),
+  the AI is asked for the line's TOTAL price instead of a rate, and
+  `openai-vision.ts`'s `resolveTotals()` divides by the referenced field's value in code
+  (deterministic, not asked-for model arithmetic). Scoped to `inventory_purchase` only,
+  not `supplier-invoice.ts` — Expense/Asset PO invoices are already unit-priced with
+  qty=1 in the common case, so applying this there would trade a working path for an
+  unverified one.
+- **New, unrelated-to-AI safety net:** `costVarianceWarning()` in `new-po-form.tsx` shows
+  a small red warning under any line whose unit cost is more than 50% below/above the
+  selected item's registered `cost`, plus a summary notice when "Create Purchase Order"
+  is clicked. Non-blocking by design — the order still submits either way.
+
+**Verification (browser preview, Claude admin test account, real E-Gosyo/Ref-Magnet-Beechwood
+data — not synthetic):**
+- Order-history screenshot (3 lines, all "Beechwood" ref-magnet variants): supplier
+  correctly resolved to the real "E-gosyo" row; item matching went from 0/3 correct
+  (pre-fix, all 3 resolved to the same wrong unrelated variant) to 3/3 correct
+  post-fix, with one re-run later mismatching the near-identical ATM-vs-Square alias
+  pair — flagged as a residual, likely-not-fully-fixable model-accuracy limit rather than
+  a code defect (see D046).
+- Cart screenshot (3 lines incl. an unrelated Bamboo Coaster, "50 pcs"/"20 pcs" pack
+  wording): item matching 3/3 correct including the coaster with zero aliases set (base
+  name alone was enough); pre-`totalDividedBy`-fix subtotal was ₱78,600, post-fix exactly
+  ₱1,980.00 — matching the real receipt total.
+- Cost-variance warning: selected "Ref Magnet Beechwood, ATM" (registered ₱14), forced
+  unit cost to ₱2, confirmed both the per-row and submit-time warnings rendered and the
+  purchase order still submitted successfully (test PO created then deleted directly via
+  SQL — `purchase_orders`/`purchase_order_items` have no soft-delete column).
+- `npx tsc --noEmit` and `eslint` clean on every touched file. Committed `909fe5c`, pushed
+  to `origin/main`.
+
+**Notes for next phase:** the inventory-item-picker gap PUR-2 flagged is resolved by the
+label-then-resolve matching fix, not by adding a real combobox — the item list is still
+small (32 SKUs) so a plain `<select>` remains fine; revisit if the catalog grows much
+larger. The residual ATM-vs-Square-style alias confusion (very similar keyword wording
+across near-identical variants) wasn't chased further — every AI-filled row stays
+ring-highlighted and editable specifically so this class of miss gets caught before
+submit, not silently trusted.

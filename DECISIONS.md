@@ -1082,6 +1082,12 @@ and verification detail; this entry covers the reusable architecture.
   Local-only extractions (no AI call) still need a fallback matcher since there's no
   model to constrain, so `lib/ai-autofill/match-dropdown.ts` (hand-rolled
   Levenshtein-based, no new dependency) covers that path.
+  **Superseded 2026-07-12 (D046):** this held for Expense/Asset PO's short supplier/
+  category lists, but broke on Inventory PO's ~30-item list — the model reasoned about
+  the right item correctly and then emitted the wrong id from the enum. The AI path now
+  also returns free-text label and resolves it through `match-dropdown.ts`, same as the
+  local-only path always did — see D046 for the full story and why it doesn't regress
+  the cases this bullet originally verified.
 - **Schema/provider abstraction, not a one-off per form**: `lib/ai-autofill/schemas/`
   defines what fields a document type has (business forms supply the schema + dropdown
   options + image; the module does the rest), and `lib/ai-autofill/providers/` defines
@@ -1100,3 +1106,48 @@ and verification detail; this entry covers the reusable architecture.
   correctly, and correctly inferred a line item's expense category from its description
   even though the category wasn't printed on the document, always returning a real
   option value and never an invented one.
+
+## D046
+
+**AI Form Auto-Fill extended to Inventory PO (2026-07-12, same day as D045): two real
+accuracy bugs found and fixed via live testing against real supplier images, plus item
+alias support.** See `PROGRESS-PURCHASING.md` PUR-2.1 for the full build/verification
+detail; this entry covers the reusable architecture changes.
+
+- **Dropdown matching switched from enum-of-ids to label-then-resolve** (corrects the
+  bullet in D045). Constraining OpenAI's structured-output JSON schema to an enum of raw
+  ids is reliable for a handful of options (Expense/Asset PO's suppliers/categories) but
+  not for longer lists — confirmed live: with Inventory PO's 32 items, the model
+  correctly identified *which* item a line described but then returned the wrong id
+  string from the enum (a wood ref-magnet blank resolved to an unrelated keychain SKU).
+  Fixed in `openai-vision.ts`: dropdown fields are now returned as free-text label
+  strings and resolved to a value via `matchDropdownOption()` — the same fuzzy matcher
+  the local-OCR-only path already relied on. This moves the "never invent a value"
+  guarantee from the model's enum recall (unreliable past ~10-ish options) to a
+  deterministic app-layer lookup (reliable at any list size), so it's a strict
+  improvement, not a tradeoff — no regression expected on D045's original short-list
+  verification, since label-then-resolve degrades to the same outcome when there's only
+  one plausible match. **Rule of thumb for future document types:** any dropdown field
+  matching against more than a handful of options should use this pattern from the
+  start, not enum-of-ids.
+- **New `DropdownOption.keywords` / `items.ai_match_keywords`**: lets a registered item
+  carry alternate names/phrasing (e.g. how a supplier's marketplace listing describes it)
+  separate from `items.description`, which is a genuine Loyverse-synced field
+  (`upsertItem` pushes it via `loyverse-item-push`) and shouldn't be repurposed for
+  AI-matching text. Both the fuzzy matcher and the AI prompt check it.
+- **New `FieldSchema.totalDividedBy`**: fixes the AI treating a bundle/pack price as a
+  per-unit rate (a real cart screenshot showing "50 pcs ... ₱650" produced a computed
+  ₱78,600 subtotal instead of the real ₱1,980, because the model used 650 as a per-piece
+  cost while also using 50 as quantity). Rather than trust the model to divide correctly
+  inside a `strict: true` JSON-schema response (no room to show arithmetic), the field is
+  asked for the line's TOTAL price and `resolveTotals()` divides by the referenced
+  field's value in code. Scoped to `inventory_purchase`'s `unit_cost` only — Expense/
+  Asset PO invoices are typically already unit-priced with qty=1, so applying this there
+  untested would risk trading a verified-working path for an unverified one.
+- Verified live (browser preview, Claude admin test account) against two real supplier
+  images from the same session (an E-Gosyo order-history screenshot, then an E-Gosyo cart
+  screenshot) rather than synthetic test data: item matching went from 0/3 correct to 3/3
+  correct after the dropdown-matching fix (one later re-run showed residual variance
+  between two near-identical variant aliases — a model-accuracy limit, not a code defect,
+  see PUR-2.1); the pack-price fix took a real cart's computed subtotal from ₱78,600 to
+  the correct ₱1,980.00.
