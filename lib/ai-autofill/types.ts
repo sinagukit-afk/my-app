@@ -4,7 +4,8 @@ export type DocumentType =
   | "delivery_receipt"
   | "shipping_label"
   | "official_receipt"
-  | "inventory_purchase";
+  | "inventory_purchase"
+  | "manual_incoming";
 
 export type FieldValueType = "string" | "number" | "date" | "currency" | "dropdown";
 

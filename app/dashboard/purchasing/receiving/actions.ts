@@ -5,7 +5,15 @@ import { revalidatePath } from 'next/cache'
 
 export type ActionResult = { success: true } | { success: false; error: string }
 
-export async function createManualIncoming(formData: FormData): Promise<ActionResult> {
+export type NewIncomingItemInput = {
+  item_id: string
+  variant_id: string | null
+  item_name_snapshot: string
+  quantity: number
+  unit_price: number
+}
+
+export async function createManualIncomingWithItems(formData: FormData): Promise<ActionResult> {
   const supabase = await createClient()
 
   const {
@@ -14,29 +22,25 @@ export async function createManualIncoming(formData: FormData): Promise<ActionRe
 
   if (!user) return { success: false, error: 'Not authenticated.' }
 
-  const item_id = (formData.get('item_id') as string)?.trim()
-  const variant_id = (formData.get('variant_id') as string)?.trim() || null
   const supplier_id = (formData.get('supplier_id') as string)?.trim() || null
-  const quantity = parseFloat(formData.get('quantity') as string)
-  const unit_price = parseFloat(formData.get('unit_price') as string)
   const date_received = (formData.get('date_received') as string)?.trim()
   const notes = (formData.get('notes') as string)?.trim() || null
   const payment_type_id = (formData.get('payment_type_id') as string)?.trim() || null
   const is_credit_card = formData.get('is_credit_card') === 'true'
 
-  if (!item_id) return { success: false, error: 'Item is required.' }
   if (!date_received) return { success: false, error: 'Date received is required.' }
-  if (isNaN(quantity) || quantity <= 0) return { success: false, error: 'Quantity must be a positive number.' }
-  if (isNaN(unit_price) || unit_price < 0) return { success: false, error: 'Unit price must be zero or more.' }
 
-  // Resolve item name snapshot
-  const { data: item } = await supabase
-    .from('items')
-    .select('name')
-    .eq('id', item_id)
-    .single()
+  let items: NewIncomingItemInput[] = []
+  try {
+    items = JSON.parse((formData.get('items_json') as string) || '[]')
+  } catch {
+    return { success: false, error: 'Invalid line item data.' }
+  }
 
-  if (!item) return { success: false, error: 'Selected item not found.' }
+  const validItems = items.filter((i) => i.item_id && i.quantity > 0 && i.unit_price >= 0)
+  if (validItems.length === 0) {
+    return { success: false, error: 'Add at least one line item with a quantity greater than zero.' }
+  }
 
   // Resolve supplier text snapshot for movement note
   let supplierText: string | null = null
@@ -49,26 +53,28 @@ export async function createManualIncoming(formData: FormData): Promise<ActionRe
     supplierText = sup?.name ?? null
   }
 
-  const { error } = await supabase.from('incoming_items').insert({
-    item_id,
-    variant_id,
-    item_name_snapshot: item.name,
-    quantity,
-    unit_price,
-    total_price: quantity * unit_price,
-    date_received,
-    supplier_id,
-    supplier: supplierText,
-    source: 'manual',
-    received_by: user.id,
-    received_by_email: user.email ?? null,
-    notes,
-    purchase_order_id: null,
-    shipping_fee: 0,
-    discount_amount: 0,
-    payment_type_id,
-    is_credit_card,
-  })
+  const { error } = await supabase.from('incoming_items').insert(
+    validItems.map((item) => ({
+      item_id: item.item_id,
+      variant_id: item.variant_id,
+      item_name_snapshot: item.item_name_snapshot,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      total_price: item.quantity * item.unit_price,
+      date_received,
+      supplier_id,
+      supplier: supplierText,
+      source: 'manual',
+      received_by: user.id,
+      received_by_email: user.email ?? null,
+      notes,
+      purchase_order_id: null,
+      shipping_fee: 0,
+      discount_amount: 0,
+      payment_type_id,
+      is_credit_card,
+    }))
+  )
 
   if (error) return { success: false, error: error.message }
 

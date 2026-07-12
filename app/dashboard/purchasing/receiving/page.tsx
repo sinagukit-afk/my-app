@@ -3,7 +3,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ReceivingHeader } from "./receiving-header";
 import { ReceivingTable, type ReceivablePO } from "./receiving-table";
 import { ReceivingLogTable, type ReceivingLogRow } from "./receiving-log-table";
-import type { SupplierOption, ItemOption } from "./manual-incoming-form";
 
 function firstOf<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
@@ -24,14 +23,7 @@ export default async function ReceivingPage() {
   const role = profile?.role ?? "";
   const canWrite = ["admin", "manager", "encoder"].includes(role);
 
-  const [
-    { data: poData, error: poError },
-    { data: supplierData },
-    { data: itemData },
-    { data: variantData },
-    { data: logData, error: logError },
-    { data: paymentTypesData },
-  ] = await Promise.all([
+  const [{ data: poData, error: poError }, { data: logData, error: logError }] = await Promise.all([
     supabase
       .from("purchase_orders")
       .select(
@@ -42,36 +34,12 @@ export default async function ReceivingPage() {
       .order("expected_date", { ascending: true, nullsFirst: false }),
 
     supabase
-      .from("suppliers")
-      .select("id, name")
-      .eq("is_active", true)
-      .order("name"),
-
-    supabase
-      .from("items")
-      .select("id, name")
-      .is("deleted_at", null)
-      .order("name"),
-
-    supabase
-      .from("item_variants")
-      .select("id, item_id, option1_value, option2_value, sku")
-      .is("deleted_at", null)
-      .order("created_at"),
-
-    supabase
       .from("incoming_items")
       .select(
         "id, reference, status, date_received, item_name_snapshot, variant_id, quantity, unit_price, total_price, supplier_id, supplier, notes, received_by_email, is_credit_card, item_variants(option1_value, option2_value), suppliers(name), purchase_orders(reference), payment_types(name)"
       )
       .order("date_received", { ascending: false })
       .order("created_at", { ascending: false }),
-
-    supabase
-      .from("payment_types")
-      .select("id, name")
-      .eq("is_active", true)
-      .order("name"),
   ]);
 
   const openPOs: ReceivablePO[] = (poData ?? []).map((po) => {
@@ -87,20 +55,6 @@ export default async function ReceivingPage() {
       expected_date: po.expected_date,
       supplier_name: supplier?.name ?? "Unknown supplier",
       items_remaining: remaining,
-    };
-  });
-
-  const suppliers: SupplierOption[] = supplierData ?? [];
-
-  const items: ItemOption[] = (itemData ?? []).map((item) => {
-    const itemVariants = (variantData ?? []).filter((v) => v.item_id === item.id);
-    return {
-      id: item.id,
-      name: item.name,
-      variants: itemVariants.map((v) => ({
-        id: v.id,
-        label: [v.option1_value, v.option2_value].filter(Boolean).join(" / ") || v.sku || v.id,
-      })),
     };
   });
 
@@ -133,16 +87,9 @@ export default async function ReceivingPage() {
     };
   });
 
-  const paymentTypeOptions = paymentTypesData ?? [];
-
   return (
     <div className="space-y-6">
-      <ReceivingHeader
-        canWrite={canWrite}
-        suppliers={suppliers}
-        items={items}
-        paymentTypeOptions={paymentTypeOptions}
-      />
+      <ReceivingHeader canWrite={canWrite} />
 
       {(poError || logError) && (
         <Card>
