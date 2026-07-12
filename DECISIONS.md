@@ -1050,3 +1050,53 @@ covers the cross-cutting schema/design calls only.
   event types were missing from the Journal/Review pages' friendly-label maps (also
   backfilled a pre-existing gap where ACCT-7.8's own `credit_card_installment_payment`
   was never added to `journal-table.tsx`'s map).
+
+## D045
+
+**AI Form Auto-Fill module (2026-07-12): hybrid Tesseract.js + OpenAI Vision, first
+Route Handler in the app, provider/schema abstraction so any form can plug in.** Design
+was reviewed with Sinag before writing code; two forks were resolved via direct
+questions rather than assumed. See `PROGRESS-PURCHASING.md` PUR-2 for the full build
+and verification detail; this entry covers the reusable architecture.
+
+- **New Route Handler (`app/api/ai-autofill/extract/route.ts`), not a Server Action** —
+  the first `route.ts` in the entire app; every other mutation goes through Server
+  Actions. Chosen because Server Actions cap request bodies at 1MB by default and a
+  photographed invoice routinely exceeds that; raising
+  `experimental.serverActions.bodySizeLimit` in `next.config.ts` would have widened that
+  limit for every Server Action in the app, not just this one. The Route Handler
+  requires an authenticated Supabase session (`supabase.auth.getUser()`) before calling
+  OpenAI — without that check it would be an open proxy anyone could hit to spend the
+  project's OpenAI credits. No role check beyond "logged in": role gating is left to
+  whichever page hosts the consuming form (Purchasing's PO pages are already
+  admin/manager-gated at the page level, per the existing D016-style convention).
+- **Hybrid OCR, local-first**: Tesseract.js runs entirely client-side (dynamically
+  imported, only loaded if the user picks Upload) before any paid API call. A cheap
+  regex/keyword pass tries to fill header fields from the raw OCR text for free;
+  escalates to OpenAI Vision only when OCR confidence is low, a required field is still
+  empty, or the document schema has line items at all (table/layout extraction needs
+  real vision — local text-only OCR can't reliably parse a table).
+- **Dropdown fields are enum-constrained in OpenAI's structured-output JSON schema**,
+  not resolved by fuzzy-matching the model's free-text guess after the fact — the model
+  can only return one of the option values the calling form actually has, or `null`.
+  Local-only extractions (no AI call) still need a fallback matcher since there's no
+  model to constrain, so `lib/ai-autofill/match-dropdown.ts` (hand-rolled
+  Levenshtein-based, no new dependency) covers that path.
+- **Schema/provider abstraction, not a one-off per form**: `lib/ai-autofill/schemas/`
+  defines what fields a document type has (business forms supply the schema + dropdown
+  options + image; the module does the rest), and `lib/ai-autofill/providers/` defines
+  an `AIVisionProvider` interface so a future non-OpenAI backend is a new file
+  implementing that interface, not a rewrite. Piloted on Purchasing's Expense PO + Asset
+  PO (`PUR-2`) using one shared `supplier_invoice` schema for both forms — proves the
+  reuse goal without any Purchasing-specific code living inside `lib/ai-autofill`.
+- New deps: `tesseract.js`, `openai`. New env var `OPENAI_API_KEY`, unprefixed
+  (server-only, read only inside the Route Handler) — matches the existing
+  `SUPABASE_SERVICE_ROLE_KEY`/`N8N_WEBHOOK_BASE_URL` convention of no `NEXT_PUBLIC_`
+  prefix for anything that must never reach the browser bundle.
+- Verified live end-to-end (browser preview, Claude admin test account) both before and
+  after Sinag added a real `OPENAI_API_KEY`: the graceful-503-when-unconfigured path,
+  and — once the key was added — a real OpenAI Vision extraction that correctly matched
+  a supplier to an existing dropdown option, extracted every header/line-item field
+  correctly, and correctly inferred a line item's expense category from its description
+  even though the category wasn't printed on the document, always returning a real
+  option value and never an invented one.

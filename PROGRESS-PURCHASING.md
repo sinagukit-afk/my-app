@@ -102,3 +102,77 @@ data per this project's standing verification convention):**
 - Full Expense PO / Direct Entry round trip documented in FIN-1 (same session).
 - `npm run build` passes, all `/dashboard/purchasing/*` routes registered;
   `get_advisors(security)` shows only the standard baseline WARN, no new categories.
+
+---
+
+## PUR-2 — AI Form Auto-Fill module, piloted on Expense PO + Asset PO ✅ DONE
+
+**Status:** Complete 2026-07-12. See `DECISIONS.md` D045 for the cross-cutting
+architecture calls (shared here in brief) — this entry covers the Purchasing-side
+integration.
+
+**Ask (Sinag):** a reusable "AI Form Auto-Fill" module any BMS form could use — user
+uploads/photographs a document, the system reads it and pre-fills the form, every field
+stays editable, nothing auto-saves or auto-submits. Design was reviewed before any code
+was written; user picked the pilot form (Purchasing PO, over New Expense or a
+no-form-yet option) and the fallback-endpoint approach (a new Route Handler, over
+raising the Server Action body-size limit globally) via two direct questions.
+
+**What was built:**
+- `lib/ai-autofill/` — provider-agnostic core: `types.ts` (`DocumentSchema`/
+  `FieldSchema`/`ExtractionResult`), `schemas/` (5 document types registered —
+  `receipt`, `supplier_invoice`, `delivery_receipt`, `shipping_label`,
+  `official_receipt` — only `supplier_invoice` wired to a real form so far),
+  `match-dropdown.ts` (local Levenshtein-based fuzzy match, used by the free local OCR
+  path only), `ocr/` (Tesseract.js client wrapper + cheap regex/keyword local extractor
+  + a confidence check deciding whether to escalate), `providers/openai-vision.ts`
+  (OpenAI structured-outputs call, dropdown fields sent as JSON-schema enums so the
+  model can only return a real option value or `null` — never invents one).
+- `app/api/ai-autofill/extract/route.ts` — the OpenAI Vision fallback endpoint, and the
+  **first Route Handler in the whole app** (every other mutation is a Server Action).
+  Requires an authenticated Supabase session before calling OpenAI, otherwise it would
+  be an open proxy anyone could hit to spend the project's API credits.
+- `components/ai-autofill/` — `use-auto-fill.ts` (idle → reading-locally → asking-ai →
+  done/error), `use-ai-filled-keys.ts` (tracks which fields are still AI-filled and
+  unedited), `auto-fill-panel.tsx` (Manual Entry / Upload-Capture toggle UI),
+  `ai-field-highlight.tsx` (ring + "AI" badge, clears the instant the user edits that
+  field).
+- Hybrid OCR flow: Tesseract.js runs client-side first (dynamically imported, only
+  loads if the user picks Upload). A cheap regex pass tries to fill header fields for
+  free. Escalates to the paid OpenAI Vision route whenever OCR confidence is low, a
+  required header field is still empty, or the schema has line items at all — table/
+  layout extraction needs real vision, so `supplier_invoice` (used by both PO forms)
+  always escalates.
+
+**Purchasing-side integration:** [new-expense-po-form.tsx](app/dashboard/purchasing/expense-po/new/new-expense-po-form.tsx)
+and the near-identical Asset PO twin. Both forms map the generic `supplier_invoice`
+schema's `category_id` line-item key to their own `expense_category_id`/
+`asset_category_id` at the call site — the same schema drives both forms, proving the
+module's reusability goal without any Purchasing-specific code inside `lib/ai-autofill`.
+New deps: `tesseract.js`, `openai`. New env var `OPENAI_API_KEY` (unprefixed —
+server-only, read only inside the Route Handler, matching the existing
+`SUPABASE_SERVICE_ROLE_KEY`/`N8N_WEBHOOK_BASE_URL` convention).
+
+**Verification (browser preview, Claude admin test account):**
+- Before `OPENAI_API_KEY` was configured: uploaded a synthetic invoice image, confirmed
+  local OCR ran client-side without error, correctly determined AI was needed (line
+  items present), and the route gracefully returned 503 ("AI Auto-Fill is not
+  configured") — the form stayed fully usable, Clear reset the panel, no crash.
+- After Sinag added a real `OPENAI_API_KEY`: re-ran the same flow against a synthetic
+  "Test" supplier invoice (supplier name, invoice date, one line item, shipping fee).
+  Every field extracted correctly — supplier matched to the real existing dropdown
+  option (not a lookalike string), order date, shipping fee, description, quantity, and
+  unit cost all correct, subtotal recalculated correctly (₱1,500). The expense category
+  wasn't printed on the document at all, yet the model correctly inferred "Repairs &
+  Maintenance" from the line-item description and returned one of the real category
+  values. Confirmed the ring+"AI" badge renders on filled fields and disappears the
+  instant a field is edited (tested by overwriting Shipping Fee).
+- `npx tsc --noEmit` clean. Committed `82d070b`, pushed to `origin/main`.
+
+**Notes for next phase:** only `supplier_invoice` is wired to a form. The other 4
+schemas exist in the registry for extensibility but have no consuming form yet — natural
+next candidates are Receipt (Direct Expense Entry) and Delivery Receipt (Receiving). No
+searchable/combobox dropdown component exists anywhere in the app
+(`components/ui/select.tsx` is a plain native `<select>`) — fine for today's short
+option lists (suppliers, categories), but would need a new component before this module
+could target a long list (e.g. an inventory item picker).
