@@ -529,6 +529,8 @@ export function ItemForm({
                     <NumberInput
                       label="Initial Stock"
                       min={0}
+                      step="0.001"
+                      decimals={3}
                       value={row.initial_stock}
                       onChange={(e) => updateRow(row.rowId, { initial_stock: e.target.value })}
                     />
@@ -545,6 +547,8 @@ export function ItemForm({
                     <NumberInput
                       label="Minimum Stock"
                       min={0}
+                      step="0.001"
+                      decimals={3}
                       value={row.low_stock_threshold}
                       onChange={(e) => updateRow(row.rowId, { low_stock_threshold: e.target.value })}
                     />
@@ -568,6 +572,7 @@ export function ItemForm({
                         <NumberInput
                           min={0.01}
                           step="any"
+                          decimals={3}
                           value={c.quantity}
                           onChange={(e) => updateComponent(row.rowId, c.rowId, { quantity: e.target.value })}
                         />

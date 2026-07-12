@@ -3,6 +3,7 @@
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatDate } from "@/lib/utils/format-date";
+import { formatQty } from "@/lib/utils/format";
 
 export type AdjustmentRow = {
   id: string;
@@ -47,7 +48,7 @@ export function RecentAdjustments({ data }: Props) {
         const v = Number(value);
         return (
           <span className={v >= 0 ? "text-(--color-success)" : "text-(--color-danger)"}>
-            {v > 0 ? `+${v}` : v}
+            {v > 0 ? `+${formatQty(v)}` : formatQty(v)}
           </span>
         );
       },
@@ -55,7 +56,7 @@ export function RecentAdjustments({ data }: Props) {
     {
       key: "quantity_after",
       header: "Resulting Stock",
-      render: (value) => (value === null ? "—" : String(value)),
+      render: (value) => (value === null ? "—" : formatQty(value as number)),
     },
     {
       key: "note",

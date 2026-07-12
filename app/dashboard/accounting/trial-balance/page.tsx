@@ -8,7 +8,7 @@ import { TrialBalanceTable, type TrialBalanceRow } from "./trial-balance-table";
 type SearchParams = Promise<{ asOf?: string }>;
 
 function money(v: number) {
-  return `₱${v.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
+  return `₱${v.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export default async function TrialBalancePage({ searchParams }: { searchParams: SearchParams }) {

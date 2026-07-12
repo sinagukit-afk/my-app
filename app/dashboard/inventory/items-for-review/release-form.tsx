@@ -79,6 +79,7 @@ export function ReleaseForm({ open, onOpenChange, row, onReleased }: Props) {
             label={`Quantity (max ${row.on_hold_qty})`}
             name="quantity"
             step="any"
+            decimals={3}
             min={0}
             max={row.on_hold_qty}
             defaultValue={row.on_hold_qty}

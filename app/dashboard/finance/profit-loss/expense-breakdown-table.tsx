@@ -8,7 +8,7 @@ export type ExpenseCategoryRow = {
 };
 
 function money(v: number) {
-  return `₱${v.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
+  return `₱${v.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 const columns: Column<ExpenseCategoryRow>[] = [

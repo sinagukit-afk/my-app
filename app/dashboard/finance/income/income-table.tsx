@@ -45,7 +45,7 @@ export function IncomeTable({ data }: Props) {
       sortable: true,
       render: (value) => (
         <span className="font-medium text-(--color-text)">
-          ₱{Number(value).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+          ₱{Number(value).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </span>
       ),
     },
@@ -81,7 +81,7 @@ export function IncomeTable({ data }: Props) {
       </Card>
 
       <p className="text-sm text-(--color-text-muted)">
-        Total recorded: <span className="font-medium text-(--color-text)">₱{totalAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+        Total recorded: <span className="font-medium text-(--color-text)">₱{totalAmount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
       </p>
 
       <DataTable

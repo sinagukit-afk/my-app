@@ -29,7 +29,7 @@ const SOURCE_LABELS: Record<string, string> = {
 };
 
 function peso(n: number) {
-  return `₱${Number(n).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
+  return `₱${Number(n).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export default async function JournalEntryDetailPage({

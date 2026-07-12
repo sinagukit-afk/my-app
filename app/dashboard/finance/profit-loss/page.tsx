@@ -10,7 +10,7 @@ type SearchParams = Promise<{ from?: string; to?: string }>;
 const REVENUE_STATUSES = ["confirmed", "in_production", "delivered"];
 
 function money(v: number) {
-  return `₱${v.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
+  return `₱${v.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export default async function ProfitLossPage({ searchParams }: { searchParams: SearchParams }) {

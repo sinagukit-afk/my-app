@@ -76,7 +76,7 @@ export function JournalTable({ data }: Props) {
       sortable: true,
       render: (value) => (
         <span className="font-medium text-(--color-text)">
-          ₱{Number(value).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+          ₱{Number(value).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </span>
       ),
     },

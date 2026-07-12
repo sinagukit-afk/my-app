@@ -292,6 +292,7 @@ export function NewPurchaseOrderForm({ suppliers, variantOptions }: Props) {
                   label={i === 0 ? "Quantity" : undefined}
                   min={0.01}
                   step="any"
+                  decimals={3}
                   value={row.quantity}
                   onChange={(e) => updateRow(row.rowId, { quantity: e.target.value })}
                 />

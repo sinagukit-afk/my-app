@@ -13,7 +13,7 @@ export type PaymentRow = {
 };
 
 function peso(n: number) {
-  return `₱${Number(n).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
+  return `₱${Number(n).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 const columns: Column<PaymentRow>[] = [

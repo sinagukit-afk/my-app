@@ -183,7 +183,10 @@ function resolveTotals(record: Record<string, FieldValue>, fields: FieldSchema[]
     const total = resolved[field.key];
     const divisor = resolved[field.totalDividedBy];
     if (typeof total === "number" && typeof divisor === "number" && divisor > 0) {
-      resolved[field.key] = total / divisor;
+      const perUnit = total / divisor;
+      const decimals = field.type === "currency" ? 2 : 3;
+      const factor = 10 ** decimals;
+      resolved[field.key] = Math.round(perUnit * factor) / factor;
     }
   }
   return resolved;

@@ -227,6 +227,8 @@ export function ConfirmedOrderDetail({ data }: { data: ConfirmedOrderData }) {
                     className="h-8 text-right"
                     min={0}
                     max={item.quantity}
+                    step="0.001"
+                    decimals={3}
                     value={reservedQty[item.id]}
                     onChange={(e) =>
                       setReservedQty((prev) => ({
@@ -267,6 +269,8 @@ export function ConfirmedOrderDetail({ data }: { data: ConfirmedOrderData }) {
                       className="h-8 w-24 text-right"
                       min={0}
                       max={item.quantity}
+                      step="0.001"
+                      decimals={3}
                       value={reservedQty[item.id]}
                       onChange={(e) =>
                         setReservedQty((prev) => ({

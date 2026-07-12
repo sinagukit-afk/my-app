@@ -1,6 +1,7 @@
 "use client";
 
 import { DataTable, type Column } from "@/components/ui/data-table";
+import { formatQty } from "@/lib/utils/format";
 
 export type ItemSalesRow = {
   item: string;
@@ -10,7 +11,7 @@ export type ItemSalesRow = {
 };
 
 function money(v: number) {
-  return `₱${v.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
+  return `₱${v.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 const columns: Column<ItemSalesRow>[] = [
@@ -20,7 +21,7 @@ const columns: Column<ItemSalesRow>[] = [
     key: "quantitySold",
     header: "Units Sold",
     sortable: true,
-    render: (value) => Number(value).toLocaleString("en-PH"),
+    render: (value) => formatQty(value as number),
   },
   {
     key: "revenue",

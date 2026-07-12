@@ -106,6 +106,7 @@ export function AdjustmentForm({ variants }: Props) {
             value={qtyDelta}
             onChange={(e) => setQtyDelta(e.target.value)}
             step="any"
+            decimals={3}
             required
           />
 

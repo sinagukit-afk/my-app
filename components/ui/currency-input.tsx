@@ -10,8 +10,24 @@ export interface CurrencyInputProps extends Omit<React.InputHTMLAttributes<HTMLI
 }
 
 const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputProps>(
-  ({ className, label, error, id, currency = "₱", ...props }, ref) => {
+  ({ className, label, error, id, currency = "₱", onBlur, ...props }, ref) => {
     const inputId = id ?? label?.toLowerCase().replace(/\s+/g, "-");
+
+    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+      const raw = e.target.value;
+      if (raw !== "") {
+        const num = Number(raw);
+        if (Number.isFinite(num)) {
+          const rounded = Math.round(num * 100) / 100;
+          if (String(rounded) !== raw) {
+            e.target.value = String(rounded);
+            props.onChange?.(e as unknown as React.ChangeEvent<HTMLInputElement>);
+          }
+        }
+      }
+      onBlur?.(e);
+    };
+
     return (
       <div className="flex flex-col gap-1.5">
         {label && (
@@ -29,6 +45,7 @@ const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputProps>(
             id={inputId}
             step="0.01"
             min="0"
+            onBlur={handleBlur}
             className={cn(
               "flex h-9 w-full rounded-md border border-(--color-border) bg-(--color-surface) pl-8 pr-3 py-1 text-sm text-(--color-text) shadow-(--shadow-sm) transition-colors",
               "placeholder:text-(--color-text-subtle)",

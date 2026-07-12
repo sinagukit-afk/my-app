@@ -65,7 +65,7 @@ export function ItemForm({ open, onOpenChange, purchaseOrderId, reference, categ
           />
           <Input label="Description" name="description" placeholder="e.g. Laser Machine" required />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <NumberInput label="Quantity" name="quantity_ordered" min={0.01} step="any" defaultValue={1} required />
+            <NumberInput label="Quantity" name="quantity_ordered" min={0.01} step="any" decimals={3} defaultValue={1} required />
             <CurrencyInput label="Unit Cost" name="unit_cost" defaultValue={0} />
             <CurrencyInput label="Discount" name="discount_amount" defaultValue={0} />
           </div>

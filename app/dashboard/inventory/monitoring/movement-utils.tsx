@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import type { Column } from "@/components/ui/data-table";
 import { formatDate } from "@/lib/utils/format-date";
+import { formatQty } from "@/lib/utils/format";
 
 export function firstOf<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
@@ -148,7 +149,7 @@ export function movementColumns(): Column<MovementRow>[] {
         const v = Number(value);
         return (
           <span className={v >= 0 ? "text-(--color-success)" : "text-(--color-danger)"}>
-            {v > 0 ? `+${v}` : v}
+            {v > 0 ? `+${formatQty(v)}` : formatQty(v)}
           </span>
         );
       },
@@ -161,7 +162,7 @@ export function movementColumns(): Column<MovementRow>[] {
           "—"
         ) : (
           <span>
-            {row.quantity_before} → {value as number}
+            {formatQty(row.quantity_before)} → {formatQty(value as number)}
           </span>
         ),
     },

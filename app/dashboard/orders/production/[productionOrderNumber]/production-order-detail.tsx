@@ -205,6 +205,8 @@ export function ProductionOrderDetail({ data, logs }: { data: ProductionOrderDet
                     className="h-8 w-32 text-right"
                     min={1}
                     max={remaining}
+                    step="0.001"
+                    decimals={3}
                     value={addQty}
                     onChange={(e) => setAddQty(Math.max(0, Math.min(remaining, Number(e.target.value) || 0)))}
                   />

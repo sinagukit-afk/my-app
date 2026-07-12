@@ -6,7 +6,7 @@ import { AddAssetButton } from "./add-asset-button";
 import { FixedAssetsTable, type AssetRow, type AssetStatus } from "./fixed-assets-table";
 
 function peso(n: number) {
-  return `₱${n.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
+  return `₱${n.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export default async function FixedAssetsPage() {

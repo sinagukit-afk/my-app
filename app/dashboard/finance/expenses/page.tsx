@@ -7,7 +7,7 @@ import { CategoriesDialogButton } from "./categories-dialog";
 import { ExpensesTable, type ExpenseRow } from "./expenses-table";
 
 function peso(n: number) {
-  return `₱${n.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
+  return `₱${n.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export default async function ExpensesPage() {

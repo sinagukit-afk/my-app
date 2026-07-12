@@ -9,6 +9,7 @@ import {
   type ProductionOrderStatus,
 } from "@/lib/production-order-status";
 import { formatDate } from "@/lib/utils/format-date";
+import { formatQty } from "@/lib/utils/format";
 
 export type { ProductionOrderStatus };
 
@@ -43,7 +44,7 @@ const columns: Column<ProductionOrderRow>[] = [
       </div>
     ),
   },
-  { key: "quantity", header: "Quantity", sortable: true },
+  { key: "quantity", header: "Quantity", sortable: true, render: (value) => formatQty(value as number) },
   {
     key: "status",
     header: "Status",

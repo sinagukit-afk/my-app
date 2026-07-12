@@ -262,6 +262,7 @@ export function NewManualIncomingForm({ suppliers, variantOptions, paymentTypeOp
                 label={i === 0 ? "Quantity" : undefined}
                 min={0.001}
                 step="any"
+                decimals={3}
                 value={row.quantity}
                 onChange={(e) => updateRow(row.rowId, { quantity: e.target.value })}
               />

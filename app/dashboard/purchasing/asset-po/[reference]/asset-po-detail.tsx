@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { TextArea } from "@/components/ui/textarea";
 import { formatDate } from "@/lib/utils/format-date";
+import { formatQty } from "@/lib/utils/format";
 import { Select } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -214,8 +215,8 @@ export function AssetPODetail({ po, items, suppliers, categories, canWrite, canD
         </div>
       ),
     },
-    { key: "quantity_ordered", header: "Ordered" },
-    { key: "quantity_received", header: "Received" },
+    { key: "quantity_ordered", header: "Ordered", render: (value) => formatQty(value as number) },
+    { key: "quantity_received", header: "Received", render: (value) => formatQty(value as number) },
     { key: "unit_cost", header: "Unit Cost", render: (value) => `₱${Number(value).toFixed(2)}` },
     { key: "discount_amount", header: "Discount", render: (value) => `₱${Number(value).toFixed(2)}` },
     { key: "line_total", header: "Line Total", render: (value) => `₱${Number(value).toFixed(2)}` },
@@ -437,6 +438,7 @@ export function AssetPODetail({ po, items, suppliers, categories, canWrite, canD
                       min={0}
                       max={item.quantity_ordered - item.quantity_received}
                       step="any"
+                      decimals={3}
                       value={row.quantity}
                       onChange={(e) => setReceiveRows((prev) => ({ ...prev, [item.id]: { ...row, quantity: e.target.value } }))}
                     />

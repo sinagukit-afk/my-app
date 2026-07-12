@@ -86,6 +86,7 @@ export function ReceiveForm({ purchaseOrderId, reference, items, paymentTypeOpti
                 min={0}
                 max={item.remaining}
                 step="any"
+                decimals={3}
                 value={quantities[item.id] ?? ""}
                 onChange={(e) => setQuantities((prev) => ({ ...prev, [item.id]: e.target.value }))}
               />

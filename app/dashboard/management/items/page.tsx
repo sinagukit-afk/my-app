@@ -13,7 +13,7 @@ function arrayOf<T>(value: T | T[] | null | undefined): T[] {
 }
 
 function peso(v: number) {
-  return `₱${v.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
+  return `₱${v.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export default async function ItemsPage() {

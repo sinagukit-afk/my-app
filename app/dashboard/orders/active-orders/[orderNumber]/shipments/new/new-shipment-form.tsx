@@ -357,6 +357,8 @@ export function NewShipmentForm({
                 <NumberInput
                   min={0}
                   max={si.remainingQty}
+                  step="0.001"
+                  decimals={3}
                   value={lineQtys[si.orderItemId] ?? "0"}
                   onChange={(e) => setLineQtys((prev) => ({ ...prev, [si.orderItemId]: e.target.value }))}
                 />
@@ -384,6 +386,7 @@ export function NewShipmentForm({
                 <NumberInput
                   min={0.01}
                   step="any"
+                  decimals={3}
                   value={row.quantity}
                   onChange={(e) => updatePackagingRow(row.rowId, { quantity: e.target.value })}
                 />

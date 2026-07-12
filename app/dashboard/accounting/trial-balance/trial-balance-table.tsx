@@ -12,7 +12,7 @@ export type TrialBalanceRow = {
 };
 
 function money(v: number) {
-  return `₱${v.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
+  return `₱${v.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 const CATEGORY_VARIANT: Record<string, "default" | "success" | "warning" | "danger" | "neutral"> = {

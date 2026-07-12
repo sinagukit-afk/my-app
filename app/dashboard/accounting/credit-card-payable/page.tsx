@@ -5,7 +5,7 @@ import { LogPaymentDialog } from "./log-payment-dialog";
 import { CreditCardPaymentsTable, type PaymentRow } from "./credit-card-payments-table";
 
 function peso(n: number) {
-  return `₱${n.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
+  return `₱${n.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export default async function CreditCardPayablePage() {

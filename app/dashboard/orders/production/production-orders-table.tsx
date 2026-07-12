@@ -10,6 +10,7 @@ import {
   type ProductionOrderStatus,
 } from "@/lib/production-order-status";
 import { formatDate } from "@/lib/utils/format-date";
+import { formatQty } from "@/lib/utils/format";
 
 export type ProductionOrderRow = {
   id: string;
@@ -60,7 +61,7 @@ export function ProductionOrdersTable({ data }: Props) {
       key: "quantity",
       header: "Quantity",
       sortable: true,
-      render: (value) => `${value}`,
+      render: (value) => formatQty(value as number),
     },
     {
       key: "status",

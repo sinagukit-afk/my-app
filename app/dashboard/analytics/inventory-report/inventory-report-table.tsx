@@ -18,7 +18,7 @@ export type StockRow = {
 };
 
 function money(v: number) {
-  return `₱${v.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
+  return `₱${v.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 const STATUS_BADGE: Record<StockStatus, { label: string; variant: "success" | "warning" | "danger" }> = {

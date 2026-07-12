@@ -8,7 +8,7 @@ import { BalanceSheetTable, type BalanceSheetRow } from "./balance-sheet-table";
 type SearchParams = Promise<{ asOf?: string }>;
 
 function money(v: number) {
-  return `₱${v.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
+  return `₱${v.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export default async function BalanceSheetPage({ searchParams }: { searchParams: SearchParams }) {

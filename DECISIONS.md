@@ -1151,3 +1151,67 @@ detail; this entry covers the reusable architecture changes.
   between two near-identical variant aliases — a model-accuracy limit, not a code defect,
   see PUR-2.1); the pack-price fix took a real cart's computed subtotal from ₱78,600 to
   the correct ₱1,980.00.
+
+## D047
+
+**Price/quantity decimal precision enforced at both the database and UI layers
+(2026-07-12), app-wide.** User asked for a full review: prices must have at most 2
+decimals, quantities at most 3, "not just on display but on database level." Treated as
+a two-layer fix — Postgres column typmods as the unconditional backstop, shared input/
+display components as the UI-level enforcement — rather than trying to hand-round every
+call site.
+
+- **Database**: every money-ish column (`*price*`, `*cost*`, `*amount*`, `*total*`,
+  `*subtotal*`, `*discount*`, `*fee*`, `*shipping_fee*`, `*tip*`, `*tax*` — 34 columns
+  across 15 tables, several found only by a full `information_schema` sweep, not by name
+  guessing) altered to `numeric(12,2)`; every quantity column (`*qty*`, `quantity*` — 23
+  columns across 11 tables, including three that were already `numeric(_,4)` and had to
+  be tightened) altered to `numeric(12,3)`. Verified via `count(*) where col <>
+  round(col, n)` against live data first — zero rows would have been affected by the
+  rounding, so the migration was safe to apply outright without a user confirmation
+  detour for a destructive-adjacent change ([[project_test_data_status]] — all data is
+  test data anyway).
+  **Pitfall hit and fixed in the same migration**: `ALTER COLUMN ... TYPE numeric(p,s)`
+  fails outright if any view depends on that column (`cannot alter type of a column used
+  by a view or rule`), even for a typmod-only change. Three views
+  (`v_composite_bom`, `v_receipt_details`, `v_inventory_overview`) had to be dropped and
+  recreated. **Recreating a view with a plain `CREATE VIEW` silently drops
+  `security_invoker = true`** if the original had it — Supabase's security advisor
+  immediately flagged all three as new "Security Definer View" errors post-migration.
+  Fixed with an explicit `ALTER VIEW ... SET (security_invoker = true)` follow-up
+  migration and confirmed clean via `get_advisors`. **Any future migration that drops and
+  recreates a Supabase-created view must explicitly restore `security_invoker = true` —
+  don't assume `CREATE VIEW` preserves it.**
+- **UI**: no shared currency/quantity formatting or rounding utility existed anywhere in
+  the app before this — ~40 duplicated local formatters, several with a real bug
+  (`{ minimumFractionDigits: 2 }` with no `maximumFractionDigits`, so a value with more
+  than 2 decimals would display with more than 2 decimals; `toLocaleString` only sets a
+  *floor*, not a *cap*). Added `lib/utils/format.ts` (`formatCurrency`, `formatQty`,
+  `roundMoney`, `roundQty`) as the one place decimal rules live. Fixed the buggy
+  formatter pattern across 26 files via one mechanical bulk substitution (verified by
+  grep before/after, not by hand-checking each file).
+  The two shared form inputs (`components/ui/currency-input.tsx`,
+  `components/ui/number-input.tsx`) now round on `onBlur` and re-fire `onChange` with the
+  corrected value so parent state actually updates (not just the DOM) — `CurrencyInput`
+  always rounds to 2dp; `NumberInput` gained an opt-in `decimals?: number` prop, applied
+  as `decimals={3}` at all 24 quantity call sites app-wide (Inventory, Orders, Quotes,
+  Purchase Orders, Incoming Items, Shipments, Production). Chosen over blocking keystrokes
+  live (regex-filtering `onChange`) because `type="number"` inputs make robust keystroke-
+  level filtering fragile across paste/arrow-step/negative-sign edge cases; blur-rounding
+  plus the DB column as the final backstop was judged the more robust two-layer design
+  for a business app with ~60 affected call sites.
+  Also fixed: 7 quantity table columns that rendered the raw DB value with no formatter
+  at all (`String(value)` fallback in `data-table.tsx`), and
+  `lib/ai-autofill/providers/openai-vision.ts`'s `resolveTotals()` — which divides a
+  line's total by quantity to back out a unit price/cost for AI-autofilled forms — now
+  rounds that division's result (2dp for `currency`-typed fields, 3dp otherwise) instead
+  of leaving long decimal tails (e.g. `650/3 = 216.666666...`) to flow straight into
+  `CurrencyInput` state.
+- Verified live (browser preview, Claude admin test account, Manual Incoming form):
+  typed `112.34567` into a quantity field → rounded to `112.346` on blur; typed
+  `99.999` into unit price → rounded to `100` on blur; the computed subtotal correctly
+  reflected the rounded inputs (`₱11234.60`), not the raw unrounded values. `tsc --noEmit`
+  and `next lint` both clean across the full 53-file change set — no new errors
+  introduced (the 8 pre-existing lint errors in `data-table.tsx`/`app-shell.tsx`/
+  `item-form.tsx` are unrelated `react-hooks` rules, confirmed by line number to be
+  outside every edit made here).

@@ -242,6 +242,7 @@ export function OrderLineItemsEditor({
                   label={i === 0 ? "Quantity" : undefined}
                   min={disabled ? undefined : row.completedQty > 0 ? row.completedQty : 0.01}
                   step="any"
+                  decimals={3}
                   value={row.quantity}
                   disabled={disabled}
                   onChange={(e) => updateRow(row.rowId, { quantity: e.target.value })}
