@@ -82,11 +82,7 @@ type ComponentRow = {
 };
 
 type VariantRow = {
-  rowId: string;
   id?: string;
-  option1_value: string;
-  option2_value: string;
-  option3_value: string;
   sku: string;
   barcode: string;
   cost: string;
@@ -99,12 +95,8 @@ type VariantRow = {
   components: ComponentRow[];
 };
 
-function emptyVariantRow(option1_value = "", option2_value = "", option3_value = ""): VariantRow {
+function emptyVariantRow(): VariantRow {
   return {
-    rowId: randomId(),
-    option1_value,
-    option2_value,
-    option3_value,
     sku: "",
     barcode: "",
     cost: "",
@@ -122,14 +114,11 @@ function emptyComponentRow(): ComponentRow {
   return { rowId: randomId(), component_variant_id: "", quantity: "1" };
 }
 
-function seedRows(initial: ItemFormInitial | undefined): VariantRow[] {
-  if (!initial || initial.variants.length === 0) return [emptyVariantRow()];
-  return initial.variants.map((v) => ({
-    rowId: randomId(),
+function seedVariant(initial: ItemFormInitial | undefined): VariantRow {
+  const v = initial?.variants[0];
+  if (!v) return emptyVariantRow();
+  return {
     id: v.id,
-    option1_value: v.option1_value ?? "",
-    option2_value: v.option2_value ?? "",
-    option3_value: v.option3_value ?? "",
     sku: v.sku,
     barcode: v.barcode ?? "",
     cost: v.cost != null ? String(v.cost) : "",
@@ -144,14 +133,7 @@ function seedRows(initial: ItemFormInitial | undefined): VariantRow[] {
       component_variant_id: c.component_variant_id,
       quantity: String(c.quantity),
     })),
-  }));
-}
-
-function parseValues(s: string): string[] {
-  return s
-    .split(",")
-    .map((v) => v.trim())
-    .filter(Boolean);
+  };
 }
 
 export function ItemForm({
@@ -170,13 +152,7 @@ export function ItemForm({
   const [itemType, setItemType] = useState<"simple" | "composite">(initial?.item_type ?? "simple");
   const [trackStock, setTrackStock] = useState(initial?.track_stock ?? false);
   const [isAvailableForSale, setIsAvailableForSale] = useState(initial?.is_available_for_sale ?? true);
-  const [option1Name, setOption1Name] = useState(initial?.option1_name ?? "");
-  const [option2Name, setOption2Name] = useState(initial?.option2_name ?? "");
-  const [option3Name, setOption3Name] = useState(initial?.option3_name ?? "");
-  const [option1Values, setOption1Values] = useState("");
-  const [option2Values, setOption2Values] = useState("");
-  const [option3Values, setOption3Values] = useState("");
-  const [rows, setRows] = useState<VariantRow[]>(() => seedRows(initial));
+  const [variant, setVariant] = useState<VariantRow>(() => seedVariant(initial));
   const [selectedModifierIds, setSelectedModifierIds] = useState<string[]>(
     initial?.modifier_ids ?? []
   );
@@ -185,67 +161,33 @@ export function ItemForm({
     if (itemType === "composite" && trackStock) setTrackStock(false);
   }, [itemType, trackStock]);
 
-  function updateRow(rowId: string, patch: Partial<VariantRow>) {
-    setRows((prev) => prev.map((r) => (r.rowId === rowId ? { ...r, ...patch } : r)));
+  function updateVariant(patch: Partial<VariantRow>) {
+    setVariant((prev) => ({ ...prev, ...patch }));
   }
 
-  function removeRow(rowId: string) {
-    setRows((prev) => (prev.length > 1 ? prev.filter((r) => r.rowId !== rowId) : prev));
+  function addComponent() {
+    setVariant((prev) => ({ ...prev, components: [...prev.components, emptyComponentRow()] }));
   }
 
-  function generateVariants() {
-    const l1 = option1Name.trim() ? parseValues(option1Values) : [];
-    const l2 = option2Name.trim() ? parseValues(option2Values) : [];
-    const l3 = option3Name.trim() ? parseValues(option3Values) : [];
-    const combos: [string, string, string][] = [];
-    for (const a of l1.length ? l1 : [""]) {
-      for (const b of l2.length ? l2 : [""]) {
-        for (const c of l3.length ? l3 : [""]) {
-          combos.push([a, b, c]);
-        }
-      }
-    }
-
-    setRows((prev) => {
-      const existingByKey = new Map(
-        prev.map((r) => [`${r.option1_value}|${r.option2_value}|${r.option3_value}`, r])
-      );
-      return combos.map(([a, b, c]) => existingByKey.get(`${a}|${b}|${c}`) ?? emptyVariantRow(a, b, c));
-    });
+  function updateComponent(compRowId: string, patch: Partial<ComponentRow>) {
+    setVariant((prev) => ({
+      ...prev,
+      components: prev.components.map((c) => (c.rowId === compRowId ? { ...c, ...patch } : c)),
+    }));
   }
 
-  function addComponent(rowId: string) {
-    setRows((prev) =>
-      prev.map((r) => (r.rowId === rowId ? { ...r, components: [...r.components, emptyComponentRow()] } : r))
-    );
-  }
-
-  function updateComponent(rowId: string, compRowId: string, patch: Partial<ComponentRow>) {
-    setRows((prev) =>
-      prev.map((r) =>
-        r.rowId === rowId
-          ? {
-              ...r,
-              components: r.components.map((c) => (c.rowId === compRowId ? { ...c, ...patch } : c)),
-            }
-          : r
-      )
-    );
-  }
-
-  function removeComponent(rowId: string, compRowId: string) {
-    setRows((prev) =>
-      prev.map((r) =>
-        r.rowId === rowId ? { ...r, components: r.components.filter((c) => c.rowId !== compRowId) } : r
-      )
-    );
+  function removeComponent(compRowId: string) {
+    setVariant((prev) => ({
+      ...prev,
+      components: prev.components.filter((c) => c.rowId !== compRowId),
+    }));
   }
 
   function toggleModifier(id: string, checked: boolean) {
     setSelectedModifierIds((prev) => (checked ? [...prev, id] : prev.filter((m) => m !== id)));
   }
 
-  const ownVariantIds = new Set(rows.map((r) => r.id).filter((id): id is string => !!id));
+  const ownVariantIds = new Set(variant.id ? [variant.id] : []);
   const availableComponentOptions = componentOptions.filter((v) => !ownVariantIds.has(v.id));
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -253,61 +195,50 @@ export function ItemForm({
     setError(null);
     const formData = new FormData(e.currentTarget);
 
-    if (rows.length === 0) {
-      setError("Add at least one variant.");
+    if (!variant.sku.trim()) {
+      setError("A SKU is required.");
       return;
     }
-    for (const r of rows) {
-      if (!r.sku.trim()) {
-        setError("Every variant needs a SKU.");
-        return;
-      }
-      if (r.pricing_type === "FIXED" && !r.default_price) {
-        setError(`Default price is required for SKU "${r.sku}" (Fixed pricing).`);
-        return;
-      }
+    if (variant.pricing_type === "FIXED" && !variant.default_price) {
+      setError(`Default price is required for SKU "${variant.sku}" (Fixed pricing).`);
+      return;
     }
     if (itemType === "composite") {
-      for (const r of rows) {
-        const validComponents = r.components.filter((c) => c.component_variant_id);
-        if (validComponents.length === 0) {
-          setError(`Composite variant "${r.sku}" needs at least one component.`);
-          return;
-        }
-        if (validComponents.some((c) => ownVariantIds.has(c.component_variant_id))) {
-          setError("A component can't be one of this item's own variants.");
-          return;
-        }
+      const validComponents = variant.components.filter((c) => c.component_variant_id);
+      if (validComponents.length === 0) {
+        setError(`Composite item "${variant.sku}" needs at least one component.`);
+        return;
+      }
+      if (validComponents.some((c) => ownVariantIds.has(c.component_variant_id))) {
+        setError("A component can't be this item's own variant.");
+        return;
       }
     }
 
-    const variantsPayload = rows.map((r) => ({
-      id: r.id,
-      sku: r.sku,
-      barcode: r.barcode || undefined,
-      option1_value: r.option1_value || undefined,
-      option2_value: r.option2_value || undefined,
-      option3_value: r.option3_value || undefined,
-      cost: r.cost === "" ? null : Number(r.cost),
-      default_price: r.default_price === "" ? null : Number(r.default_price),
-      pricing_type: r.pricing_type,
-      initial_stock:
-        mode === "create" && trackStock ? Number(r.initial_stock || 0) : undefined,
-      low_stock_threshold:
-        trackStock && r.low_stock_threshold !== "" ? Number(r.low_stock_threshold) : null,
-    }));
+    const variantsPayload = [
+      {
+        id: variant.id,
+        sku: variant.sku,
+        barcode: variant.barcode || undefined,
+        cost: variant.cost === "" ? null : Number(variant.cost),
+        default_price: variant.default_price === "" ? null : Number(variant.default_price),
+        pricing_type: variant.pricing_type,
+        initial_stock:
+          mode === "create" && trackStock ? Number(variant.initial_stock || 0) : undefined,
+        low_stock_threshold:
+          trackStock && variant.low_stock_threshold !== "" ? Number(variant.low_stock_threshold) : null,
+      },
+    ];
 
     const componentsPayload =
       itemType === "composite"
-        ? rows.flatMap((r) =>
-            r.components
-              .filter((c) => c.component_variant_id)
-              .map((c) => ({
-                composite_sku: r.sku,
-                component_variant_id: c.component_variant_id,
-                quantity: Number(c.quantity || 1),
-              }))
-          )
+        ? variant.components
+            .filter((c) => c.component_variant_id)
+            .map((c) => ({
+              composite_sku: variant.sku,
+              component_variant_id: c.component_variant_id,
+              quantity: Number(c.quantity || 1),
+            }))
         : [];
 
     formData.set("is_available_for_sale", String(isAvailableForSale));
@@ -415,180 +346,107 @@ export function ItemForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Variant Matrix</CardTitle>
-          <CardDescription>
-            Up to 3 options. Leave a name blank to skip it. Generating re-uses existing rows for
-            option combinations you keep.
-          </CardDescription>
+          <CardTitle>Pricing & Stock</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="flex flex-col gap-2">
-              <Input
-                placeholder="Option 1 name (e.g. Size)"
-                value={option1Name}
-                onChange={(e) => setOption1Name(e.target.value)}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Input
+              label="SKU"
+              value={variant.sku}
+              onChange={(e) => updateVariant({ sku: e.target.value })}
+              required
+            />
+            <Input
+              label="Barcode"
+              value={variant.barcode}
+              onChange={(e) => updateVariant({ barcode: e.target.value })}
+            />
+            <CurrencyInput
+              label="Cost"
+              value={variant.cost}
+              onChange={(e) => updateVariant({ cost: e.target.value })}
+            />
+            {variant.default_purchase_cost != null && (
+              <CurrencyInput label="Default Purchase Cost" value={variant.default_purchase_cost} disabled />
+            )}
+            <Select
+              label="Pricing Type"
+              value={variant.pricing_type}
+              onChange={(e) =>
+                updateVariant({ pricing_type: e.target.value as "FIXED" | "VARIABLE" })
+              }
+              options={[
+                { value: "VARIABLE", label: "Variable" },
+                { value: "FIXED", label: "Fixed" },
+              ]}
+            />
+            <CurrencyInput
+              label="Default Price"
+              value={variant.default_price}
+              onChange={(e) => updateVariant({ default_price: e.target.value })}
+              disabled={variant.pricing_type !== "FIXED"}
+            />
+            {mode === "create" && trackStock && (
+              <NumberInput
+                label="Initial Stock"
+                min={0}
+                step="0.001"
+                decimals={3}
+                value={variant.initial_stock}
+                onChange={(e) => updateVariant({ initial_stock: e.target.value })}
               />
-              <input name="option1_name" type="hidden" value={option1Name} readOnly />
-              <Input
-                placeholder="Values, comma separated"
-                value={option1Values}
-                onChange={(e) => setOption1Values(e.target.value)}
-                disabled={!option1Name.trim()}
+            )}
+            {mode === "edit" && trackStock && (
+              <p className="flex items-end pb-1 text-sm text-(--color-text-muted)">
+                Current stock: <span className="ml-1 font-medium text-(--color-text)">{variant.in_stock ?? 0}</span>
+                <Link href="/dashboard/inventory/adjustment" className="ml-2 text-(--color-primary) underline">
+                  Adjust Stock
+                </Link>
+              </p>
+            )}
+            {trackStock && (
+              <NumberInput
+                label="Minimum Stock"
+                min={0}
+                step="0.001"
+                decimals={3}
+                value={variant.low_stock_threshold}
+                onChange={(e) => updateVariant({ low_stock_threshold: e.target.value })}
               />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Input
-                placeholder="Option 2 name"
-                value={option2Name}
-                onChange={(e) => setOption2Name(e.target.value)}
-              />
-              <input name="option2_name" type="hidden" value={option2Name} readOnly />
-              <Input
-                placeholder="Values, comma separated"
-                value={option2Values}
-                onChange={(e) => setOption2Values(e.target.value)}
-                disabled={!option2Name.trim()}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Input
-                placeholder="Option 3 name"
-                value={option3Name}
-                onChange={(e) => setOption3Name(e.target.value)}
-              />
-              <input name="option3_name" type="hidden" value={option3Name} readOnly />
-              <Input
-                placeholder="Values, comma separated"
-                value={option3Values}
-                onChange={(e) => setOption3Values(e.target.value)}
-                disabled={!option3Name.trim()}
-              />
-            </div>
+            )}
           </div>
-          <Button type="button" variant="secondary" onClick={generateVariants}>
-            Generate Variants
-          </Button>
 
-          <div className="space-y-6">
-            {rows.map((row) => (
-              <div key={row.rowId} className="rounded-md border border-(--color-border) p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-(--color-text)">
-                    {[row.option1_value, row.option2_value, row.option3_value].filter(Boolean).join(" / ") ||
-                      "Default"}
-                  </p>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="text-(--color-danger)"
-                    disabled={rows.length === 1}
-                    onClick={() => removeRow(row.rowId)}
-                  >
+          {itemType === "composite" && (
+            <div className="space-y-2 border-t border-(--color-border) pt-3">
+              <p className="text-sm font-medium text-(--color-text)">Components</p>
+              {variant.components.map((c) => (
+                <div key={c.rowId} className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr_auto] sm:items-end">
+                  <Select
+                    placeholder="Select a component…"
+                    value={c.component_variant_id}
+                    onChange={(e) => updateComponent(c.rowId, { component_variant_id: e.target.value })}
+                    options={availableComponentOptions.map((v) => ({
+                      value: v.id,
+                      label: v.sku ? `${v.label} (${v.sku})` : v.label,
+                    }))}
+                  />
+                  <NumberInput
+                    min={0.01}
+                    step="any"
+                    decimals={3}
+                    value={c.quantity}
+                    onChange={(e) => updateComponent(c.rowId, { quantity: e.target.value })}
+                  />
+                  <Button type="button" variant="ghost" className="text-(--color-danger)" onClick={() => removeComponent(c.rowId)}>
                     Remove
                   </Button>
                 </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <Input
-                    label="SKU"
-                    value={row.sku}
-                    onChange={(e) => updateRow(row.rowId, { sku: e.target.value })}
-                    required
-                  />
-                  <Input
-                    label="Barcode"
-                    value={row.barcode}
-                    onChange={(e) => updateRow(row.rowId, { barcode: e.target.value })}
-                  />
-                  <CurrencyInput
-                    label="Cost"
-                    value={row.cost}
-                    onChange={(e) => updateRow(row.rowId, { cost: e.target.value })}
-                  />
-                  {row.default_purchase_cost != null && (
-                    <CurrencyInput label="Default Purchase Cost" value={row.default_purchase_cost} disabled />
-                  )}
-                  <Select
-                    label="Pricing Type"
-                    value={row.pricing_type}
-                    onChange={(e) =>
-                      updateRow(row.rowId, { pricing_type: e.target.value as "FIXED" | "VARIABLE" })
-                    }
-                    options={[
-                      { value: "VARIABLE", label: "Variable" },
-                      { value: "FIXED", label: "Fixed" },
-                    ]}
-                  />
-                  <CurrencyInput
-                    label="Default Price"
-                    value={row.default_price}
-                    onChange={(e) => updateRow(row.rowId, { default_price: e.target.value })}
-                    disabled={row.pricing_type !== "FIXED"}
-                  />
-                  {mode === "create" && trackStock && (
-                    <NumberInput
-                      label="Initial Stock"
-                      min={0}
-                      step="0.001"
-                      decimals={3}
-                      value={row.initial_stock}
-                      onChange={(e) => updateRow(row.rowId, { initial_stock: e.target.value })}
-                    />
-                  )}
-                  {mode === "edit" && trackStock && (
-                    <p className="flex items-end pb-1 text-sm text-(--color-text-muted)">
-                      Current stock: <span className="ml-1 font-medium text-(--color-text)">{row.in_stock ?? 0}</span>
-                      <Link href="/dashboard/inventory/adjustment" className="ml-2 text-(--color-primary) underline">
-                        Adjust Stock
-                      </Link>
-                    </p>
-                  )}
-                  {trackStock && (
-                    <NumberInput
-                      label="Minimum Stock"
-                      min={0}
-                      step="0.001"
-                      decimals={3}
-                      value={row.low_stock_threshold}
-                      onChange={(e) => updateRow(row.rowId, { low_stock_threshold: e.target.value })}
-                    />
-                  )}
-                </div>
-
-                {itemType === "composite" && (
-                  <div className="space-y-2 border-t border-(--color-border) pt-3">
-                    <p className="text-sm font-medium text-(--color-text)">Components</p>
-                    {row.components.map((c) => (
-                      <div key={c.rowId} className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr_auto] sm:items-end">
-                        <Select
-                          placeholder="Select a component…"
-                          value={c.component_variant_id}
-                          onChange={(e) => updateComponent(row.rowId, c.rowId, { component_variant_id: e.target.value })}
-                          options={availableComponentOptions.map((v) => ({
-                            value: v.id,
-                            label: v.sku ? `${v.label} (${v.sku})` : v.label,
-                          }))}
-                        />
-                        <NumberInput
-                          min={0.01}
-                          step="any"
-                          decimals={3}
-                          value={c.quantity}
-                          onChange={(e) => updateComponent(row.rowId, c.rowId, { quantity: e.target.value })}
-                        />
-                        <Button type="button" variant="ghost" className="text-(--color-danger)" onClick={() => removeComponent(row.rowId, c.rowId)}>
-                          Remove
-                        </Button>
-                      </div>
-                    ))}
-                    <Button type="button" variant="secondary" size="sm" onClick={() => addComponent(row.rowId)}>
-                      Add Component
-                    </Button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+              ))}
+              <Button type="button" variant="secondary" size="sm" onClick={addComponent}>
+                Add Component
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
