@@ -12,10 +12,21 @@ export default async function ConfirmedOrdersPage({ searchParams }: { searchPara
   const { from = "", to = "" } = await searchParams;
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: profile } = user
+    ? await supabase.from("profiles").select("role").eq("id", user.id).single()
+    : { data: null };
+
+  const role = profile?.role ?? "";
+  const canCreate = ["admin", "manager", "encoder"].includes(role);
+
   let query = supabase
     .from("orders")
     .select(
-      "id, order_number, created_at, updated_at, customers(name), order_items(item_name_snapshot, quantity)"
+      "id, order_number, created_at, target_date, customers(name), order_items(item_name_snapshot, quantity)"
     )
     .eq("status", "confirmed");
 
@@ -43,8 +54,7 @@ export default async function ConfirmedOrdersPage({ searchParams }: { searchPara
       orderNumber: o.order_number,
       customerName: customer?.name ?? null,
       orderDate: o.created_at.slice(0, 10),
-      createdAt: o.created_at,
-      updatedAt: o.updated_at,
+      targetDate: o.target_date,
       items: (o.order_items ?? []).map((it) => `(${Number(it.quantity)}) ${it.item_name_snapshot ?? ""}`),
       lastActivity: lastActivityByOrder.get(o.id) ?? "—",
     };
@@ -55,7 +65,7 @@ export default async function ConfirmedOrdersPage({ searchParams }: { searchPara
       {error && (
         <p className="text-sm text-(--color-danger)">Failed to load orders: {error.message}</p>
       )}
-      <ConfirmedOrdersTable data={rows} from={from} to={to} />
+      <ConfirmedOrdersTable data={rows} canCreate={canCreate} from={from} to={to} />
     </div>
   );
 }

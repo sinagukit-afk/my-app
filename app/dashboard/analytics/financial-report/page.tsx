@@ -11,7 +11,7 @@ import {
 
 type SearchParams = Promise<{ from?: string; to?: string }>;
 
-const REVENUE_STATUSES = ["confirmed", "in_production", "delivered"];
+const REVENUE_STATUSES = ["confirmed", "in_production", "delivered", "completed"];
 
 function money(v: number) {
   return `₱${v.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

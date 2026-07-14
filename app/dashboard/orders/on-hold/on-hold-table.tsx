@@ -10,8 +10,7 @@ export type OrderRow = {
   orderNumber: string;
   customerName: string | null;
   orderDate: string;
-  createdAt: string;
-  updatedAt: string;
+  targetDate: string;
   items: string[];
   lastActivity: string;
 };
@@ -45,14 +44,8 @@ export function OnHoldOrdersTable({ data, from, to }: Props) {
       render: (value) => formatDate(value as string),
     },
     {
-      key: "createdAt",
-      header: "Created",
-      sortable: true,
-      render: (value) => formatDate(value as string),
-    },
-    {
-      key: "updatedAt",
-      header: "Modified",
+      key: "targetDate",
+      header: "Target Date",
       sortable: true,
       render: (value) => formatDate(value as string),
     },

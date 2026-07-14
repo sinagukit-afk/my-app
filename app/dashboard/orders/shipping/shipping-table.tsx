@@ -9,6 +9,7 @@ import { formatDate } from "@/lib/utils/format-date";
 export type ProductionProgressRow = {
   productionOrderNumber: string;
   orderNumber: string;
+  customerName: string | null;
   orderStatus: string;
   itemName: string;
   sku: string | null;
@@ -27,6 +28,7 @@ export type ShipmentRow = {
   id: string;
   shipmentNumber: string;
   orderNumber: string;
+  customerName: string | null;
   status: string;
   fulfillmentType: "pickup" | "delivery";
   courierName: string | null;
@@ -59,11 +61,19 @@ export function ShippingTables({ productionRows, shipmentRows }: Props) {
       key: "productionOrderNumber",
       header: "Production Order No.",
       sortable: true,
+      render: (value, row) => (
+        <div>
+          <span className="text-(--color-text)">{value as string}</span>
+          <p className="text-xs text-(--color-text-muted)">{row.orderNumber}</p>
+        </div>
+      ),
     },
     {
-      key: "orderNumber",
-      header: "Customer Order",
+      key: "customerName",
+      header: "Customer",
       sortable: true,
+      render: (value) =>
+        (value as string) || <span className="text-(--color-text-subtle)">Walk-in</span>,
     },
     {
       key: "itemName",
@@ -102,11 +112,19 @@ export function ShippingTables({ productionRows, shipmentRows }: Props) {
       key: "shipmentNumber",
       header: "Shipment No.",
       sortable: true,
+      render: (value, row) => (
+        <div>
+          <span className="text-(--color-text)">{value as string}</span>
+          <p className="text-xs text-(--color-text-muted)">{row.orderNumber}</p>
+        </div>
+      ),
     },
     {
-      key: "orderNumber",
-      header: "Customer Order",
+      key: "customerName",
+      header: "Customer",
       sortable: true,
+      render: (value) =>
+        (value as string) || <span className="text-(--color-text-subtle)">Walk-in</span>,
     },
     {
       key: "status",

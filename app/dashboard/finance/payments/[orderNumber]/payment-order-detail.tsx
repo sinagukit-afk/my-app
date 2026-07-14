@@ -16,6 +16,7 @@ const STATUS_VARIANT: Record<string, "success" | "default" | "danger" | "warning
   ready_for_shipping: "default",
   shipped: "default",
   delivered: "success",
+  completed: "success",
   on_hold: "neutral",
   cancelled: "danger",
 };

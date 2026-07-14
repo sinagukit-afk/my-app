@@ -26,8 +26,7 @@ export type OrderRow = {
   orderNumber: string;
   customerName: string | null;
   orderDate: string;
-  createdAt: string;
-  updatedAt: string;
+  targetDate: string;
   status: string;
   totalItems: number;
   totalMoney: number;
@@ -43,6 +42,7 @@ const STATUS_VARIANT: Record<string, "success" | "default" | "danger" | "warning
   ready_for_shipping: "default",
   shipped: "default",
   delivered: "success",
+  completed: "success",
   on_hold: "neutral",
   cancelled: "danger",
 };
@@ -56,6 +56,7 @@ const STATUS_FILTER_OPTIONS = [
   { label: "Ready for Shipping", value: "ready_for_shipping" },
   { label: "Shipped", value: "shipped" },
   { label: "Delivered", value: "delivered" },
+  { label: "Completed", value: "completed" },
   { label: "On Hold", value: "on_hold" },
   { label: "Cancelled", value: "cancelled" },
 ];
@@ -124,15 +125,8 @@ export function OrderListTable({ data, canCreate, from, to }: Props) {
       exportValue: (value) => formatDate(value as string),
     },
     {
-      key: "createdAt",
-      header: "Created",
-      sortable: true,
-      render: (value) => formatDate(value as string),
-      exportValue: (value) => formatDate(value as string),
-    },
-    {
-      key: "updatedAt",
-      header: "Modified",
+      key: "targetDate",
+      header: "Target Date",
       sortable: true,
       render: (value) => formatDate(value as string),
       exportValue: (value) => formatDate(value as string),
@@ -226,8 +220,8 @@ export function OrderListTable({ data, canCreate, from, to }: Props) {
       />
 
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <DateRangeFilter from={from} to={to} />
         <FilterBar options={STATUS_FILTER_OPTIONS} value={statusFilter} onChange={setStatusFilter} />
+        <DateRangeFilter from={from} to={to} />
       </div>
 
       <DataTable

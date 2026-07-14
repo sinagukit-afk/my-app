@@ -117,8 +117,8 @@ export function QuotesTable({ data, canCreate, from, to }: Props) {
       />
 
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <DateRangeFilter from={from} to={to} />
         <FilterBar options={STATUS_FILTER_OPTIONS} value={statusFilter} onChange={setStatusFilter} />
+        <DateRangeFilter from={from} to={to} />
       </div>
 
       <DataTable

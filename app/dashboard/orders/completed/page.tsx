@@ -14,7 +14,7 @@ export default async function CompletedOrdersPage() {
     .select(
       "id, note, total_money, created_at, updated_at, loyverse_receipt_number, customers(name), order_items(id, item_name_snapshot, quantity, unit_price, line_discount)"
     )
-    .eq("status", "delivered")
+    .eq("status", "completed")
     .order("updated_at", { ascending: false });
 
   const rows: OrderRow[] = (data ?? []).map((o) => {

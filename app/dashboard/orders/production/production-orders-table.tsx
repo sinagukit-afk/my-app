@@ -16,6 +16,7 @@ export type ProductionOrderRow = {
   id: string;
   productionOrderNumber: string;
   orderNumber: string;
+  customerName: string | null;
   itemName: string;
   sku: string | null;
   modifiers: string[];
@@ -36,11 +37,19 @@ export function ProductionOrdersTable({ data }: Props) {
       key: "productionOrderNumber",
       header: "Production Order No.",
       sortable: true,
+      render: (value, row) => (
+        <div>
+          <span className="text-(--color-text)">{value as string}</span>
+          <p className="text-xs text-(--color-text-muted)">{row.orderNumber}</p>
+        </div>
+      ),
     },
     {
-      key: "orderNumber",
-      header: "Customer Order",
+      key: "customerName",
+      header: "Customer",
       sortable: true,
+      render: (value) =>
+        (value as string) || <span className="text-(--color-text-subtle)">Walk-in</span>,
     },
     {
       key: "itemName",

@@ -15,7 +15,7 @@ export default async function OnHoldOrdersPage({ searchParams }: { searchParams:
   let query = supabase
     .from("orders")
     .select(
-      "id, order_number, created_at, updated_at, customers(name), order_items(item_name_snapshot, quantity)"
+      "id, order_number, created_at, target_date, customers(name), order_items(item_name_snapshot, quantity)"
     )
     .eq("status", "on_hold");
 
@@ -43,8 +43,7 @@ export default async function OnHoldOrdersPage({ searchParams }: { searchParams:
       orderNumber: o.order_number,
       customerName: customer?.name ?? null,
       orderDate: o.created_at.slice(0, 10),
-      createdAt: o.created_at,
-      updatedAt: o.updated_at,
+      targetDate: o.target_date,
       items: (o.order_items ?? []).map((it) => `(${Number(it.quantity)}) ${it.item_name_snapshot ?? ""}`),
       lastActivity: lastActivityByOrder.get(o.id) ?? "—",
     };

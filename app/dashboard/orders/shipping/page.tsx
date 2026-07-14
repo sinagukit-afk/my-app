@@ -18,7 +18,7 @@ export default async function ShippingPage() {
   const { data: productionData, error: productionError } = await supabase
     .from("production_orders")
     .select(
-      "id, production_order_number, item_name_snapshot, sku_snapshot, modifiers_snapshot, quantity, status, orders!inner(order_number, status), order_items(quantity, shipment_items(quantity_shipped))"
+      "id, production_order_number, item_name_snapshot, sku_snapshot, modifiers_snapshot, quantity, status, orders!inner(order_number, status, customers(name)), order_items(quantity, shipment_items(quantity_shipped))"
     )
     .in("orders.status", SHIPPING_STATUSES)
     .order("created_at", { ascending: true });
@@ -26,7 +26,7 @@ export default async function ShippingPage() {
   const { data: shipmentsData, error: shipmentsError } = await supabase
     .from("order_shipments")
     .select(
-      "id, shipment_number, status, fulfillment_type, tracking_number, shipped_at, couriers(name), orders!inner(order_number, status), shipment_items(quantity_shipped, order_items(item_name_snapshot, sku_snapshot))"
+      "id, shipment_number, status, fulfillment_type, tracking_number, shipped_at, couriers(name), orders!inner(order_number, status, customers(name)), shipment_items(quantity_shipped, order_items(item_name_snapshot, sku_snapshot))"
     )
     .in("orders.status", SHIPPING_STATUSES)
     .order("created_at", { ascending: false });
@@ -34,6 +34,7 @@ export default async function ShippingPage() {
   const productionRows: ProductionProgressRow[] = (productionData ?? [])
     .map((po) => {
       const order = firstOf(po.orders);
+      const customer = order ? firstOf(order.customers) : null;
       const modifiers = Array.isArray(po.modifiers_snapshot)
         ? (po.modifiers_snapshot as { name_snapshot?: string }[]).map((m) => m.name_snapshot ?? "").filter(Boolean)
         : [];
@@ -45,6 +46,7 @@ export default async function ShippingPage() {
       return {
         productionOrderNumber: po.production_order_number,
         orderNumber: order?.order_number ?? "",
+        customerName: customer?.name ?? null,
         orderStatus: order?.status ?? "",
         itemName: po.item_name_snapshot ?? "",
         sku: po.sku_snapshot,
@@ -60,11 +62,13 @@ export default async function ShippingPage() {
 
   const shipmentRows: ShipmentRow[] = (shipmentsData ?? []).map((s) => {
     const order = firstOf(s.orders);
+    const customer = order ? firstOf(order.customers) : null;
     const courier = firstOf(s.couriers);
     return {
       id: s.id,
       shipmentNumber: s.shipment_number,
       orderNumber: order?.order_number ?? "",
+      customerName: customer?.name ?? null,
       status: s.status ?? "preparing",
       fulfillmentType: s.fulfillment_type === "pickup" ? "pickup" : "delivery",
       courierName: courier?.name ?? null,

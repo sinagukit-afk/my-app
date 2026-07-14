@@ -13,13 +13,14 @@ export default async function ProductionOrdersPage() {
   const { data, error } = await supabase
     .from("production_orders")
     .select(
-      "id, production_order_number, item_name_snapshot, sku_snapshot, modifiers_snapshot, quantity, status, created_at, orders(order_number)"
+      "id, production_order_number, item_name_snapshot, sku_snapshot, modifiers_snapshot, quantity, status, created_at, orders(order_number, customers(name))"
     )
     .in("status", ["not_started", "wip", "partially_completed"])
     .order("created_at", { ascending: true });
 
   const rows: ProductionOrderRow[] = (data ?? []).map((po) => {
     const order = firstOf(po.orders);
+    const customer = order ? firstOf(order.customers) : null;
     const modifiers = Array.isArray(po.modifiers_snapshot)
       ? (po.modifiers_snapshot as { name_snapshot?: string }[]).map((m) => m.name_snapshot ?? "").filter(Boolean)
       : [];
@@ -27,6 +28,7 @@ export default async function ProductionOrdersPage() {
       id: po.id,
       productionOrderNumber: po.production_order_number,
       orderNumber: order?.order_number ?? "",
+      customerName: customer?.name ?? null,
       itemName: po.item_name_snapshot ?? "",
       sku: po.sku_snapshot,
       modifiers,
