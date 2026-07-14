@@ -341,3 +341,30 @@ restructure (new Management/Orders/Inventory sidebar groups; Item List now
 sits alongside Customer/Supplier/Couriers under Management). File names/
 contents unchanged, only the route + physical folder moved. See
 `DECISIONS.md` D031.
+
+---
+
+## ITEM-8 — Item List UX overhaul (SKU-under-name, Cost column, Item Detail page) ✅ DONE (pending commit gate sign-off)
+
+**Status:** Built and `tsc`-verified 2026-07-14. Not part of the original ITEM-0..7 task list — Sinag requested a set of list-page UX changes directly. Awaiting Sinag's manual commit + browser sign-off.
+
+**Objective:** tighten up the Item List table and move mutating actions off the list row, following the same list→detail-page convention already used by Orders/Quotes/Customers (see D034: mutating actions belong on a detail page, list rows are pure navigation).
+
+**Tasks:**
+1. SKU moved from its own column to a subtext line under the item name (first SKU + "+n more" for multi-variant items).
+2. Removed the Stock, Sync, and Actions (Edit/Archive) columns from the list.
+3. Added a **Cost** column. For simple items this is `item_variants.cost` (range across variants, like Price). For composite items it's computed as Σ(`component.cost` × `quantity`) per variant, summed across each variant's `item_components` rows — this required a second query (`item_components` joined to the component's `item_variants.cost`) since the cost isn't a stored column on composite variants themselves.
+4. `DataTable` `pageSize` raised from the default 10 to 50.
+5. Rows are now clickable (`onRowClick` → `router.push`) to a **new Item Detail page** at `/dashboard/management/items/[id]` — this route didn't exist before (only `[id]/edit` did). Shows full item properties (category, sold-by, track-stock, primary supplier, description), a per-variant table (SKU, options, price, cost, stock/min-stock when tracked), a Components card for composite items (per-variant component breakdown + computed total cost, reusing the same aggregation logic as task 3), and assigned Modifiers.
+6. Edit and Archive moved into the Item Detail page header (Edit links to the existing `[id]/edit` route; Archive reuses the existing `archiveItem` server action + confirm-dialog pattern that previously lived in `items-table.tsx`, unchanged otherwise). Both are hidden once an item is archived.
+7. Added "Export to Excel" via `DataTable`'s existing `exportFilename` prop (CSV export, built in the Active Orders pilot per `PROGRESS-ORDERS.md`) — first rollout of that prop to a second table. The Item column's `exportValue` includes the SKU list in the exported cell, since SKU is no longer its own visible column.
+
+**What was built:**
+- `app/dashboard/management/items/page.tsx` — query now selects `item_variants.id` + `cost` (dropped now-unused `track_stock`/`inventory_levels`), plus a second query against `item_components` (only for composite items' variant IDs) to compute the composite cost sum. `peso()` replaced with the shared `formatCurrency()` (per `feedback_shared_formatters_for_price_qty_date`).
+- `app/dashboard/management/items/items-table.tsx`: `ItemRow` dropped `stock`/`sync_status`/`sync_error`, gained `cost_label`. `STATUS_BADGE`/`STATUS_LABEL`/`SYNC_BADGE`/`SYNC_LABEL` now **exported** (previously module-local) so the new detail page can reuse them instead of redefining. Archive dialog/state/handler removed entirely — archiving now only happens from the detail page.
+- `app/dashboard/management/items/[id]/page.tsx` (new) — server fetch: item core fields + category + primary supplier (embedded via `suppliers!items_primary_supplier_id_fkey`), live variants (same shape as the edit page's fetch, minus form-only fields), and — for composite items — `item_components` joined to the component variant's `sku`/`cost`/parent item name. Does **not** filter out archived items (`deleted_at`), unlike the edit page, so an archived item's properties remain viewable.
+- `app/dashboard/management/items/[id]/item-detail.tsx` (new, client) — renders the page per the tasks above; Archive dialog/handler ported verbatim from the old `items-table.tsx` logic.
+
+**Gate verification (2026-07-14):** `npx tsc --noEmit` clean. Browser verification (list columns/pagination/export/row-click, detail page render, Edit/Archive from detail) still outstanding — see the open task in this session.
+
+**Manual commit gate:** outstanding — Sinag to click through the list (new Cost column values, especially a composite item, and the Export to Excel button) and the new Item Detail page (Edit/Archive both work and disappear once archived) before this is committed.

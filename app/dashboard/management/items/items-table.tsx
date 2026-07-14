@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DataTable, type Column } from "@/components/ui/data-table";
@@ -9,16 +9,6 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { Select } from "@/components/ui/select";
 import { FilterBar } from "@/components/business/filter-bar";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
-import { archiveItem } from "./actions";
 
 export type ItemRow = {
   id: string;
@@ -26,34 +16,32 @@ export type ItemRow = {
   category: string | null;
   item_type: string;
   status: "available" | "not_for_sale" | "archived";
-  stock: number | null;
   sku_list: string;
   sku_count: number;
   price_label: string;
-  sync_status: string;
-  sync_error: string | null;
+  cost_label: string;
 };
 
-const STATUS_BADGE: Record<ItemRow["status"], "success" | "neutral" | "warning"> = {
+export const STATUS_BADGE: Record<ItemRow["status"], "success" | "neutral" | "warning"> = {
   available: "success",
   not_for_sale: "neutral",
   archived: "warning",
 };
 
-const STATUS_LABEL: Record<ItemRow["status"], string> = {
+export const STATUS_LABEL: Record<ItemRow["status"], string> = {
   available: "Available",
   not_for_sale: "Not for sale",
   archived: "Archived",
 };
 
-const SYNC_BADGE: Record<string, "success" | "warning" | "danger" | "neutral"> = {
+export const SYNC_BADGE: Record<string, "success" | "warning" | "danger" | "neutral"> = {
   synced: "success",
   pending: "warning",
   failed: "danger",
   local_only: "neutral",
 };
 
-const SYNC_LABEL: Record<string, string> = {
+export const SYNC_LABEL: Record<string, string> = {
   synced: "Synced",
   pending: "Pending",
   failed: "Failed",
@@ -67,26 +55,9 @@ type Props = {
 
 export function ItemsTable({ data, canWrite }: Props) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
   const [statusFilter, setStatusFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
-  const [archiveTarget, setArchiveTarget] = useState<ItemRow | null>(null);
-  const [archiveError, setArchiveError] = useState<string | null>(null);
-
-  function handleArchive() {
-    if (!archiveTarget) return;
-    setArchiveError(null);
-    startTransition(async () => {
-      const res = await archiveItem(archiveTarget.id);
-      if (res.success) {
-        setArchiveTarget(null);
-        router.refresh();
-      } else {
-        setArchiveError(res.error);
-      }
-    });
-  }
 
   const categories = useMemo(
     () =>
@@ -124,8 +95,18 @@ export function ItemsTable({ data, canWrite }: Props) {
       key: "name",
       header: "Item",
       sortable: true,
-      render: (value) => (
-        <p className="font-medium text-(--color-text)">{String(value)}</p>
+      exportValue: (value, row) =>
+        row.sku_count > 0 ? `${String(value)} (${row.sku_list})` : String(value),
+      render: (value, row) => (
+        <div>
+          <p className="font-medium text-(--color-text)">{String(value)}</p>
+          {row.sku_count > 0 && (
+            <p className="mt-0.5 text-xs text-(--color-text-muted)" title={row.sku_list}>
+              {row.sku_list.split(", ")[0]}
+              {row.sku_count > 1 && ` +${row.sku_count - 1} more`}
+            </p>
+          )}
+        </div>
       ),
     },
     {
@@ -134,25 +115,6 @@ export function ItemsTable({ data, canWrite }: Props) {
       sortable: true,
       render: (value) =>
         (value as string) || <span className="text-(--color-text-subtle)">—</span>,
-    },
-    {
-      key: "sku_list",
-      header: "SKU",
-      render: (_value, row) => {
-        if (row.sku_count === 0)
-          return <span className="text-(--color-text-subtle)">—</span>;
-        const [first, ...rest] = row.sku_list.split(", ");
-        return (
-          <span title={row.sku_list}>
-            {first}
-            {rest.length > 0 && (
-              <span className="ml-1 text-xs text-(--color-text-muted)">
-                +{rest.length} more
-              </span>
-            )}
-          </span>
-        );
-      },
     },
     {
       key: "price_label",
@@ -165,17 +127,9 @@ export function ItemsTable({ data, canWrite }: Props) {
         ),
     },
     {
-      key: "stock",
-      header: "Stock",
-      sortable: true,
-      render: (value) =>
-        value === null ? (
-          <span className="text-(--color-text-subtle)" title="Stock not tracked">
-            —
-          </span>
-        ) : (
-          Number(value).toLocaleString("en-PH")
-        ),
+      key: "cost_label",
+      header: "Cost",
+      render: (value) => String(value),
     },
     {
       key: "item_type",
@@ -196,63 +150,13 @@ export function ItemsTable({ data, canWrite }: Props) {
         return <Badge variant={STATUS_BADGE[status]}>{STATUS_LABEL[status]}</Badge>;
       },
     },
-    {
-      key: "sync_status",
-      header: "Sync",
-      sortable: true,
-      render: (value, row) => {
-        const sync = String(value);
-        return (
-          <div title={row.sync_error ?? undefined}>
-            <Badge variant={SYNC_BADGE[sync] ?? "neutral"}>
-              {SYNC_LABEL[sync] ?? sync}
-            </Badge>
-            {sync === "failed" && row.sync_error && (
-              <p className="mt-1 max-w-48 truncate text-xs text-(--color-danger)">
-                {row.sync_error}
-              </p>
-            )}
-          </div>
-        );
-      },
-    },
   ];
-
-  if (canWrite) {
-    columns.push({
-      key: "id",
-      header: "",
-      render: (value, row) => (
-        <div className="flex items-center gap-3">
-          <Link
-            href={`/dashboard/management/items/${String(value)}/edit`}
-            className="text-sm text-(--color-primary) underline"
-          >
-            Edit
-          </Link>
-          {row.status !== "archived" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-(--color-danger)"
-              onClick={() => {
-                setArchiveTarget(row);
-                setArchiveError(null);
-              }}
-            >
-              Archive
-            </Button>
-          )}
-        </div>
-      ),
-    });
-  }
 
   return (
     <div className="space-y-4">
       <PageHeader
         title="Item List"
-        description="Every item in the catalog, with pricing, stock, and Loyverse sync state."
+        description="Every item in the catalog, with pricing, cost, and type. Click a row to view details."
         actions={
           canWrite ? (
             <Button asChild>
@@ -294,41 +198,13 @@ export function ItemsTable({ data, canWrite }: Props) {
       <DataTable
         columns={columns}
         data={filtered}
+        pageSize={50}
         searchPlaceholder="Search items…"
         emptyMessage="No items found"
         emptyDescription="Adjust the filters or search to find what you're looking for."
+        onRowClick={(row) => router.push(`/dashboard/management/items/${row.id}`)}
+        exportFilename="items"
       />
-
-      <Dialog
-        open={!!archiveTarget}
-        onOpenChange={(next) => {
-          if (!next) {
-            setArchiveTarget(null);
-            setArchiveError(null);
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Archive Item</DialogTitle>
-            <DialogDescription>
-              Archive &quot;{archiveTarget?.name}&quot;? It will be hidden from the active catalog
-              and no longer sync to Loyverse.
-            </DialogDescription>
-          </DialogHeader>
-          {archiveError && <p className="text-sm text-(--color-danger)">{archiveError}</p>}
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="secondary" disabled={isPending}>
-                Cancel
-              </Button>
-            </DialogClose>
-            <Button type="button" variant="danger" onClick={handleArchive} disabled={isPending}>
-              {isPending ? "Archiving…" : "Archive"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
