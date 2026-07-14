@@ -1,9 +1,9 @@
 ---
-name: bms-supabase
-description: Conventions for Supabase schema, RLS, and RPC design in the Sinag Ukit BMS project (SinagUkitData, project glwskmtworldifydsihc). Use when writing migrations, RPCs, RLS policies, or any stock-affecting database logic.
+name: erp-supabase
+description: Conventions for Supabase schema, RLS, and RPC design in the Sinag Ukit ERP project (SinagUkitData, project glwskmtworldifydsihc). Use when writing migrations, RPCs, RLS policies, or any stock-affecting database logic.
 ---
 
-# BMS Supabase Conventions
+# ERP Supabase Conventions
 
 ## Preflight — do this before starting any new phase, before writing any code
 
@@ -35,7 +35,7 @@ No user-facing "Delete" action should ever remove a row from Supabase. Every tab
 
 Rows marked deleted must never appear anywhere in the app: every `SELECT` (list pages, dropdowns/pickers, joins, RPCs that expand BOM/components, RLS policies themselves) must filter `deleted_at IS NULL` (or `is_active = true`). The safest way to guarantee this app-wide is a `WHERE` filter baked into RLS SELECT policies on soft-deletable tables, not just in individual page queries — that way a query that forgets the filter still can't surface deleted rows. Unique constraints that should allow reusing a value after "deletion" (e.g. a supplier name) may need a partial unique index (`WHERE deleted_at IS NULL`) instead of a plain unique constraint.
 
-**Why:** avoids losing referential/audit history (e.g. a deleted supplier still referenced by old `incoming_items`/`purchase_orders`) and gives a recovery path, consistent with this project's existing preference for deactivate-over-delete (see the Suppliers FK-violation handling in the `bms-app` skill).
+**Why:** avoids losing referential/audit history (e.g. a deleted supplier still referenced by old `incoming_items`/`purchase_orders`) and gives a recovery path, consistent with this project's existing preference for deactivate-over-delete (see the Suppliers FK-violation handling in the `erp-app` skill).
 
 ## Reference numbering / auto-generated identifiers
 

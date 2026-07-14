@@ -1,6 +1,6 @@
 # PROGRESS-FINANCE.md
 
-Tracks the **Finance module** for Sinag Ukit BMS. Follows the same convention as
+Tracks the **Finance module** for Sinag Ukit ERP. Follows the same convention as
 `PROGRESS-PURCHASING.md`/`PROGRESS-INVENTORY.md`: dated phases kept separate from the
 core `PROGRESS.md` numbering. Append-only.
 

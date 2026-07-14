@@ -10,7 +10,7 @@
 ## Phase 21 — Finance: Cash Flow & Profit/Loss (read-only reports)
 
 ### Preflight (do first, before any code)
-Follow the Preflight section in the `bms-supabase` skill. Confirm
+Follow the Preflight section in the `erp-supabase` skill. Confirm
 Phase 20's `income`/`expenses` tables exist and have the expected
 columns before building reports on top of them.
 
@@ -52,7 +52,7 @@ Read-only Cash Flow and Profit & Loss reports.
 ## Phase 22 — Analytics: Sales Report
 
 ### Preflight (do first, before any code)
-Follow the Preflight section in the `bms-supabase` skill. Confirm the
+Follow the Preflight section in the `erp-supabase` skill. Confirm the
 Analytics routes are still stubs and `orders`/`order_items` schema is
 unchanged since Phase 14.
 
@@ -90,7 +90,7 @@ Read-only sales reporting.
 ## Phase 23 — Analytics: Inventory Report
 
 ### Preflight (do first, before any code)
-Follow the Preflight section in the `bms-supabase` skill. Confirm
+Follow the Preflight section in the `erp-supabase` skill. Confirm
 `inventory_levels`/`inventory_movements` schema is unchanged.
 
 ### Objective
@@ -128,7 +128,7 @@ Read-only inventory reporting.
 ## Phase 24 — Analytics: Production Report
 
 ### Preflight (do first, before any code)
-Follow the Preflight section in the `bms-supabase` skill. Confirm
+Follow the Preflight section in the `erp-supabase` skill. Confirm
 `orders.status`/`updated_at` are the only production-timing signals
 available — there is currently no dedicated status-change log.
 
@@ -171,7 +171,7 @@ limits.
 ## Phase 25 — Analytics: Financial Report
 
 ### Preflight (do first, before any code)
-Follow the Preflight section in the `bms-supabase` skill. Confirm
+Follow the Preflight section in the `erp-supabase` skill. Confirm
 Phases 20–22 are complete (Finance tables + Sales Report exist) —
 this phase depends on both.
 
@@ -208,7 +208,7 @@ Executive-summary read-only report combining Finance and Sales data.
 ## Phase 26 — Quotes: Encoder Self-Service Cancellation
 
 ### Preflight (do first, before any code)
-Follow the Preflight section in the `bms-supabase` skill. Confirm
+Follow the Preflight section in the `erp-supabase` skill. Confirm
 the current shape of the `orders_encoder_update_own_quote` /
 `order_items_encoder_update_own_quote` RLS policies (from migration
 `0007_fix_orders_rls_status_and_manager`) before changing anything.

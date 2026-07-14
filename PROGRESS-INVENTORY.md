@@ -1,6 +1,6 @@
 # PROGRESS-INVENTORY.md
 
-Tracks the **Inventory Status (movement-based) Phase 1** build for Sinag Ukit BMS. Follows the same convention as `PROGRESS-ITEMS.md`/`PROGRESS-ACCOUNTING.md`: `INV-` prefixed phases, kept separate from the core `PROGRESS.md` numbering. Append-only.
+Tracks the **Inventory Status (movement-based) Phase 1** build for Sinag Ukit ERP. Follows the same convention as `PROGRESS-ITEMS.md`/`PROGRESS-ACCOUNTING.md`: `INV-` prefixed phases, kept separate from the core `PROGRESS.md` numbering. Append-only.
 
 Source doc: `docs/archive/Inventory-Status-Phase1-Kickoff.md` (archived 2026-07-09 — INV-1..6's checklist is fully done and superseded by this file).
 
@@ -11,7 +11,7 @@ Source doc: `docs/archive/Inventory-Status-Phase1-Kickoff.md` (archived 2026-07-
 1. Read the full SQL body of `confirm_order()` and `adjust_stock()` (via `Supabase:execute_sql` against `pg_get_functiondef`). Both write to `inventory_levels.in_stock` and `inventory_movements` today, and this phase extends both. Do not guess their current logic.
 2. **VERIFIED (2026-07-05):** `inventory_levels` does **not** have a unique constraint on `(variant_id, store_id, source_id)`. The actual constraint is `inventory_levels_variant_id_store_id_key` = `UNIQUE(variant_id, store_id)` only. `source_id` is a plain nullable column, not part of the row's identity. This doc has been updated to key everything off the real grain, `(variant_id, store_id)` — `p_source_id` has been dropped from both new RPCs below. Do not reintroduce a 3-column grain without a separate decision to actually start using `source_id` as a live dimension.
 3. Confirm current `movement_type` check constraint values on `inventory_movements` (`initial_sync`, `incoming`, `sale`, `adjustment`, `manual_adjustment`, `order`) before altering it. **VERIFIED (2026-07-05):** matches exactly.
-4. Latest migration is `0025_adjust_order_items_receiver_fields` — this phase is `0026_inventory_status_foundation`. This project has no local `supabase/migrations` folder; apply migrations via the Supabase MCP `apply_migration` tool directly against the linked project, per the `bms-supabase` skill.
+4. Latest migration is `0025_adjust_order_items_receiver_fields` — this phase is `0026_inventory_status_foundation`. This project has no local `supabase/migrations` folder; apply migrations via the Supabase MCP `apply_migration` tool directly against the linked project, per the `erp-supabase` skill.
 
 **Re-verified live at the start of this build (2026-07-05):** `list_migrations` confirmed `0025_...` is still latest; both constraints above re-checked and unchanged; `adjust_stock()`/`confirm_order()` bodies re-read fresh (not from memory) before writing the migration.
 

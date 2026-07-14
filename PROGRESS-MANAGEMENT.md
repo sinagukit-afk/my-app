@@ -1,7 +1,7 @@
 # PROGRESS-MANAGEMENT.md
 
 Tracks the **Management module** build (Item Categories, Product Modifiers, Stores) for Sinag
-Ukit BMS. Follows the same convention as `PROGRESS-ITEMS.md`/`PROGRESS-CUSTOMERS.md`: `MGMT-`
+Ukit ERP. Follows the same convention as `PROGRESS-ITEMS.md`/`PROGRESS-CUSTOMERS.md`: `MGMT-`
 prefixed phases, kept separate from the core `PROGRESS.md` numbering. Append-only.
 
 Source: verbal kickoff from Sinag 2026-07-09 — "populate management/Product Modifier,
@@ -32,20 +32,20 @@ text; see MGMT-6 for what actually shipped and why.
   All three tables (`categories`, `modifiers`, `modifier_options`, `stores`) had **admin-only**
   RLS (`Admin full access ALL`) predating this feature, never brought in line with the general
   convention. Confirmed with Sinag before changing — see MGMT-1 below.
-- **BMS-local only — no Loyverse push-back**, confirmed with Sinag (explicitly reverted from an
+- **ERP-local only — no Loyverse push-back**, confirmed with Sinag (explicitly reverted from an
   initial "two-way push" answer mid-session). Categories and Modifiers stay one-way pull-synced
-  exactly like `customers`. **Known risk, accepted:** if a category/modifier edited in BMS is
+  exactly like `customers`. **Known risk, accepted:** if a category/modifier edited in ERP is
   later edited in Loyverse itself, the next nightly pull-sync (`Loyverse-Supabase` workflow,
   `Upsert Categories to Supabase` / `Upsert Modifiers and Options to Supabase` nodes) will
-  overwrite the BMS edit with Loyverse's version. This only fires when Loyverse's own copy of
+  overwrite the ERP edit with Loyverse's version. This only fires when Loyverse's own copy of
   that specific record changes — not on every sync run. Revisit if this becomes a real problem;
   the pattern to copy is `upsert_item` + `loyverse-item-push` webhook (see PROGRESS-ITEMS.md).
 - **Stores has no Loyverse sync path at all today** — confirmed by inspecting the
   `Loyverse-Supabase` n8n workflow: there is no store pull-sync trigger and no store push. The
   single existing row (`CPR-B13L82`) was seeded outside this workflow. Loyverse's own API has no
   create/update endpoint for stores (list/read only), so this isn't a phase-1-vs-later scoping
-  choice like categories/modifiers — **store edits in BMS can never sync to Loyverse**, full
-  stop. The Store page is BMS-local by necessity, not by choice.
+  choice like categories/modifiers — **store edits in ERP can never sync to Loyverse**, full
+  stop. The Store page is ERP-local by necessity, not by choice.
 - **Archive, not hard delete, for categories and modifiers** — both already have `deleted_at`,
   matching the Items convention (ITEM-6). **`modifier_options` is missing `deleted_at`** despite
   sitting right next to `modifiers` in the same sync path — a small migration adds it (MGMT-1)
@@ -54,7 +54,7 @@ text; see MGMT-6 for what actually shipped and why.
   hard-deleting an option ever used on a real order/quote would fail with `23503` anyway.
 - **Stores keeps `is_active` toggle, no soft-delete column** — matches the existing column and
   the Suppliers pattern. Hard delete is offered too (guarded by catching `23503`, same as
-  Suppliers), for a BMS-only store created by mistake.
+  Suppliers), for a ERP-only store created by mistake.
 - **No activity-log entries for these three** — matches the Suppliers/Customers tier (no
   logging), not the Items tier (which logs create/update/archive). These are lower-frequency
   master-data edits; add logging later if traceability turns out to matter.
@@ -84,7 +84,7 @@ Findings (via `list_tables`/`execute_sql`/`pg_policies`/n8n `get_workflow_detail
   `customers`.
 - `modifiers.raw` (jsonb) carries Loyverse's nested `modifier_options` with a `position` field,
   but the normalized `modifier_options` table has no `position` column — display order isn't
-  currently controllable from BMS. Not blocking (no push-back in this phase to need it), noted
+  currently controllable from ERP. Not blocking (no push-back in this phase to need it), noted
   for whoever adds Loyverse push-back later.
 - Items' Add/Edit form (`app/dashboard/inventory/items/{new,[id]/edit}/page.tsx`) already reads
   `categories`/`modifiers` directly from these tables for its dropdowns — anything created here
@@ -116,7 +116,7 @@ before MGMT-6's port — no re-migration needed.
 
 `app/dashboard/management/item-categories/{page.tsx,item-categories-table.tsx,category-form.tsx,actions.ts}`
 - List: Name (+ color swatch), Type (Product/Packaging badge), Source (Loyverse-synced vs
-  BMS-only, based on `loyverse_category_id`), Status (Active/Archived), Actions.
+  ERP-only, based on `loyverse_category_id`), Status (Active/Archived), Actions.
 - Form: Name (required), Type (Select, required), Color (Select from a fixed palette).
 - Actions: `createCategory`, `updateCategory`, `archiveCategory`/`restoreCategory`
   (`deleted_at`) — no hard delete, matching Items.
@@ -130,7 +130,7 @@ No console errors.
 **Status:** Complete 2026-07-09; ported onto its current path by MGMT-6.
 
 `app/dashboard/management/product-modifiers/{page.tsx,product-modifiers-table.tsx,modifier-form.tsx,actions.ts}`
-- List: Name, Options (name + price badges), Source (Loyverse-synced vs BMS-only), Status,
+- List: Name, Options (name + price badges), Source (Loyverse-synced vs ERP-only), Status,
   Actions.
 - Form: Name (required) + repeatable Options rows (name + price, add/remove), matching the
   Items variant-matrix UX.
@@ -150,7 +150,7 @@ No console errors.
 2. **`modifiers.loyverse_modifier_id` and `modifier_options.loyverse_modifier_option_id` were
    `NOT NULL`** with no default — unlike `categories.loyverse_category_id` and
    `stores.loyverse_store_id`, which already allow null. This silently blocked creation of any
-   BMS-only modifier (the exact scenario the "BMS-only" source badge exists for). Fixed via
+   ERP-only modifier (the exact scenario the "ERP-only" source badge exists for). Fixed via
    migration `mgmt2_modifiers_loyverse_id_nullable` (`DROP NOT NULL` on both columns; uniqueness
    preserved since Postgres allows multiple NULLs under a UNIQUE constraint).
 
@@ -165,7 +165,7 @@ console errors after the two fixes above.
 already the right route name) by MGMT-6.
 
 `app/dashboard/management/stores/{page.tsx,stores-table.tsx,store-form.tsx,actions.ts}`
-- List: Name, Address, Phone, Email, Source (Loyverse-linked vs BMS-only), Active toggle,
+- List: Name, Address, Phone, Email, Source (Loyverse-linked vs ERP-only), Active toggle,
   Actions.
 - Form: Name (required), Address, Phone, Email. `loyverse_store_id` shown read-only when
   present, never editable (external identifier, no Loyverse write path exists).

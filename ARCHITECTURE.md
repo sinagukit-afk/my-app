@@ -1,8 +1,8 @@
-# Sinag Ukit BMS Architecture
+# Sinag Ukit ERP Architecture
 
 ## Philosophy
 
-Sinag Ukit BMS follows a **Database-First Architecture**.
+Sinag Ukit ERP follows a **Database-First Architecture**.
 
 Business Rules ↓ Supabase Database ↓ PostgreSQL RPCs ↓ Server Actions ↓
 React Components ↓ User Interface

@@ -13,10 +13,10 @@
 > detail, including the security fix applied in the same session.
 
 Tracking file for the Accounting Module workstream only. Kept separate from the
-core BMS `PROGRESS.md` so phase numbers don't collide between the two build
+core ERP `PROGRESS.md` so phase numbers don't collide between the two build
 threads.
 
-Migration files share one global sequence with core BMS migrations
+Migration files share one global sequence with core ERP migrations
 (`0013_...` onward) — only the phase *labels* below are namespaced to this
 workstream.
 
@@ -202,9 +202,9 @@ Verified directly against the live DB via `request.jwt.claims` role impersonatio
 
 **Browser preview verification not performed via this session's own tooling** — blocked by another active session's `next dev` server holding this project directory's single-instance dev lock (confirmed via `node_modules/next/dist/build/lockfile.js`, a documented breaking change in this Next.js version per `AGENTS.md`); `preview_start` refused to start a second instance regardless of port. Compensated with build/typecheck passing and the DB-level role-impersonation verification above.
 
-**Bug found by Sinag in that other session's live browser, fixed same session:** the initial `page.tsx` defined the `DataTable` `columns` array (with `render` functions for date/currency/badge formatting) inline inside the server component and passed it as a prop to the client `DataTable` — Next.js threw "Functions cannot be passed directly to Client Components." `npm run build`'s type-check did not catch this; it's a runtime-only RSC boundary violation. The rest of the Accounting module already had the correct pattern (`journal-table.tsx`, `trial-balance-table.tsx` — `"use client"` wrapper components that own `columns` internally and take only a plain `data` prop) but it wasn't followed here. Fixed by extracting `fixed-assets-table.tsx` as a `"use client"` component following that exact pattern; `page.tsx` now only fetches/shapes data and passes `rows` down. Rebuilt clean after the fix. Saved as a standing memory (`feedback_datatable_columns_client_boundary`) so future Accounting/BMS pages don't repeat it. Sinag has not yet re-confirmed the fix in-browser as of this log entry.
+**Bug found by Sinag in that other session's live browser, fixed same session:** the initial `page.tsx` defined the `DataTable` `columns` array (with `render` functions for date/currency/badge formatting) inline inside the server component and passed it as a prop to the client `DataTable` — Next.js threw "Functions cannot be passed directly to Client Components." `npm run build`'s type-check did not catch this; it's a runtime-only RSC boundary violation. The rest of the Accounting module already had the correct pattern (`journal-table.tsx`, `trial-balance-table.tsx` — `"use client"` wrapper components that own `columns` internally and take only a plain `data` prop) but it wasn't followed here. Fixed by extracting `fixed-assets-table.tsx` as a `"use client"` component following that exact pattern; `page.tsx` now only fetches/shapes data and passes `rows` down. Rebuilt clean after the fix. Saved as a standing memory (`feedback_datatable_columns_client_boundary`) so future Accounting/ERP pages don't repeat it. Sinag has not yet re-confirmed the fix in-browser as of this log entry.
 
-No git commit (standing project rule — stopped at DoD for manual review). Next: the doc's "Final check after ACCT-5" balance query was run directly (0 rows, `difference` trivially null/0) — ledger is clean, ready for ACCT-6 (Historical Import) whenever Sinag wants to proceed; ACCT-7 remains gated on core BMS order/PO stabilization.
+No git commit (standing project rule — stopped at DoD for manual review). Next: the doc's "Final check after ACCT-5" balance query was run directly (0 rows, `difference` trivially null/0) — ledger is clean, ready for ACCT-6 (Historical Import) whenever Sinag wants to proceed; ACCT-7 remains gated on core ERP order/PO stabilization.
 
 ---
 
@@ -231,7 +231,7 @@ Verified Definition of Done directly against the live DB:
 - `get_trial_balance('2026-06-30')` output matches the finalized table exactly.
 - `npm run build` passes with zero errors.
 
-No git commit (standing project rule — stopped at DoD for manual review). ACCT-7 remains gated on core BMS order/PO stabilization; ACCT-8 (BIR tax estimate) not started.
+No git commit (standing project rule — stopped at DoD for manual review). ACCT-7 remains gated on core ERP order/PO stabilization; ACCT-8 (BIR tax estimate) not started.
 
 ---
 

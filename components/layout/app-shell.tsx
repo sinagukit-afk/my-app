@@ -641,8 +641,8 @@ export function AppShell({ children, userEmail, userRole, signOutAction, navCoun
           </button>
 
           <div className="hidden md:block">
-            <p className="text-sm font-semibold text-(--color-text)">Sinag Ukit BMS</p>
-            <p className="text-xs text-(--color-text-muted)">Business Management System</p>
+            <p className="text-sm font-semibold text-(--color-text)">Sinag Ukit ERP</p>
+            <p className="text-xs text-(--color-text-muted)">Enterprise Resource Planning</p>
           </div>
 
           <div className="flex items-center gap-3 ml-auto">

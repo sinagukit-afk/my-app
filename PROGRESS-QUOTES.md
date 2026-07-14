@@ -1,6 +1,6 @@
 # PROGRESS-QUOTES.md
 
-Tracks the **Quote Module rebuild** for Sinag Ukit BMS. Follows the same convention as `PROGRESS-ITEMS.md`/`PROGRESS-CUSTOMERS.md`/`PROGRESS-INVENTORY.md`: `QUOTE-` prefixed phases, kept separate from the core `PROGRESS.md` numbering. Append-only.
+Tracks the **Quote Module rebuild** for Sinag Ukit ERP. Follows the same convention as `PROGRESS-ITEMS.md`/`PROGRESS-CUSTOMERS.md`/`PROGRESS-INVENTORY.md`: `QUOTE-` prefixed phases, kept separate from the core `PROGRESS.md` numbering. Append-only.
 
 Source doc: `Quote_Module_Business_Requirements_Specification.md` (handed over by Sinag), audited against the live app before any build — see the audit + kickoff-plan conversation for the full conflict list. Two architectural conflicts were found and resolved before building:
 

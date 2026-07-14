@@ -1,6 +1,6 @@
 # PROGRESS-CUSTOMERS.md
 
-Tracks the **Customer Management + Shipping** feature build for Sinag Ukit BMS. Follows the
+Tracks the **Customer Management + Shipping** feature build for Sinag Ukit ERP. Follows the
 same convention as `PROGRESS-ITEMS.md`/`PROGRESS-ACCOUNTING.md`: `CUST-` prefixed phases, kept
 separate from the core `PROGRESS.md` numbering. Append-only.
 
@@ -12,7 +12,7 @@ self-contained).
 
 ## Locked decisions (read this before starting any phase)
 
-- **`customers` stays the single BMS profile per person**, still pull-synced from Loyverse.
+- **`customers` stays the single ERP profile per person**, still pull-synced from Loyverse.
   Gained shipping-address columns (`address_line1`, `barangay`, `city`, `province`,
   `postal_code` — all nullable, so the form doesn't force an address on walk-ins).
 - **`customer_sources`** links a `customers.id` to any number of external identities
@@ -22,8 +22,8 @@ self-contained).
 - **Facebook/Instagram are schema-ready but not built.** `source` accepts those values; no
   sync, no matching logic, no "Link Facebook" action — that button exists in the UI as a
   disabled stub only.
-- **Manual customer creation is BMS-only, one-way.** No push back to Loyverse for
-  BMS-created customers. Whether that should change later (would need `sync_status` columns
+- **Manual customer creation is ERP-only, one-way.** No push back to Loyverse for
+  ERP-created customers. Whether that should change later (would need `sync_status` columns
   on `customers`, same pattern as `items`) is an open decision — not needed now.
 - **Receiver info lives on `orders`, not `customers`.** Souvenir/giveaway orders often ship to
   someone other than the paying customer, and that can change order to order — so
@@ -112,7 +112,7 @@ See D022 in `DECISIONS.md`.
   whole departments (Finance, Accounting, Analytics, Administration), and Customers is exactly
   where customer context is already used day-to-day (creating quotes/orders).
 - Followed the Item List screen's page/table/actions split per the kickoff brief's own
-  instruction, matching the `bms-app` skill's established CRUD pattern (Suppliers as the
+  instruction, matching the `erp-app` skill's established CRUD pattern (Suppliers as the
   reference).
 
 Key files: `app/dashboard/orders/customers/{page.tsx,customers-table.tsx,customer-form.tsx,actions.ts,[id]/{page.tsx,customer-detail.tsx}}`, `components/layout/app-shell.tsx`.

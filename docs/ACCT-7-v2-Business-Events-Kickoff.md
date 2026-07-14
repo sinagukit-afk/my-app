@@ -1,4 +1,4 @@
-# Sinag Ukit BMS — Accounting Module: Event-Driven Auto-Posting
+# Sinag Ukit ERP — Accounting Module: Event-Driven Auto-Posting
 
 ## Rewrite of ACCT-7 ("Auto-posting from `confirm_order()` / PO receiving")
 
@@ -10,7 +10,7 @@
 
 ## Why ACCT-7 needed a rewrite, not just a resume
 
-The original `PROGRESS-ACCOUNTING.md` scoped ACCT-7 as "waiting on core BMS
+The original `PROGRESS-ACCOUNTING.md` scoped ACCT-7 as "waiting on core ERP
 order/PO flow to stabilize," with the implied hook point being
 `confirm_order()`. That function was retired in **D027** (2026-07-06, Order
 Module Improvement) — the order lifecycle today is an 8-status state machine

@@ -1,4 +1,4 @@
-# Sinag Ukit BMS — Accounting Module (Option A)
+# Sinag Ukit ERP — Accounting Module (Option A)
 ## Claude Code Instructions: ACCT-1 through ACCT-6
 
 > **ARCHIVED (2026-07-09).** ACCT-1 through ACCT-6 are all built and live.
@@ -12,7 +12,7 @@
 > here for historical reference (original SQL bodies, seed data) only —
 > the module itself is paused, see `PROGRESS-ACCOUNTING.md`.
 
-**Context for Claude Code:** This extends the existing Sinag Ukit BMS (Supabase project `glwskmtworldifydsihc`, Next.js frontend). These phases are self-contained — they do not touch `orders`, `purchase_orders`, or any confirm/receive RPC. Run one phase per session. Update `PROGRESS-ACCOUNTING.md` after each phase — **not** the core BMS `PROGRESS.md`. This module uses its own `ACCT-1`...`ACCT-8` phase labels specifically to avoid colliding with the core BMS's own phase numbering in `PROGRESS.md`. Migration file numbers (`0013_...` onward) remain a single shared sequence across both workstreams — only the phase *labels* are namespaced. Do not commit to git automatically — stop at the Definition of Done for manual review, per standing project rules. No new dependencies without approval.
+**Context for Claude Code:** This extends the existing Sinag Ukit ERP (Supabase project `glwskmtworldifydsihc`, Next.js frontend). These phases are self-contained — they do not touch `orders`, `purchase_orders`, or any confirm/receive RPC. Run one phase per session. Update `PROGRESS-ACCOUNTING.md` after each phase — **not** the core ERP `PROGRESS.md`. This module uses its own `ACCT-1`...`ACCT-8` phase labels specifically to avoid colliding with the core ERP's own phase numbering in `PROGRESS.md`. Migration file numbers (`0013_...` onward) remain a single shared sequence across both workstreams — only the phase *labels* are namespaced. Do not commit to git automatically — stop at the Definition of Done for manual review, per standing project rules. No new dependencies without approval.
 
 ---
 

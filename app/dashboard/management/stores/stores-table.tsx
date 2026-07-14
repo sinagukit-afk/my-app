@@ -105,7 +105,7 @@ export function StoresTable({ data, canWrite, canDelete }: Props) {
       key: "loyverse_store_id",
       header: "Source",
       render: (value) =>
-        value ? <Badge variant="neutral">Loyverse-linked</Badge> : <Badge variant="default">BMS-only</Badge>,
+        value ? <Badge variant="neutral">Loyverse-linked</Badge> : <Badge variant="default">ERP-only</Badge>,
     },
     {
       key: "is_active",

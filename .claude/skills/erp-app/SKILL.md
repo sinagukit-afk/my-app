@@ -1,9 +1,9 @@
 ---
-name: bms-app
-description: Conventions for building/editing Sinag Ukit BMS frontend pages (Next.js 16 App Router, React 19, Tailwind v4). Use when adding or modifying dashboard screens, forms, tables, or server actions in D:\my-app.
+name: erp-app
+description: Conventions for building/editing Sinag Ukit ERP frontend pages (Next.js 16 App Router, React 19, Tailwind v4). Use when adding or modifying dashboard screens, forms, tables, or server actions in D:\my-app.
 ---
 
-# BMS App Conventions
+# ERP App Conventions
 
 Read `node_modules/next/dist/docs/` for this Next.js version's breaking changes before writing App Router code — this is NOT the Next.js you already know (per AGENTS.md).
 
@@ -37,8 +37,8 @@ Never target `button[type=submit]` generically with `preview_click`/`preview_eva
 
 ## Delete actions are always soft deletes
 
-No "Delete" button/server action should issue a real Supabase `DELETE`. It should update a soft-delete column (`deleted_at`, or an existing `is_active`-style flag) instead — see the `bms-supabase` skill for the schema-side convention. On the list/query side, don't rely solely on the UI to hide deleted rows: the underlying query (and ideally RLS) should already exclude them, so a soft-deleted row can never leak into a table, dropdown, or picker even if a new screen forgets to add the filter itself.
+No "Delete" button/server action should issue a real Supabase `DELETE`. It should update a soft-delete column (`deleted_at`, or an existing `is_active`-style flag) instead — see the `erp-supabase` skill for the schema-side convention. On the list/query side, don't rely solely on the UI to hide deleted rows: the underlying query (and ideally RLS) should already exclude them, so a soft-deleted row can never leak into a table, dropdown, or picker even if a new screen forgets to add the filter itself.
 
 ## Stock-affecting UI logic
 
-Never write inventory math in a page/action directly. If a UI action changes stock (adjustment, receiving, order confirm/edit), it should call an existing or new Postgres RPC (see the `bms-supabase` skill) — client code should only call the RPC and handle its error/shortfall response, never compute the stock delta itself.
+Never write inventory math in a page/action directly. If a UI action changes stock (adjustment, receiving, order confirm/edit), it should call an existing or new Postgres RPC (see the `erp-supabase` skill) — client code should only call the RPC and handle its error/shortfall response, never compute the stock delta itself.

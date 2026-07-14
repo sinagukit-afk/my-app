@@ -1,6 +1,6 @@
 # PROGRESS-MOBILE.md
 
-Tracks the **mobile-responsiveness retrofit** for Sinag Ukit BMS. Follows the same convention as
+Tracks the **mobile-responsiveness retrofit** for Sinag Ukit ERP. Follows the same convention as
 `PROGRESS-AUTH.md`/`PROGRESS-MANAGEMENT.md`: `MOBILE-` prefixed phases, kept separate from the
 core `PROGRESS.md` numbering. Append-only.
 
@@ -37,7 +37,7 @@ touch those files independently and may have moved since this doc was written.
   (including iPad portrait ~768px) get the hide/show drawer nav. Only `≥1024px` (real
   desktop/laptop widths) keeps today's persistent sidebar, completely unchanged. Chosen over the
   narrower `md`(768px) option specifically because this app's nav is deep (group > subgroup >
-  item) and staff may access the BMS from a tablet, not just a phone. **Every `lg:` class in
+  item) and staff may access the ERP from a tablet, not just a phone. **Every `lg:` class in
   `app-shell.tsx` (MOBILE-1) is the practical enforcement of this decision** — build the drawer to
   activate `<1024px` and the persistent sidebar at `≥1024px`, matching Tailwind's existing `lg:`
   prefix (no custom breakpoint needed). Other phases (MOBILE-2/3/4) should default to the same
@@ -287,9 +287,9 @@ Built the off-canvas sidebar drawer in [components/layout/app-shell.tsx](compone
 - Breadcrumb bar: `px-6` → `px-4 lg:px-6`, added `overflow-x-auto` so deep paths scroll horizontally instead of breaking layout (the parent's `overflow-x-auto` + child `nav`'s default `min-width:auto` means it scrolls rather than squishes — verified, not just assumed).
 - Main content: `p-6` → `p-4 lg:p-6`.
 
-**Verified in browser preview** (logged in as the Claude Code test account): 375px (drawer opens/closes via hamburger, backdrop click, and route navigation; nested group/subgroup expand-collapse works; labels render even after toggling `collapsed` from a prior desktop session), 768px tablet (drawer treatment applies here too, per the locked `lg` cutoff — no header crowding between the hamburger and the "Sinag Ukit BMS" title), 1280px desktop (persistent sidebar, icon-rail collapse toggle, byte-for-byte the same layout as before this change). No console errors, no page-level horizontal scroll on mobile, `tsc --noEmit` clean.
+**Verified in browser preview** (logged in as the Claude Code test account): 375px (drawer opens/closes via hamburger, backdrop click, and route navigation; nested group/subgroup expand-collapse works; labels render even after toggling `collapsed` from a prior desktop session), 768px tablet (drawer treatment applies here too, per the locked `lg` cutoff — no header crowding between the hamburger and the "Sinag Ukit ERP" title), 1280px desktop (persistent sidebar, icon-rail collapse toggle, byte-for-byte the same layout as before this change). No console errors, no page-level horizontal scroll on mobile, `tsc --noEmit` clean.
 
-**Left alone / out of scope for this phase:** `DataTable` still has no card/stacked fallback (tables scroll horizontally inside their own container on mobile — that's MOBILE-2). The "Sinag Ukit BMS" header title block's `hidden md:block` was left as-is (not flagged as broken in the assessment; still looked fine at 768px in testing).
+**Left alone / out of scope for this phase:** `DataTable` still has no card/stacked fallback (tables scroll horizontally inside their own container on mobile — that's MOBILE-2). The "Sinag Ukit ERP" header title block's `hidden md:block` was left as-is (not flagged as broken in the assessment; still looked fine at 768px in testing).
 
 Next step: MOBILE-2 (shared primitives — `DataTable`, `PageHeader`, `Dialog`).
 
@@ -306,7 +306,7 @@ exists in `app/layout.tsx`, and none is needed) — matches the `generate-viewpo
 from the assessment session. Nothing to fix here.
 
 **Sidebar drawer breakpoint — asked Sinag directly (`md`/768px vs `lg`/1024px), confirmed
-`lg`(1024px).** Recorded in Locked decisions above. Sinag's reasoning: staff may access the BMS
+`lg`(1024px).** Recorded in Locked decisions above. Sinag's reasoning: staff may access the ERP
 from a tablet, and this app's nav is deep enough (group > subgroup > item, see `app-shell.tsx`)
 that a squeezed 768px sidebar-plus-content layout was judged not worth keeping the persistent
 sidebar for — tablets get the same drawer treatment as phones. Only real desktop/laptop widths

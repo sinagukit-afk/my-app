@@ -21,14 +21,14 @@ stub. See `PROGRESS-CUSTOMERS.md` (CUST-0..4) and D022/D023 in
 🟩 Supplier (`/dashboard/management/suppliers`)
 🟩 Item List (`/dashboard/management/items`) — full Loyverse-parity
 Add/Edit (variant matrix, composite components, modifier assignment,
-minimum stock threshold), archive, activity logging, BMS→Loyverse
+minimum stock threshold), archive, activity logging, ERP→Loyverse
 push-sync via n8n. See `PROGRESS-ITEMS.md` (ITEM-0..7) and D020/D021 in
 `DECISIONS.md`.
 🟩 Item Category (`/dashboard/management/item-categories`) — full CRUD
 (name, `category_type` Product/Packaging, color), admin/manager/encoder
 write, admin/manager delete; archive not hard-delete. Source badge shows
-Loyverse-synced vs. BMS-only; Loyverse pull-sync can still overwrite a
-BMS edit on that category's next sync (accepted risk). Lets Master Items
+Loyverse-synced vs. ERP-only; Loyverse pull-sync can still overwrite a
+ERP edit on that category's next sync (accepted risk). Lets Master Items
 be tagged Packaging for the shipment packaging picker. See
 `PROGRESS-PRODUCTION-SHIPPING.md` PS-1 and `PROGRESS-MANAGEMENT.md`
 MGMT-2.
@@ -42,7 +42,7 @@ populates the courier picker in Order Detail's Ship Order dialog. See
 🟩 Stores (`/dashboard/management/stores`) — full CRUD (name, address,
 phone, email), `is_active` toggle, hard delete guarded against FK use
 (matches Suppliers). No Loyverse sync path exists for stores at all
-(API has no create/update endpoint) — BMS-local by necessity. See
+(API has no create/update endpoint) — ERP-local by necessity. See
 `PROGRESS-MANAGEMENT.md` MGMT-4.
 
 ## Orders
@@ -335,11 +335,11 @@ number/birthday, password change via Supabase Auth reset-email link
 
 ## Integrations
 
-> No dedicated Integrations screens exist in the BMS UI. That said,
+> No dedicated Integrations screens exist in the ERP UI. That said,
 > Loyverse sync is functionally live as of the Item List feature
 > (D020): pull-sync for categories/items/customers/inventory/receipts/
 > payment types/modifiers/discounts runs daily via the n8n workflow
-> `Loyverse-Supabase`, and BMS item Create/Edit pushes to Loyverse in
+> `Loyverse-Supabase`, and ERP item Create/Edit pushes to Loyverse in
 > real time. This all runs invisibly under Inventory > Item List —
 > none of it surfaces as an "Integrations" screen below.
 

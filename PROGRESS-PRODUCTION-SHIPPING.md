@@ -1,6 +1,6 @@
 # PROGRESS-PRODUCTION-SHIPPING.md
 
-Tracks the **Production Orders + Shipments + Packaging** build for Sinag Ukit BMS. Follows the same convention as `PROGRESS-ORDERS.md`/`PROGRESS-QUOTES.md`: phase-prefixed (`PS-`), kept separate from the core `PROGRESS.md` numbering. Append-only.
+Tracks the **Production Orders + Shipments + Packaging** build for Sinag Ukit ERP. Follows the same convention as `PROGRESS-ORDERS.md`/`PROGRESS-QUOTES.md`: phase-prefixed (`PS-`), kept separate from the core `PROGRESS.md` numbering. Append-only.
 
 Source doc: Orders Module Specification (handed over by Sinag in chat, 2026-07-07), assessed against the live app before any build — see the assessment in this session's transcript for the full comparison. This is the deferred inventory-consumption phase D025/D030 both pointed at ("Production consumption is out of scope for Inventory Phase 1... revisit in a future order page revision phase") — this plan **is** that phase, and building it means formally superseding D030's scope-out, not silently ignoring it.
 
@@ -577,7 +577,7 @@ Per this project's own convention (ORDER-1: *"MODULE_STATUS.md/BUSINESS_RULES.md
 | `PROGRESS-ORDERS.md` | Add forward-pointer note: ORDER-3/D028's manual Completed Qty retired | PS-3 |
 | `PROGRESS-ORDERS.md` | Add forward-pointer note on the bottom "open questions" section: `completed`/`delivered` resolved here | PS-7 |
 | `PROGRESS-CUSTOMERS.md` | Cross-reference Part 2 TBD #5 (split shipments) against new multi-shipment support | PS-6 |
-| `.claude/skills/bms-app/SKILL.md` | Re-check/update the Production Queue "Mark Completed is admin-only" example — no longer accurate once Production Orders replace it | PS-3 |
-| `.claude/skills/bms-supabase/SKILL.md` | Optional: add `production_order_number`/`shipment_number` as named numbering precedents | PS-2, PS-6 (optional) |
+| `.claude/skills/erp-app/SKILL.md` | Re-check/update the Production Queue "Mark Completed is admin-only" example — no longer accurate once Production Orders replace it | PS-3 |
+| `.claude/skills/erp-supabase/SKILL.md` | Optional: add `production_order_number`/`shipment_number` as named numbering precedents | PS-2, PS-6 (optional) |
 
 No changes needed: `TESTING.md`, `ROADMAP.md`, `NEXT_PHASE.md`, `PROGRESS.md`, `PROGRESS-INVENTORY.md`, `PROGRESS-QUOTES.md`, `PROGRESS-ITEMS.md`, `PROGRESS-PURCHASING.md`, `PROGRESS-ACCOUNTING.md`, `AGENTS.md`/`CLAUDE.md`.

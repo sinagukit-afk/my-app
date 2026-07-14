@@ -1,4 +1,4 @@
-# Sinag Ukit BMS — Theme Notes
+# Sinag Ukit ERP — Theme Notes
 
 How the brand infographic was translated into UI tokens, and what I had to
 assume because the brand kit was built for marketing/print, not a dense
@@ -6,7 +6,7 @@ admin/POS interface.
 
 ## 1. Direct mappings (no ambiguity)
 
-| Brand color | Hex | Role in infographic | Role in BMS |
+| Brand color | Hex | Role in infographic | Role in ERP |
 |---|---|---|---|
 | Warm Ivory | `#F6EFE4` | Primary background (60%) | `background` — app shell, page background |
 | Deep Charcoal | `#1F1F1F` | Primary foundation / text (25%) | `foreground` (light mode) text, and the dark `sidebar` surface |
@@ -51,7 +51,7 @@ business management system needs:
 - **Dark mode** — the brand kit shows no dark variant; "Warm Ivory" as a
   background is explicitly the spec. I extrapolated a dark mode by
   inverting charcoal/ivory roles and lightening gold slightly for contrast
-  on dark backgrounds. If the BMS doesn't need dark mode, ignore the `.dark`
+  on dark backgrounds. If the ERP doesn't need dark mode, ignore the `.dark`
   block entirely.
 - **Sidebar = Charcoal + Gold** — the infographic's "Premium & Bold"
   combination example (Charcoal / Gold / Ivory / Red bar) reads to me as

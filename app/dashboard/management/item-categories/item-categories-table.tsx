@@ -118,7 +118,7 @@ export function ItemCategoriesTable({ data, canWrite, canDelete }: Props) {
       key: "loyverse_category_id",
       header: "Source",
       render: (value) =>
-        value ? <Badge variant="neutral">Loyverse-synced</Badge> : <Badge variant="default">BMS-only</Badge>,
+        value ? <Badge variant="neutral">Loyverse-synced</Badge> : <Badge variant="default">ERP-only</Badge>,
     },
     {
       key: "deleted_at",

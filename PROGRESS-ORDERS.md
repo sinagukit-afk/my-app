@@ -1,6 +1,6 @@
 # PROGRESS-ORDERS.md
 
-Tracks the **Order Module Improvement** build for Sinag Ukit BMS. Follows the same convention as `PROGRESS-QUOTES.md`/`PROGRESS-CUSTOMERS.md`/`PROGRESS-INVENTORY.md`: `ORDER-` prefixed phases, kept separate from the core `PROGRESS.md` numbering. Append-only.
+Tracks the **Order Module Improvement** build for Sinag Ukit ERP. Follows the same convention as `PROGRESS-QUOTES.md`/`PROGRESS-CUSTOMERS.md`/`PROGRESS-INVENTORY.md`: `ORDER-` prefixed phases, kept separate from the core `PROGRESS.md` numbering. Append-only.
 
 Source doc: `ORDER_MODULE_IMPROVEMENT.md` (handed over by Sinag from Downloads, 2026-07-06), assessed against the live app before any build. This is explicitly the deferred "future order page revision" phase referenced in `PROGRESS-QUOTES.md` (QUOTE-1: *"Reserved → deducted-at-completion stock transition, and partial-reservation-on-shortage — both deferred to a future 'order page revision' phase"*) and in `DECISIONS.md` D025.
 

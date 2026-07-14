@@ -1,6 +1,6 @@
 # PROGRESS-PURCHASING.md
 
-Tracks the **Purchasing module** for Sinag Ukit BMS. Follows the same convention as `PROGRESS-ITEMS.md`/`PROGRESS-CUSTOMERS.md`/`PROGRESS-INVENTORY.md`/`PROGRESS-QUOTES.md`: `RECV-` prefixed phases, kept separate from the core `PROGRESS.md` numbering. Append-only.
+Tracks the **Purchasing module** for Sinag Ukit ERP. Follows the same convention as `PROGRESS-ITEMS.md`/`PROGRESS-CUSTOMERS.md`/`PROGRESS-INVENTORY.md`/`PROGRESS-QUOTES.md`: `RECV-` prefixed phases, kept separate from the core `PROGRESS.md` numbering. Append-only.
 
 ---
 
@@ -111,7 +111,7 @@ data per this project's standing verification convention):**
 architecture calls (shared here in brief) — this entry covers the Purchasing-side
 integration.
 
-**Ask (Sinag):** a reusable "AI Form Auto-Fill" module any BMS form could use — user
+**Ask (Sinag):** a reusable "AI Form Auto-Fill" module any ERP form could use — user
 uploads/photographs a document, the system reads it and pre-fills the form, every field
 stays editable, nothing auto-saves or auto-submits. Design was reviewed before any code
 was written; user picked the pilot form (Purchasing PO, over New Expense or a

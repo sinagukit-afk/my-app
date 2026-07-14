@@ -78,7 +78,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSaved }: Props) {
             <DialogDescription>
               {isEdit
                 ? "Update this customer's contact info, address, or notes."
-                : "For walk-ins or leads not yet in Loyverse. This customer is BMS-only and won't push back to Loyverse."}
+                : "For walk-ins or leads not yet in Loyverse. This customer is ERP-only and won't push back to Loyverse."}
             </DialogDescription>
           </DialogHeader>
 

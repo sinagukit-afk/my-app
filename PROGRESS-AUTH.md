@@ -1,7 +1,7 @@
 # PROGRESS-AUTH.md
 
 Tracks the **Auth enhancements** build (root redirect, forgot password, email/username login,
-5h idle-logout) for Sinag Ukit BMS. Follows the same convention as `PROGRESS-MANAGEMENT.md`/
+5h idle-logout) for Sinag Ukit ERP. Follows the same convention as `PROGRESS-MANAGEMENT.md`/
 `PROGRESS-QUOTES.md`: `AUTH-` prefixed phases, kept separate from the core `PROGRESS.md`
 numbering. Append-only.
 

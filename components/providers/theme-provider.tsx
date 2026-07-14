@@ -21,7 +21,7 @@ export function useTheme() {
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = React.useState<Theme>(() => {
     if (typeof window === "undefined") return "system";
-    return (localStorage.getItem("bms-theme") as Theme | null) ?? "system";
+    return (localStorage.getItem("erp-theme") as Theme | null) ?? "system";
   });
 
   React.useEffect(() => {
@@ -35,7 +35,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [theme]);
 
   function setTheme(next: Theme) {
-    localStorage.setItem("bms-theme", next);
+    localStorage.setItem("erp-theme", next);
     setThemeState(next);
   }
 

@@ -78,8 +78,8 @@ Status Flow: Confirmed → In Production → (Partially Completed | Production C
 
 ## Customers
 
--   `customers` is the single BMS profile per person, still pull-synced from Loyverse. `customer_sources` links a customer to any number of external identities (`loyverse` | `facebook` | `instagram` | `manual` | `walkin`) — a new platform is a new `source` value, not a new migration.
--   Manual customer creation (walk-ins/leads) is BMS-only — no push back to Loyverse.
+-   `customers` is the single ERP profile per person, still pull-synced from Loyverse. `customer_sources` links a customer to any number of external identities (`loyverse` | `facebook` | `instagram` | `manual` | `walkin`) — a new platform is a new `source` value, not a new migration.
+-   Manual customer creation (walk-ins/leads) is ERP-only — no push back to Loyverse.
 -   Facebook/Instagram matching and sync are not built. `customer_sources.source` accepts those values but nothing writes them yet.
 
 ## Orders — Shipping Receiver (retired, PS-18/D040)

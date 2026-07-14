@@ -175,8 +175,8 @@ used the caller's own id.
 ## D020
 
 Supersedes D001/D008 for items specifically: starting with the Item
-List feature (`PROGRESS-ITEMS.md`), the BMS becomes the source of
-truth for item/variant data going forward. Create/Edit in the BMS
+List feature (`PROGRESS-ITEMS.md`), the ERP becomes the source of
+truth for item/variant data going forward. Create/Edit in the ERP
 pushes to Loyverse via API (ITEM-2); pull-sync switches from polling
 to webhook-driven (or an `updated_at`-newer guard if Loyverse has no
 outbound webhook support) to avoid a poll cycle clobbering a
@@ -187,7 +187,7 @@ a blanket re-enable of Loyverse automation. The push-sync n8n workflow
 is built as an addition to the existing `Loyverse Sync - Modifiers &
 Discounts` workflow (id `F6CfXnxji98Y75JJ`), not a new standalone one
 — confirmed with Sinag, despite that workflow's existing inactive
-status and known unfixed upsert-node bug (see `bms-supabase` skill).
+status and known unfixed upsert-node bug (see `erp-supabase` skill).
 
 **Correction 2026-07-03 (ITEM-2 build):** Loyverse's API does support
 outbound webhooks (`ITEM_UPDATED` event, `/v1/webhooks`, live since
@@ -216,7 +216,7 @@ locked in during the Item List build (`PROGRESS-ITEMS.md`):
 `track_stock` is forced `false` server-side for composite items
 regardless of form input (enforced in `upsert_item`, not just hidden
 in the UI); `use_production` is still pulled from Loyverse and stored
-(informational, read-only), but no BMS logic acts on it; component
+(informational, read-only), but no ERP logic acts on it; component
 nesting is capped at 3 levels with recursive-CTE cycle/depth
 validation in `upsert_item`. Revisit only if the Advanced Inventory
 subscription is ever purchased.
@@ -384,7 +384,7 @@ Order Detail page (`PROGRESS-ORDERS.md` ORDER-3) surfaced a mismatch
 between the original kickoff decision text ("Completed Qty entry by
 admin/manager") and the live RLS: `order_items_admin_update` and
 `orders_admin_update` are both **admin-only** — no manager-level
-UPDATE policy exists on either table. Per the `bms-supabase` skill's
+UPDATE policy exists on either table. Per the `erp-supabase` skill's
 preflight instruction (flag doc/system mismatches before proceeding),
 this was surfaced to Sinag rather than assumed either way. Decision:
 gate Completed Qty entry to **admin-only** in the UI, matching live

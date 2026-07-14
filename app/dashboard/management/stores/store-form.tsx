@@ -54,7 +54,7 @@ export function StoreForm({ open, onOpenChange, store, onSaved }: Props) {
             <DialogDescription>
               {isEdit
                 ? "Update this store's contact details."
-                : "Add a new store location. Loyverse's API has no way to receive new stores, so a store added here stays BMS-only."}
+                : "Add a new store location. Loyverse's API has no way to receive new stores, so a store added here stays ERP-only."}
             </DialogDescription>
           </DialogHeader>
 
@@ -67,7 +67,7 @@ export function StoreForm({ open, onOpenChange, store, onSaved }: Props) {
 
           {isEdit && store?.loyverse_store_id && (
             <p className="text-xs text-(--color-text-subtle)">
-              This store is linked to Loyverse (read-only there). Edits here stay in BMS only —
+              This store is linked to Loyverse (read-only there). Edits here stay in the ERP only —
               Loyverse has no API to update store details.
             </p>
           )}
