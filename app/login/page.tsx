@@ -16,7 +16,7 @@ export default async function LoginPage({
       >
         <div>
           <h1 className="text-lg font-semibold text-stone-900">Sign in</h1>
-          <p className="text-sm text-stone-500">Sinag POS Dashboard</p>
+          <p className="text-sm text-stone-500">Sinag Ukit ERP</p>
         </div>
 
         {error && (

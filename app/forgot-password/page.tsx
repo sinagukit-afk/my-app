@@ -35,7 +35,7 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-sm space-y-5 rounded-xl border border-stone-200 bg-white p-8 shadow-sm">
         <div>
           <h1 className="text-lg font-semibold text-stone-900">Reset your password</h1>
-          <p className="text-sm text-stone-500">Sinag POS Dashboard</p>
+          <p className="text-sm text-stone-500">Sinag Ukit ERP</p>
         </div>
 
         {submitted ? (

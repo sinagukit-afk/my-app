@@ -3,7 +3,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 
 export const metadata: Metadata = {
-  title: "Sinag POS",
+  title: "Sinag Ukit ERP",
   description: "Sign in to manage your POS dashboard.",
 };
 
