@@ -1,22 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
-import { deletePurchaseOrder } from "./actions";
 import { formatDate } from "@/lib/utils/format-date";
 
 export type PurchaseOrderRow = {
@@ -33,7 +22,6 @@ export type PurchaseOrderRow = {
 type Props = {
   data: PurchaseOrderRow[];
   canWrite: boolean;
-  canDelete: boolean;
 };
 
 const STATUS_VARIANT: Record<string, "neutral" | "success" | "warning" | "danger" | "default"> = {
@@ -45,40 +33,14 @@ const STATUS_VARIANT: Record<string, "neutral" | "success" | "warning" | "danger
   cancelled: "danger",
 };
 
-export function PurchaseOrdersTable({ data, canWrite, canDelete }: Props) {
+export function PurchaseOrdersTable({ data, canWrite }: Props) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [deleteTarget, setDeleteTarget] = useState<PurchaseOrderRow | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-
-  function refresh() {
-    router.refresh();
-  }
-
-  function handleDelete() {
-    if (!deleteTarget) return;
-    setDeleteError(null);
-    startTransition(async () => {
-      const res = await deletePurchaseOrder(deleteTarget.id);
-      if (res.success) {
-        setDeleteTarget(null);
-        refresh();
-      } else {
-        setDeleteError(res.error);
-      }
-    });
-  }
 
   const columns: Column<PurchaseOrderRow>[] = [
     {
       key: "reference",
       header: "Reference",
       sortable: true,
-      render: (value, row) => (
-        <Link href={`/dashboard/purchasing/inventory-po/${row.reference}`} className="font-medium text-(--color-primary) hover:underline">
-          {String(value)}
-        </Link>
-      ),
     },
     {
       key: "supplier_name",
@@ -114,39 +76,13 @@ export function PurchaseOrdersTable({ data, canWrite, canDelete }: Props) {
       sortable: true,
       render: (value) => `₱${Number(value).toFixed(2)}`,
     },
-    {
-      key: "id",
-      header: "Actions",
-      render: (_value, row) => (
-        <div className="flex items-center gap-2">
-          <Link href={`/dashboard/purchasing/inventory-po/${row.reference}`}>
-            <Button variant="ghost" size="sm">
-              View
-            </Button>
-          </Link>
-          {canDelete && row.status === "draft" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-(--color-danger)"
-              onClick={() => {
-                setDeleteTarget(row);
-                setDeleteError(null);
-              }}
-            >
-              Delete
-            </Button>
-          )}
-        </div>
-      ),
-    },
   ];
 
   return (
     <div className="space-y-4">
       <PageHeader
         title="Purchase Orders"
-        description="Create and track orders placed with your suppliers."
+        description="Create and track orders placed with your suppliers. Click a row to view details."
         actions={
           canWrite ? (
             <Link href="/dashboard/purchasing/inventory-po/new">
@@ -162,37 +98,8 @@ export function PurchaseOrdersTable({ data, canWrite, canDelete }: Props) {
         searchPlaceholder="Search purchase orders…"
         emptyMessage="No purchase orders found"
         emptyDescription="Create your first purchase order to get started."
+        onRowClick={(row) => router.push(`/dashboard/purchasing/inventory-po/${row.reference}`)}
       />
-
-      <Dialog
-        open={!!deleteTarget}
-        onOpenChange={(next) => {
-          if (!next) {
-            setDeleteTarget(null);
-            setDeleteError(null);
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Purchase Order</DialogTitle>
-            <DialogDescription>
-              Delete purchase order &quot;{deleteTarget?.reference}&quot;? This cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          {deleteError && <p className="text-sm text-(--color-danger)">{deleteError}</p>}
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="secondary" disabled={isPending}>
-                Cancel
-              </Button>
-            </DialogClose>
-            <Button type="button" variant="danger" onClick={handleDelete} disabled={isPending}>
-              {isPending ? "Deleting…" : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

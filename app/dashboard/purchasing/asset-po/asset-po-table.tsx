@@ -1,22 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
-import { deleteAssetPurchaseOrder } from "./actions";
 import { formatDate } from "@/lib/utils/format-date";
 
 export type AssetPORow = {
@@ -33,7 +22,6 @@ export type AssetPORow = {
 type Props = {
   data: AssetPORow[];
   canWrite: boolean;
-  canDelete: boolean;
 };
 
 const STATUS_VARIANT: Record<string, "neutral" | "success" | "warning" | "danger" | "default"> = {
@@ -45,41 +33,11 @@ const STATUS_VARIANT: Record<string, "neutral" | "success" | "warning" | "danger
   cancelled: "danger",
 };
 
-export function AssetPOTable({ data, canWrite, canDelete }: Props) {
+export function AssetPOTable({ data, canWrite }: Props) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [deleteTarget, setDeleteTarget] = useState<AssetPORow | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-
-  function refresh() {
-    router.refresh();
-  }
-
-  function handleDelete() {
-    if (!deleteTarget) return;
-    setDeleteError(null);
-    startTransition(async () => {
-      const res = await deleteAssetPurchaseOrder(deleteTarget.id);
-      if (res.success) {
-        setDeleteTarget(null);
-        refresh();
-      } else {
-        setDeleteError(res.error);
-      }
-    });
-  }
 
   const columns: Column<AssetPORow>[] = [
-    {
-      key: "reference",
-      header: "Reference",
-      sortable: true,
-      render: (value, row) => (
-        <Link href={`/dashboard/purchasing/asset-po/${row.reference}`} className="font-medium text-(--color-primary) hover:underline">
-          {String(value)}
-        </Link>
-      ),
-    },
+    { key: "reference", header: "Reference", sortable: true },
     { key: "supplier_name", header: "Supplier", sortable: true },
     {
       key: "status",
@@ -100,39 +58,13 @@ export function AssetPOTable({ data, canWrite, canDelete }: Props) {
       sortable: true,
       render: (value) => `₱${Number(value).toFixed(2)}`,
     },
-    {
-      key: "id",
-      header: "Actions",
-      render: (_value, row) => (
-        <div className="flex items-center gap-2">
-          <Link href={`/dashboard/purchasing/asset-po/${row.reference}`}>
-            <Button variant="ghost" size="sm">
-              View
-            </Button>
-          </Link>
-          {canDelete && row.status === "draft" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-(--color-danger)"
-              onClick={() => {
-                setDeleteTarget(row);
-                setDeleteError(null);
-              }}
-            >
-              Delete
-            </Button>
-          )}
-        </div>
-      ),
-    },
   ];
 
   return (
     <div className="space-y-4">
       <PageHeader
         title="Asset Purchase Orders"
-        description="Request approval to purchase fixed assets before buying — routes to Finance → Fixed Assets on receipt."
+        description="Request approval to purchase fixed assets before buying — routes to Finance → Fixed Assets on receipt. Click a row to view details."
         actions={
           canWrite ? (
             <Link href="/dashboard/purchasing/asset-po/new">
@@ -148,37 +80,8 @@ export function AssetPOTable({ data, canWrite, canDelete }: Props) {
         searchPlaceholder="Search asset purchase orders…"
         emptyMessage="No asset purchase orders found"
         emptyDescription="Create your first asset PO to get started."
+        onRowClick={(row) => router.push(`/dashboard/purchasing/asset-po/${row.reference}`)}
       />
-
-      <Dialog
-        open={!!deleteTarget}
-        onOpenChange={(next) => {
-          if (!next) {
-            setDeleteTarget(null);
-            setDeleteError(null);
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Asset PO</DialogTitle>
-            <DialogDescription>
-              Delete asset purchase order &quot;{deleteTarget?.reference}&quot;? This cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          {deleteError && <p className="text-sm text-(--color-danger)">{deleteError}</p>}
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="secondary" disabled={isPending}>
-                Cancel
-              </Button>
-            </DialogClose>
-            <Button type="button" variant="danger" onClick={handleDelete} disabled={isPending}>
-              {isPending ? "Deleting…" : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

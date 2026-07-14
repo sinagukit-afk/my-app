@@ -15,7 +15,6 @@ export default async function ExpensePurchaseOrdersPage() {
 
   const role = profile?.role ?? "";
   const canWrite = ["admin", "manager"].includes(role);
-  const canDelete = ["admin", "manager"].includes(role);
 
   const { data, error } = await supabase
     .from("purchase_orders")
@@ -49,7 +48,7 @@ export default async function ExpensePurchaseOrdersPage() {
         </Card>
       )}
 
-      <ExpensePOTable data={rows} canWrite={canWrite} canDelete={canDelete} />
+      <ExpensePOTable data={rows} canWrite={canWrite} />
     </div>
   );
 }

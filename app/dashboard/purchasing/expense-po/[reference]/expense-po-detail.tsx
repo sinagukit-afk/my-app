@@ -30,6 +30,7 @@ import {
   setExpensePurchaseOrderStatus,
   removeExpensePurchaseOrderItem,
   receiveExpensePurchaseOrder,
+  deleteExpensePurchaseOrder,
 } from "../actions";
 
 export type ExpensePODetailData = {
@@ -102,6 +103,8 @@ export function ExpensePODetail({ po, items, suppliers, categories, canWrite, ca
   const [receiveOpen, setReceiveOpen] = useState(false);
   const [receiveError, setReceiveError] = useState<string | null>(null);
   const [receiveQty, setReceiveQty] = useState<Record<string, string>>({});
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   function refresh() {
     router.refresh();
@@ -182,6 +185,18 @@ export function ExpensePODetail({ po, items, suppliers, categories, canWrite, ca
     });
   }
 
+  function confirmDelete() {
+    setDeleteError(null);
+    startTransition(async () => {
+      const res = await deleteExpensePurchaseOrder(po.id);
+      if (res.success) {
+        router.push("/dashboard/purchasing/expense-po");
+      } else {
+        setDeleteError(res.error);
+      }
+    });
+  }
+
   const canEditHeader = canWrite && po.status === "draft";
   const canEditItems = canWrite && po.status === "draft";
   const transitions = canWrite ? NEXT_STATUS[po.status] ?? [] : [];
@@ -256,6 +271,18 @@ export function ExpensePODetail({ po, items, suppliers, categories, canWrite, ca
               </Button>
             ))}
             {canShowReceive && <Button onClick={openReceiveDialog}>Receive</Button>}
+            {canDelete && po.status === "draft" && (
+              <Button
+                variant="secondary"
+                className="text-(--color-danger)"
+                onClick={() => {
+                  setDeleteError(null);
+                  setDeleteOpen(true);
+                }}
+              >
+                Delete
+              </Button>
+            )}
           </div>
         }
       />
@@ -437,6 +464,26 @@ export function ExpensePODetail({ po, items, suppliers, categories, canWrite, ca
             </DialogClose>
             <Button type="button" onClick={confirmReceive} disabled={isPending}>
               {isPending ? "Receiving…" : "Post Receipt"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteOpen} onOpenChange={(next) => { setDeleteOpen(next); if (!next) setDeleteError(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Expense PO</DialogTitle>
+            <DialogDescription>
+              Delete expense purchase order &quot;{po.reference}&quot;? This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError && <p className="text-sm text-(--color-danger)">{deleteError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isPending}>Cancel</Button>
+            </DialogClose>
+            <Button type="button" variant="danger" onClick={confirmDelete} disabled={isPending}>
+              {isPending ? "Deleting…" : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

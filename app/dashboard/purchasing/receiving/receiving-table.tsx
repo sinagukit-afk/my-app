@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 
@@ -18,16 +18,10 @@ type Props = {
 };
 
 export function ReceivingTable({ data }: Props) {
+  const router = useRouter();
+
   const columns: Column<ReceivablePO>[] = [
-    {
-      key: "reference",
-      header: "Reference",
-      render: (value, row) => (
-        <Link href={`/dashboard/purchasing/receiving/${row.reference}`} className="font-medium text-(--color-primary) hover:underline">
-          {String(value)}
-        </Link>
-      ),
-    },
+    { key: "reference", header: "Reference" },
     { key: "supplier_name", header: "Supplier" },
     {
       key: "status",
@@ -40,15 +34,6 @@ export function ReceivingTable({ data }: Props) {
       render: (value) => (value as string) || <span className="text-(--color-text-subtle)">—</span>,
     },
     { key: "items_remaining", header: "Units Remaining" },
-    {
-      key: "id",
-      header: "",
-      render: (_value, row) => (
-        <Link href={`/dashboard/purchasing/receiving/${row.reference}`} className="text-sm text-(--color-primary) hover:underline">
-          Receive →
-        </Link>
-      ),
-    },
   ];
 
   return (
@@ -58,6 +43,7 @@ export function ReceivingTable({ data }: Props) {
       searchPlaceholder="Search open purchase orders…"
       emptyMessage="Nothing to receive"
       emptyDescription="Purchase orders will appear here once they've been sent to a supplier."
+      onRowClick={(row) => router.push(`/dashboard/purchasing/receiving/${row.reference}`)}
     />
   );
 }

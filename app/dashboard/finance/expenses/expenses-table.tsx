@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils/format-date";
 
 export type ExpenseRow = {
@@ -35,17 +34,10 @@ type Props = {
 };
 
 export function ExpensesTable({ data }: Props) {
+  const router = useRouter();
+
   const columns: Column<ExpenseRow>[] = [
-    {
-      key: "expense_number",
-      header: "Expense #",
-      sortable: true,
-      render: (value, row) => (
-        <Link href={`/dashboard/finance/expenses/${row.id}`} className="font-medium text-(--color-primary) hover:underline">
-          {String(value)}
-        </Link>
-      ),
-    },
+    { key: "expense_number", header: "Expense #", sortable: true },
     { key: "expense_date", header: "Date", sortable: true, render: (value) => formatDate(value as string) },
     { key: "category_name", header: "Category", sortable: true },
     { key: "description", header: "Description", className: "max-w-xs truncate" },
@@ -70,17 +62,6 @@ export function ExpensesTable({ data }: Props) {
         </Badge>
       ),
     },
-    {
-      key: "id",
-      header: "",
-      render: (_value, row) => (
-        <Link href={`/dashboard/finance/expenses/${row.id}`}>
-          <Button variant="ghost" size="sm">
-            View
-          </Button>
-        </Link>
-      ),
-    },
   ];
 
   return (
@@ -90,6 +71,7 @@ export function ExpensesTable({ data }: Props) {
       searchPlaceholder="Search expenses…"
       emptyMessage="No expenses recorded"
       emptyDescription="Record a direct expense, or receive an Expense PO from Purchasing."
+      onRowClick={(row) => router.push(`/dashboard/finance/expenses/${row.id}`)}
     />
   );
 }

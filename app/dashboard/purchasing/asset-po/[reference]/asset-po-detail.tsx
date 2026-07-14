@@ -30,6 +30,7 @@ import {
   setAssetPurchaseOrderStatus,
   removeAssetPurchaseOrderItem,
   receiveAssetPurchaseOrder,
+  deleteAssetPurchaseOrder,
   type ReceiveLine,
 } from "../actions";
 
@@ -106,6 +107,8 @@ export function AssetPODetail({ po, items, suppliers, categories, canWrite, canD
   const [receiveOpen, setReceiveOpen] = useState(false);
   const [receiveError, setReceiveError] = useState<string | null>(null);
   const [receiveRows, setReceiveRows] = useState<Record<string, ReceiveRowState>>({});
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   function refresh() {
     router.refresh();
@@ -198,6 +201,18 @@ export function AssetPODetail({ po, items, suppliers, categories, canWrite, canD
     });
   }
 
+  function confirmDelete() {
+    setDeleteError(null);
+    startTransition(async () => {
+      const res = await deleteAssetPurchaseOrder(po.id);
+      if (res.success) {
+        router.push("/dashboard/purchasing/asset-po");
+      } else {
+        setDeleteError(res.error);
+      }
+    });
+  }
+
   const canEditHeader = canWrite && po.status === "draft";
   const canEditItems = canWrite && po.status === "draft";
   const transitions = canWrite ? NEXT_STATUS[po.status] ?? [] : [];
@@ -272,6 +287,18 @@ export function AssetPODetail({ po, items, suppliers, categories, canWrite, canD
               </Button>
             ))}
             {canShowReceive && <Button onClick={openReceiveDialog}>Receive</Button>}
+            {canDelete && po.status === "draft" && (
+              <Button
+                variant="secondary"
+                className="text-(--color-danger)"
+                onClick={() => {
+                  setDeleteError(null);
+                  setDeleteOpen(true);
+                }}
+              >
+                Delete
+              </Button>
+            )}
           </div>
         }
       />
@@ -467,6 +494,26 @@ export function AssetPODetail({ po, items, suppliers, categories, canWrite, canD
             </DialogClose>
             <Button type="button" onClick={confirmReceive} disabled={isPending}>
               {isPending ? "Receiving…" : "Post Receipt"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteOpen} onOpenChange={(next) => { setDeleteOpen(next); if (!next) setDeleteError(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Asset PO</DialogTitle>
+            <DialogDescription>
+              Delete asset purchase order &quot;{po.reference}&quot;? This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError && <p className="text-sm text-(--color-danger)">{deleteError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isPending}>Cancel</Button>
+            </DialogClose>
+            <Button type="button" variant="danger" onClick={confirmDelete} disabled={isPending}>
+              {isPending ? "Deleting…" : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
