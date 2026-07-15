@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { ProductMappingTable, type AccountOption, type MappingRow } from "./product-mapping-table";
+import { CategoryDefaultsTable, type CategoryDefaultRow } from "./category-defaults-table";
 
 export default async function ProductMappingPage() {
   const supabase = await createClient();
@@ -37,7 +38,11 @@ export default async function ProductMappingPage() {
 
   const [{ data: items }, { data: categories }, { data: mappings }, { data: accounts }] = await Promise.all([
     supabase.from("items").select("id, name, item_type, category_id").is("deleted_at", null).order("name"),
-    supabase.from("categories").select("id, name"),
+    supabase
+      .from("categories")
+      .select("id, name, default_revenue_account_id, default_inventory_account_id, default_expense_account_id")
+      .is("deleted_at", null)
+      .order("name"),
     supabase
       .from("item_accounting_mappings")
       .select("item_id, revenue_account_id, inventory_account_id, expense_account_id"),
@@ -64,6 +69,14 @@ export default async function ProductMappingPage() {
     };
   });
 
+  const categoryDefaultRows: CategoryDefaultRow[] = (categories ?? []).map((c) => ({
+    category_id: c.id,
+    category_name: c.name,
+    default_revenue_account_id: c.default_revenue_account_id ?? "",
+    default_inventory_account_id: c.default_inventory_account_id ?? "",
+    default_expense_account_id: c.default_expense_account_id ?? "",
+  }));
+
   const accountOptions: AccountOption[] = accounts ?? [];
 
   return (
@@ -72,6 +85,12 @@ export default async function ProductMappingPage() {
         title="Product Account Mapping"
         description="Map each item to the Sales Revenue, Inventory, and COGS/Expense accounts used when Accounting auto-posts from operational events (ACCT-7)."
       />
+      <Card>
+        <CardContent className="space-y-3 p-4">
+          <h3 className="text-sm font-semibold text-(--color-text)">Category Defaults</h3>
+          <CategoryDefaultsTable rows={categoryDefaultRows} accounts={accountOptions} canEdit={canEdit} />
+        </CardContent>
+      </Card>
       <Card>
         <CardContent className="p-4">
           <ProductMappingTable rows={rows} accounts={accountOptions} canEdit={canEdit} />

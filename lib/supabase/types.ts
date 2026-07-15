@@ -245,6 +245,9 @@ export type Database = {
           category_type: string
           color: string | null
           created_at: string
+          default_expense_account_id: string | null
+          default_inventory_account_id: string | null
+          default_revenue_account_id: string | null
           deleted_at: string | null
           id: string
           loyverse_category_id: string | null
@@ -255,6 +258,9 @@ export type Database = {
           category_type?: string
           color?: string | null
           created_at?: string
+          default_expense_account_id?: string | null
+          default_inventory_account_id?: string | null
+          default_revenue_account_id?: string | null
           deleted_at?: string | null
           id?: string
           loyverse_category_id?: string | null
@@ -265,13 +271,38 @@ export type Database = {
           category_type?: string
           color?: string | null
           created_at?: string
+          default_expense_account_id?: string | null
+          default_inventory_account_id?: string | null
+          default_revenue_account_id?: string | null
           deleted_at?: string | null
           id?: string
           loyverse_category_id?: string | null
           name?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "categories_default_expense_account_id_fkey"
+            columns: ["default_expense_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "categories_default_inventory_account_id_fkey"
+            columns: ["default_inventory_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "categories_default_revenue_account_id_fkey"
+            columns: ["default_revenue_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       couriers: {
         Row: {

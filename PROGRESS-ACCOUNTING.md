@@ -88,7 +88,7 @@ conventions worth keeping are:
 
 > **Migration renumber (2026-07-02, ACCT-3):** ACCT-3 wasn't originally assigned a migration, but the Rent/Transportation decision added account `6015 Rent Expense`, which needed one. Created during ACCT-3 (chronologically before ACCT-4..7, none of which exist yet), it correctly takes the next free label `0015` — so the reserved labels for ACCT-4 (`0015→0016`), ACCT-5 (`0016→0017`), ACCT-6 (`0017→0018`), and ACCT-7 (`0018→0019`) each shift up by one, preserving the "lower label = created earlier" invariant the earlier amendments established.
 | ACCT-8 | BIR tax estimate calculator | Not started | — | Lowest priority, optional |
-| ACCT-9 | Module restructure — COA hierarchy, Financial Settings nav, mapping generalization, foundation-only Taxes | In progress | `acct9_1_chart_of_accounts_hierarchy`, `acct9_3_system_account_mappings`, `acct9_4_bank_accounts` | Kickoff plan (assessment + 7 sub-phases) in the 2026-07-15 session log entry below. Sub-phases ACCT-9.1..9.7 have no ordering dependency on each other except: 9.5 needs 9.3, 9.6 needs 9.3, 9.7 needs 9.1. **9.1, 9.2, 9.3, 9.4 done** (see session log) — 9.5/9.6/9.7 next, no ordering dependency between them (all only needed 9.3/9.1, already done). |
+| ACCT-9 | Module restructure — COA hierarchy, Financial Settings nav, mapping generalization, foundation-only Taxes | In progress | `acct9_1_chart_of_accounts_hierarchy`, `acct9_3_system_account_mappings`, `acct9_4_bank_accounts`, `acct9_5_sales_purchase_inventory_mapping` | Kickoff plan (assessment + 7 sub-phases) in the 2026-07-15 session log entry below. Sub-phases ACCT-9.1..9.7 have no ordering dependency on each other except: 9.5 needs 9.3, 9.6 needs 9.3, 9.7 needs 9.1. **9.1, 9.2, 9.3, 9.4, 9.5 done** (see session log) — 9.6/9.7 next, no ordering dependency between them. |
 
 ## Session log
 
@@ -1711,6 +1711,141 @@ the design note above); that would be a deliberate future decision, not an
 oversight. No git commit (standing project rule — stopped at DoD for
 manual review). Next per the plan: 9.5 (Sales/Purchase/Inventory Mapping
 screens) or 9.6 (Taxes, foundation-only) or 9.7 (Reports) — no ordering
+dependency between them.
+
+---
+
+### 2026-07-15 — ACCT-9.5 (Sales/Purchase/Inventory Mapping + category default accounts)
+
+Sinag asked to start 9.5. Re-verified live schema first (standing
+"re-verify before starting" note): the 7 `system_account_mappings` keys,
+`categories`, and `item_accounting_mappings` all matched the kickoff
+assessment, no drift. Read `generate_draft_journal_entries()`'s live body
+via `pg_get_functiondef` to confirm exactly how it resolves `item_
+accounting_mappings` per item — this shaped the design decision below.
+
+**Scope decision made before writing code, not in the kickoff plan's
+explicit wording:** the plan's 9.5 bullet says categories should gain
+default account columns "so new items inherit sane defaults instead of
+needing 100% manual per-item mapping," but doesn't say *how* the
+inheritance happens. Two options: (a) wire the defaults directly into
+`generate_draft_journal_entries()` as a fallback when `item_accounting_
+mappings` is empty for an item, or (b) auto-populate a real `item_
+accounting_mappings` row from the category's defaults at the moment a new
+item is created, leaving the posting RPC untouched. Chose **(b)** — same
+"foundation-first, don't touch the live posting engine unless the plan
+explicitly calls for it" discipline ACCT-9.4 used for `bank_account_id`.
+Confirmed via `information_schema.triggers` and a grep for `.from('items').
+insert`/`insert into items` that **items are never created by app code
+directly** — the only two paths are the Loyverse n8n sync (raw SQL,
+external) and `upsert_item()` (a real `insert into public.items`), so a
+plain `AFTER INSERT ON items` trigger is the one place both paths pass
+through, matching the precedent of `apply_incoming_item_inventory_
+movement` (also `SECURITY DEFINER`, also a cross-table trigger writing
+from one table's insert into a different table).
+
+**Migration `acct9_5_sales_purchase_inventory_mapping`:**
+- `categories` gains `default_revenue_account_id`/`default_inventory_
+  account_id`/`default_expense_account_id` (all nullable `uuid references
+  accounts(id)`, additive).
+- New trigger function `items_apply_category_default_mappings()`
+  (`SECURITY DEFINER`, `AFTER INSERT ON items FOR EACH ROW`): if the new
+  item's category has any of the 3 defaults set, inserts one `item_
+  accounting_mappings` row seeded from them (`on conflict (item_id) do
+  nothing`, so it never clobbers a mapping that already exists); does
+  nothing if the category has no defaults, or the item has no category.
+- Verified live with real (non-CTE — a data-modifying CTE's sibling
+  statements share one snapshot and won't see a trigger's cross-table
+  writes, a dead end hit first) sequential statements inside a rolled-back
+  transaction: temporarily set one real category's 3 defaults, inserted a
+  real item under it — the trigger correctly created a matching `item_
+  accounting_mappings` row; a second item inserted with `category_id =
+  null` correctly got no mapping row and no error. Rolled back, 0 rows
+  left behind.
+- `get_advisors(security)`: only the expected new anon/authenticated
+  "can execute `SECURITY DEFINER`" baseline WARN for the new trigger
+  function — same pre-existing class as every other `SECURITY DEFINER`
+  function in the project, no new class of finding.
+
+**UI — three new thin Financial Settings pages**, each filtering
+`system_account_mappings` to the plan's listed keys (per the plan's own
+"thin admin pages" framing, `output_tax_payable` deferred to 9.6 since it
+doesn't exist yet):
+- `sales-mapping` — `tip_income` (revenue picker), `write_off_expense`
+  (expense picker).
+- `purchase-mapping` — `credit_card_payable` (liability picker), `credit_
+  card_interest_expense` (expense picker).
+- `inventory-mapping` — `inventory_adjustment_gain` (revenue picker),
+  `inventory_adjustment_loss` (expense picker).
+
+All three share one new component, `components/business/system-mapping-
+table.tsx` (rows = `{mapping_key, label, account_id, account_category}`,
+account picker filtered per-row to `account_category`, "Save Mappings"
+button) rather than tripling the same ~130-line table across 3 folders —
+each page's own `page.tsx`/`actions.ts` stays a thin per-screen wrapper
+(data fetch + a `mapping_key`-scoped update), matching the established
+per-screen-`actions.ts` convention elsewhere in this module. Since all 7
+`system_account_mappings` rows are already seeded (ACCT-9.3) and `account_
+id` is nullable, saves are plain `update ... where mapping_key = ...` (no
+upsert/insert path needed or offered — these keys are system-managed, not
+admin-creatable). The key→expected-account-category domain mapping lives
+in one new shared file, `lib/accounting/system-mapping-keys.ts`, rather
+than being hardcoded three times.
+
+**UI — Category Defaults panel** added to the top of the existing
+Product Account Mapping page (`category-defaults-table.tsx`, new
+`saveCategoryDefaultMappings()` in that page's `actions.ts`): one row per
+active category (6 rows: Item, Item(Pre-made), Packaging, Pre-Prod BOM,
+Product(Pre-made), Services), same 3-picker/filter-by-account-category
+shape as the per-item table below it, explicit copy clarifying it "only
+affects newly created items, not existing mappings below" so it doesn't
+read as a bulk-backfill tool for the 61 existing items.
+
+`app-shell.tsx`: added **Sales Mapping**, **Purchase Mapping**, **Inventory
+Mapping** as the last three children of the Financial Settings subgroup,
+after Expense Categories — matches the kickoff plan's finalized nav order
+exactly (Taxes is the only listed item still missing, deferred to 9.6).
+`lib/supabase/types.ts` regenerated (same oversized-MCP-response
+workaround as every prior ACCT-9 session — this time via a small Node
+script since the raw dump had two layers of JSON-string wrapping instead
+of one).
+
+**Verified:**
+- `npm run build` passes zero errors; all 3 new routes registered
+  (`/dashboard/accounting/financial-settings/{sales,purchase,inventory}-
+  mapping`).
+- **RLS role-impersonation** (`set local role authenticated` + `request.
+  jwt.claims`, rolled back): manager sees all 7 `system_account_mappings`
+  rows on select but a direct `update` affects 0 rows (RLS-blocked, not
+  erroring — matches the existing admin-only update policy from 9.3);
+  encoder sees 0 rows on select.
+- **Browser-verified end-to-end** (admin `claude-code@sinagukit.internal`)
+  — asked Sinag first this time before touching another session's `next
+  dev` (PID 6480) holding the single-instance dev lock; Sinag confirmed,
+  killed it, cleared `.next/` per the standing stale-Turbopack-cache
+  lesson, started clean. Sales/Purchase/Inventory Mapping pages all render
+  with the correct existing values pre-selected (Tip Income → SCA-4041,
+  Write-off → SCA-6090, Credit Card Payable → SCA-2020, CC Interest →
+  SCA-6092, Adjustment Gain → SCA-4042, Adjustment Loss → SCA-6091) and
+  each picker correctly filtered to only its expected account category.
+  On Product Account Mapping, set a real category's 3 defaults through the
+  new panel, got "Category defaults saved.", confirmed via direct DB query
+  the row actually persisted, reloaded the page and confirmed the values
+  survived a fresh server fetch, then reset all 3 back to "None" and saved
+  again — confirmed back to `null` in the DB, leaving no dummy real-looking
+  defaults in place (unlike some earlier ACCT-9 sessions' verification
+  rows, category defaults aren't self-evidently-fake the way `SCA-9999` or
+  a labeled test bank account are, so this one was cleaned up rather than
+  left in place). No console errors on any of the 4 pages touched.
+
+**Not built this session, on purpose:** `output_tax_payable` isn't on any
+of the 3 new pages (doesn't exist until 9.6 adds it); no bulk "apply
+category defaults to the 61 already-existing items" action (the panel's
+copy explicitly scopes itself to new items only — backfilling existing
+unmapped items stays a manual Product Account Mapping edit, same "Sinag
+enters the real data" convention as the rest of this module). No git
+commit (standing project rule — stopped at DoD for manual review). Next
+per the plan: 9.6 (Taxes, foundation-only) or 9.7 (Reports) — no ordering
 dependency between them.
 
 ---
