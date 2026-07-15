@@ -88,6 +88,7 @@ conventions worth keeping are:
 
 > **Migration renumber (2026-07-02, ACCT-3):** ACCT-3 wasn't originally assigned a migration, but the Rent/Transportation decision added account `6015 Rent Expense`, which needed one. Created during ACCT-3 (chronologically before ACCT-4..7, none of which exist yet), it correctly takes the next free label `0015` — so the reserved labels for ACCT-4 (`0015→0016`), ACCT-5 (`0016→0017`), ACCT-6 (`0017→0018`), and ACCT-7 (`0018→0019`) each shift up by one, preserving the "lower label = created earlier" invariant the earlier amendments established.
 | ACCT-8 | BIR tax estimate calculator | Not started | — | Lowest priority, optional |
+| ACCT-9 | Module restructure — COA hierarchy, Financial Settings nav, mapping generalization, foundation-only Taxes | Not started | — | Kickoff plan (assessment + 7 sub-phases) in the 2026-07-15 session log entry below. Sub-phases ACCT-9.1..9.7 have no ordering dependency on each other except: 9.5 needs 9.3, 9.6 needs 9.3, 9.7 needs 9.1 |
 
 ## Session log
 
@@ -1342,5 +1343,152 @@ shows only the standard baseline WARN (anon/authenticated can execute
 categories of finding.
 
 No git commit yet (standing project rule — stopped for manual review).
+
+---
+
+### 2026-07-15 — ACCT-9 kickoff (Module Restructure — plan only, no code)
+
+Sinag brought a target IA for the Accounting module (Chart of Accounts /
+Financial Settings [Bank Accounts, Payment Methods, Taxes, Product Account
+Mapping, Expense Categories, Sales Mapping, Purchase Mapping, Inventory
+Mapping] / Journal Entries / Trial Balance / Balance Sheet / Profit & Loss)
+plus requirements: unlimited parent-child COA hierarchy with parent accounts
+grouping-only and only leaves postable, every mapping FK'd to `accounts`
+(never by name), Journal Entries auto-using those mappings, and readiness for
+future payroll/fixed-assets/bank-reconciliation/multi-company/multi-currency
+modules. This session assessed the live schema + code against that target
+and produced a plan — **no migrations or code changes were made**, this is
+design-only, same as ACCT-7's original kickoff pattern
+(`docs/ACCT-7-v2-Business-Events-Kickoff.md`).
+
+**Key findings (current state vs. target):**
+
+- **`accounts` is completely flat today** — no `parent_account_id`, no
+  postable/leaf concept, just a `category` text enum (asset/liability/equity/
+  revenue/expense). 109 rows. Every report (`trial-balance`, `balance-sheet`,
+  `income-statement`) groups by that flat `category` only — this is the
+  single biggest structural gap vs. the hierarchy requirement.
+- **The FK-mapping requirement is already violated in the live rule engine.**
+  `generate_draft_journal_entries()` (built across ACCT-7.5–7.9) has 7 spots
+  that resolve an account by hardcoded `account_number` string instead of a
+  mapping row: `'SCA-4041'` (Tip Income), `'SCA-6090'` (Write-off Expense),
+  `'SCA-2020'` (Credit Card Payable), `'SCA-6092'` (CC Interest Expense),
+  `'SCA-4042'`/`'SCA-6091'` (Inventory Adjustment Gain/Loss), `'SCA-2000'`
+  (used as both default Cash and Accounts Payable depending on branch —
+  pre-existing naming quirk, not touched by this plan). Renumbering any of
+  these accounts today would silently break posting.
+- Mappings that **already exist and are FK-based** (keep as-is, just
+  re-home in nav): `item_accounting_mappings` (Product Account Mapping,
+  per-item revenue/inventory/expense — 100% manual per item today, 59/62
+  items mapped), `payment_type_accounting_mappings` (Payment Methods),
+  `expense_categories` + `asset_categories` (Expense Categories, feeds
+  [[project_expense_treatment_engine]]).
+- **Bank Accounts and Taxes don't exist as entities at all.** No
+  `bank_accounts` table (Cash/Bank destinations only reachable today via
+  `payment_type_accounting_mappings` straight to a GL account — no
+  reconciliation-ready entity). No `tax_rates`/tax mapping — `orders/
+  quotes/receipts.total_tax` is a raw numeric column that **isn't even
+  posted separately today**: `sale_recognized`'s draft-generation branch
+  never reads `total_tax` from the event payload, so tax collected is
+  currently bundled into revenue-account credits rather than split into a
+  tax-liability line. Real GL-correctness gap, not just a missing settings
+  screen.
+- Found a **pre-existing duplicate**: `/dashboard/finance/profit-loss`
+  (legacy, computed from raw `orders` + a stale `expenses` table that's a
+  different table from the one actually in use, `opex_expenses`) vs. the
+  GL-correct `/dashboard/accounting/income-statement`. **Sinag's call:
+  leave Finance's Profit & Loss untouched, add the new one in Accounting**
+  (rename existing `income-statement` page's label to "Profit & Loss", no
+  dedup of the Finance one for now).
+
+**Decisions Sinag confirmed this session:**
+1. Keep **both** `/dashboard/accounting/review` and `/dashboard/accounting/
+   credit-card-payable` as their own top-level Accounting nav items (not
+   folded into Journal Entries or Financial Settings) — Review just gets
+   relabeled **"Pending Review."**
+2. Taxes = **foundation-only** this round (rate/mapping config + correct GL
+   posting of existing `total_tax`), not a full tax-calculation engine.
+3. `/dashboard/finance/profit-loss` (legacy) stays untouched/unmerged; the
+   new GL-correct Profit & Loss lives under Accounting only.
+4. Renames confirmed: **Journal → Journal Entries**, **Income Statement →
+   Profit & Loss**.
+
+**Finalized target nav** (Accounting group in `app-shell.tsx`):
+
+```
+Accounting
+├── Chart of Accounts
+├── Financial Settings                 (new "subgroup" — same nav primitive already used for Management/Orders/Inventory under Operations)
+│   ├── Bank Accounts
+│   ├── Payment Methods
+│   ├── Taxes
+│   ├── Product Account Mapping
+│   ├── Expense Categories
+│   ├── Sales Mapping
+│   ├── Purchase Mapping
+│   └── Inventory Mapping
+├── Pending Review                     (renamed from "Review")
+├── Journal Entries                    (renamed from "Journal")
+├── Credit Card Payable                (unchanged position)
+├── Trial Balance
+├── Balance Sheet
+└── Profit & Loss                      (renamed from "Income Statement")
+```
+
+**Sub-phase breakdown (ACCT-9.1–9.7, no code yet):**
+
+- **9.1 — COA hierarchy.** `accounts` gains `parent_account_id uuid
+  references accounts(id)` and `is_postable boolean default true`
+  (additive, all 109 existing rows stay leaf/postable — zero disruption).
+  New triggers: reject journal-line inserts against a non-postable account;
+  reject a child whose `category` mismatches its parent's; reject a
+  `parent_account_id` that would create a cycle. `chart-of-accounts-table.tsx`
+  becomes a tree (indent by depth, expand/collapse); `account-form.tsx` gains
+  a Parent Account picker + an "Allow journal entries" toggle.
+- **9.2 — Financial Settings shell + relocation.** New
+  `/dashboard/accounting/financial-settings/` route group. Move
+  `accounting/product-mapping` → `financial-settings/product-mapping` and
+  `accounting/category-mapping` → `financial-settings/expense-categories`
+  (folder renames, update `revalidatePath` calls). Nav gets the renames +
+  the new Financial Settings subgroup.
+- **9.3 — `system_account_mappings`.** New table (`mapping_key` unique,
+  `label`, `account_id → accounts`), seeded with the 7 keys currently
+  hardcoded (see Key Findings above). Rewrite `generate_draft_journal_
+  entries()` (`CREATE OR REPLACE`, signature unchanged — no `DROP FUNCTION`
+  needed) to read every one via `mapping_key` instead of `account_number`
+  literals. Highest-value phase for the FK-only requirement.
+- **9.4 — Bank Accounts.** New `bank_accounts` table (name, bank, masked
+  account #, `gl_account_id → accounts`, currency, active).
+  `payment_type_accounting_mappings` gains optional `bank_account_id →
+  bank_accounts` (Cash keeps mapping straight to a GL account; BDO/BPI/
+  GCash/etc. route through a bank account instead). New Financial Settings
+  ▸ Bank Accounts page.
+- **9.5 — Sales / Purchase / Inventory Mapping screens** (needs 9.3). Thin
+  admin pages filtering `system_account_mappings`: Sales Mapping shows
+  `tip_income`/`write_off_expense`/(later `output_tax_payable`); Purchase
+  Mapping shows `credit_card_payable`/`credit_card_interest_expense`;
+  Inventory Mapping shows `inventory_adjustment_gain`/
+  `inventory_adjustment_loss`. `categories` gains
+  `default_revenue_account_id`/`default_inventory_account_id`/
+  `default_expense_account_id` so new items inherit sane defaults instead of
+  needing 100% manual per-item mapping.
+- **9.6 — Taxes, foundation-only** (needs 9.3). New `tax_rates` table +
+  `output_tax_payable` key added to `system_account_mappings`. Extend the
+  `sale_recognized` branch to split each sale's `total_tax` into its own
+  credit line against the mapped liability account — requires widening the
+  `sale_recognized` event payload (same pattern ACCT-7.5 already used once
+  for per-line revenue splitting). No tax-rate calculation engine wired into
+  POS/Orders this round, per Sinag's explicit scope call.
+- **9.7 — Reports** (needs 9.1). Trial Balance / Balance Sheet / Profit &
+  Loss replace flat `category`-only grouping with a recursive rollup from
+  the new hierarchy (indented rows + parent subtotals).
+
+**Not started — no migrations, no RPC changes, no UI changes made this
+session.** Sinag asked for this to be logged so a future session can pick up
+ACCT-9 without re-deriving the assessment. **How to apply:** before starting
+any ACCT-9.x sub-phase, re-verify `generate_draft_journal_entries()`'s
+current body against live schema first (standing lesson from every ACCT-7.x
+session — RPC bodies drift). See [[project_acct7_v2_event_architecture]] and
+[[project_expense_treatment_engine]] for the pipeline this extends.
 
 ---
