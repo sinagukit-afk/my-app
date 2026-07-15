@@ -3659,6 +3659,41 @@ export type Database = {
         }
         Relationships: []
       }
+      system_account_mappings: {
+        Row: {
+          account_id: string | null
+          id: string
+          label: string
+          mapping_key: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          id?: string
+          label: string
+          mapping_key: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          id?: string
+          label?: string
+          mapping_key?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_account_mappings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       web_faqs: {
         Row: {
           answer: string

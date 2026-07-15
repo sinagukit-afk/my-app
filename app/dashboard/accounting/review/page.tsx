@@ -21,7 +21,7 @@ export default async function ReviewPage() {
     return (
       <div>
         <PageHeader
-          title="Review"
+          title="Pending Review"
           description="Draft journal entries auto-generated from business events, waiting for approval."
         />
         <Card className="max-w-lg">

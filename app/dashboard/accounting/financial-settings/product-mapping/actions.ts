@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-const LIST_PATH = '/dashboard/accounting/product-mapping'
+const LIST_PATH = '/dashboard/accounting/financial-settings/product-mapping'
 
 export type MappingInput = {
   item_id: string

@@ -97,7 +97,7 @@ export function JournalTable({ data }: Props) {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Journal"
+        title="Journal Entries"
         description="Every posted double-entry transaction. Each entry balances — total debits equal total credits."
         actions={
           <Button onClick={() => router.push("/dashboard/accounting/journal/new")}>New Journal Entry</Button>

@@ -30,7 +30,7 @@ export default async function IncomeStatementPage({ searchParams }: { searchPara
     return (
       <div>
         <PageHeader
-          title="Income Statement"
+          title="Profit & Loss"
           description="Revenue and expenses for a date range, netting to profit or loss."
         />
         <Card className="max-w-lg">
@@ -58,7 +58,7 @@ export default async function IncomeStatementPage({ searchParams }: { searchPara
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Income Statement"
+        title="Profit & Loss"
         description="Revenue and expenses for a date range, netting to profit or loss."
       />
 

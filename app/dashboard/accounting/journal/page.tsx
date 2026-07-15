@@ -21,7 +21,7 @@ export default async function JournalPage() {
     return (
       <div>
         <PageHeader
-          title="Journal"
+          title="Journal Entries"
           description="Double-entry journal for all posted accounting transactions."
         />
         <Card className="max-w-lg">

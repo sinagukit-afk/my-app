@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-const LIST_PATH = '/dashboard/accounting/category-mapping'
+const LIST_PATH = '/dashboard/accounting/financial-settings/expense-categories'
 
 export type SaveResult = { success: true } | { success: false; error: string }
 

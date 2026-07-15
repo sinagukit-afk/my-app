@@ -122,7 +122,7 @@ export function ReviewTable({ data }: Props) {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Review"
+        title="Pending Review"
         description="Draft journal entries auto-generated from business events. Edit if needed, then approve to post them to the Journal."
       />
 

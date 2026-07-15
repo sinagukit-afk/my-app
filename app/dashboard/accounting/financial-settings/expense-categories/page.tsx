@@ -22,7 +22,7 @@ export default async function CategoryMappingPage() {
     return (
       <div>
         <PageHeader
-          title="Category Mapping"
+          title="Expense Categories"
           description="Map expense and asset categories to the Chart of Accounts used for automatic posting."
         />
         <Card className="max-w-lg">
@@ -59,7 +59,7 @@ export default async function CategoryMappingPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Category Mapping"
+        title="Expense Categories"
         description="Map Expense PO / Asset PO categories to the Chart of Accounts used when Accounting auto-posts (Purchasing → Finance)."
       />
       <CategoryMappingTable
