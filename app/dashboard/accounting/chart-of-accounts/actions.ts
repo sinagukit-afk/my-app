@@ -12,6 +12,7 @@ const ACCOUNT_PREFIX = 'SCA-'
 function friendlyError(error: { code?: string; message: string }): string {
   if (error.code === '23505') return 'That account number is already in use.'
   if (error.code === '42501') return 'You do not have permission to edit the Chart of Accounts.'
+  if (error.code === '23503') return 'Selected parent account no longer exists.'
   return error.message
 }
 
@@ -21,7 +22,9 @@ function readAccountFields(formData: FormData) {
   const name = (formData.get('name') as string)?.trim()
   const category = (formData.get('category') as string)?.trim()
   const description = (formData.get('description') as string)?.trim() || null
-  return { account_number, name, category, description }
+  const parent_account_id = (formData.get('parent_account_id') as string)?.trim() || null
+  const is_postable = formData.get('is_postable') === 'on'
+  return { account_number, name, category, description, parent_account_id, is_postable }
 }
 
 function validate(fields: ReturnType<typeof readAccountFields>): string | null {

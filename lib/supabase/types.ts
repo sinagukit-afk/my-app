@@ -22,7 +22,9 @@ export type Database = {
           description: string | null
           id: string
           is_active: boolean
+          is_postable: boolean
           name: string
+          parent_account_id: string | null
           updated_at: string
         }
         Insert: {
@@ -32,7 +34,9 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean
+          is_postable?: boolean
           name: string
+          parent_account_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -42,10 +46,20 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean
+          is_postable?: boolean
           name?: string
+          parent_account_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "accounts_parent_account_id_fkey"
+            columns: ["parent_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       activity_logs: {
         Row: {
@@ -413,6 +427,7 @@ export type Database = {
           created_at: string
           fixed_asset_id: string
           id: string
+          journal_entry_draft_id: string | null
           journal_entry_id: string | null
           period_month: string
         }
@@ -421,6 +436,7 @@ export type Database = {
           created_at?: string
           fixed_asset_id: string
           id?: string
+          journal_entry_draft_id?: string | null
           journal_entry_id?: string | null
           period_month: string
         }
@@ -429,6 +445,7 @@ export type Database = {
           created_at?: string
           fixed_asset_id?: string
           id?: string
+          journal_entry_draft_id?: string | null
           journal_entry_id?: string | null
           period_month?: string
         }
@@ -438,6 +455,13 @@ export type Database = {
             columns: ["fixed_asset_id"]
             isOneToOne: false
             referencedRelation: "fixed_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "depreciation_entries_journal_entry_draft_id_fkey"
+            columns: ["journal_entry_draft_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entry_drafts"
             referencedColumns: ["id"]
           },
           {
@@ -528,24 +552,36 @@ export type Database = {
       }
       expense_categories: {
         Row: {
+          accounting_treatment: string
           created_at: string
+          default_amortization_months: number | null
+          default_asset_category_id: string | null
           default_expense_account_id: string | null
+          default_prepaid_account_id: string | null
           id: string
           is_active: boolean
           name: string
           updated_at: string
         }
         Insert: {
+          accounting_treatment?: string
           created_at?: string
+          default_amortization_months?: number | null
+          default_asset_category_id?: string | null
           default_expense_account_id?: string | null
+          default_prepaid_account_id?: string | null
           id?: string
           is_active?: boolean
           name: string
           updated_at?: string
         }
         Update: {
+          accounting_treatment?: string
           created_at?: string
+          default_amortization_months?: number | null
+          default_asset_category_id?: string | null
           default_expense_account_id?: string | null
+          default_prepaid_account_id?: string | null
           id?: string
           is_active?: boolean
           name?: string
@@ -553,8 +589,22 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "expense_categories_default_asset_category_id_fkey"
+            columns: ["default_asset_category_id"]
+            isOneToOne: false
+            referencedRelation: "asset_categories"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "expense_categories_default_expense_account_id_fkey"
             columns: ["default_expense_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_categories_default_prepaid_account_id_fkey"
+            columns: ["default_prepaid_account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
             referencedColumns: ["id"]
@@ -619,6 +669,7 @@ export type Database = {
           purchase_order_id: string | null
           purchased_date: string
           salvage_value: number
+          schedule_status: string
           supplier_id: string | null
           updated_at: string
           useful_life_months: number
@@ -636,6 +687,7 @@ export type Database = {
           purchase_order_id?: string | null
           purchased_date: string
           salvage_value?: number
+          schedule_status?: string
           supplier_id?: string | null
           updated_at?: string
           useful_life_months: number
@@ -653,6 +705,7 @@ export type Database = {
           purchase_order_id?: string | null
           purchased_date?: string
           salvage_value?: number
+          schedule_status?: string
           supplier_id?: string | null
           updated_at?: string
           useful_life_months?: number
@@ -2438,6 +2491,138 @@ export type Database = {
         }
         Relationships: []
       }
+      prepaid_expense_schedule_entries: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          journal_entry_draft_id: string | null
+          journal_entry_id: string | null
+          period_month: string
+          schedule_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          journal_entry_draft_id?: string | null
+          journal_entry_id?: string | null
+          period_month: string
+          schedule_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          journal_entry_draft_id?: string | null
+          journal_entry_id?: string | null
+          period_month?: string
+          schedule_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prepaid_expense_schedule_entries_journal_entry_draft_id_fkey"
+            columns: ["journal_entry_draft_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entry_drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prepaid_expense_schedule_entries_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prepaid_expense_schedule_entries_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "prepaid_expense_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prepaid_expense_schedules: {
+        Row: {
+          category_id: string
+          created_at: string
+          expense_account_id: string
+          id: string
+          monthly_amount: number
+          next_posting_date: string
+          opex_expense_id: string
+          prepaid_account_id: string
+          remaining_balance: number
+          schedule_status: string
+          start_date: string
+          term_months: number
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          expense_account_id: string
+          id?: string
+          monthly_amount: number
+          next_posting_date: string
+          opex_expense_id: string
+          prepaid_account_id: string
+          remaining_balance: number
+          schedule_status?: string
+          start_date: string
+          term_months: number
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          expense_account_id?: string
+          id?: string
+          monthly_amount?: number
+          next_posting_date?: string
+          opex_expense_id?: string
+          prepaid_account_id?: string
+          remaining_balance?: number
+          schedule_status?: string
+          start_date?: string
+          term_months?: number
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prepaid_expense_schedules_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prepaid_expense_schedules_expense_account_id_fkey"
+            columns: ["expense_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prepaid_expense_schedules_opex_expense_id_fkey"
+            columns: ["opex_expense_id"]
+            isOneToOne: false
+            referencedRelation: "opex_expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prepaid_expense_schedules_prepaid_account_id_fkey"
+            columns: ["prepaid_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       production_orders: {
         Row: {
           completed_qty: number
@@ -3474,6 +3659,140 @@ export type Database = {
         }
         Relationships: []
       }
+      web_faqs: {
+        Row: {
+          answer: string
+          category: string | null
+          created_at: string
+          id: string
+          published: boolean
+          question: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          answer: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          published?: boolean
+          question: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          answer?: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          published?: boolean
+          question?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      web_quote_requests: {
+        Row: {
+          converted_quote_id: string | null
+          created_at: string
+          customization_details: string | null
+          email: string | null
+          full_name: string
+          id: string
+          needed_by_date: string | null
+          phone: string | null
+          product_category: string | null
+          quantity: string | null
+          shipping_address: string | null
+          status: string
+          submitter_ip: unknown
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          converted_quote_id?: string | null
+          created_at?: string
+          customization_details?: string | null
+          email?: string | null
+          full_name: string
+          id?: string
+          needed_by_date?: string | null
+          phone?: string | null
+          product_category?: string | null
+          quantity?: string | null
+          shipping_address?: string | null
+          status?: string
+          submitter_ip?: unknown
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          converted_quote_id?: string | null
+          created_at?: string
+          customization_details?: string | null
+          email?: string | null
+          full_name?: string
+          id?: string
+          needed_by_date?: string | null
+          phone?: string | null
+          product_category?: string | null
+          quantity?: string | null
+          shipping_address?: string | null
+          status?: string
+          submitter_ip?: unknown
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_requests_converted_quote_id_fkey"
+            columns: ["converted_quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      web_testimonials: {
+        Row: {
+          author_name: string
+          author_role: string | null
+          avatar_url: string | null
+          created_at: string
+          id: string
+          published: boolean
+          quote: string
+          rating: number | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          author_name: string
+          author_role?: string | null
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          published?: boolean
+          quote: string
+          rating?: number | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          author_name?: string
+          author_role?: string | null
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          published?: boolean
+          quote?: string
+          rating?: number | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       v_composite_bom: {
@@ -3558,6 +3877,23 @@ export type Database = {
           p_store_id: string
         }
         Returns: undefined
+      }
+      _record_expense_with_treatment: {
+        Args: {
+          p_amount: number
+          p_category_id: string
+          p_description: string
+          p_expense_date: string
+          p_payment_status: string
+          p_purchase_order_id: string
+          p_salvage_override?: number
+          p_source: string
+          p_supplier_id: string
+          p_term_override?: number
+          p_treatment_override?: string
+          p_useful_life_override?: number
+        }
+        Returns: Json
       }
       add_expense_attachment: {
         Args: { p_expense_id: string; p_file_name: string; p_file_path: string }
@@ -4059,7 +4395,12 @@ export type Database = {
         }
       }
       delete_expense: { Args: { p_id: string }; Returns: undefined }
+      extend_expense_schedule: {
+        Args: { p_additional_months: number; p_id: string; p_type: string }
+        Returns: undefined
+      }
       generate_draft_journal_entries: { Args: never; Returns: number }
+      generate_due_prepaid_postings: { Args: never; Returns: number }
       get_balance_sheet: {
         Args: { p_as_of?: string }
         Returns: {
@@ -4452,6 +4793,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      pause_expense_schedule: {
+        Args: { p_id: string; p_type: string }
+        Returns: undefined
+      }
       post_journal_entry: {
         Args: {
           p_description: string
@@ -4508,9 +4853,13 @@ export type Database = {
           p_description: string
           p_expense_date?: string
           p_payment_status?: string
+          p_salvage_override?: number
           p_supplier_id?: string
+          p_term_override?: number
+          p_treatment_override?: string
+          p_useful_life_override?: number
         }
-        Returns: string
+        Returns: Json
       }
       reject_journal_entry_draft: {
         Args: { p_draft_id: string; p_reason?: string }
@@ -4566,6 +4915,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      resume_expense_schedule: {
+        Args: { p_id: string; p_type: string }
+        Returns: undefined
       }
       resume_order: {
         Args: { p_order_id: string }
@@ -4637,6 +4990,7 @@ export type Database = {
           created_at: string
           fixed_asset_id: string
           id: string
+          journal_entry_draft_id: string | null
           journal_entry_id: string | null
           period_month: string
         }[]
@@ -4767,6 +5121,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      terminate_expense_schedule: {
+        Args: { p_id: string; p_termination_date?: string; p_type: string }
+        Returns: Json
       }
       transfer_stock_status: {
         Args: {

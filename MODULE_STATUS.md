@@ -293,6 +293,10 @@ Accounts payable`) and a new Category Mapping page
 (`/dashboard/accounting/category-mapping`, expense/asset categories →
 accounts). See `PROGRESS-ACCOUNTING.md`.
 ⬜ BIR tax estimate calculator (ACCT-8) — optional, lowest priority, not started
+🟨 Module restructure (ACCT-9) — COA hierarchy, Financial Settings nav,
+mapping generalization, foundation-only Taxes. **9.1 done 2026-07-15**:
+`accounts` gained `parent_account_id`/`is_postable`, Chart of Accounts UI
+is now a tree with expand/collapse. 9.2–9.7 not started.
 
 Tracked separately in `PROGRESS-ACCOUNTING.md`, not this file's usual phase log.
 

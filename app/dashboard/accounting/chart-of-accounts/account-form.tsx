@@ -17,10 +17,13 @@ import { Button } from "@/components/ui/button";
 import { createAccount, updateAccount, type ActionResult } from "./actions";
 import type { AccountRow } from "./chart-of-accounts-table";
 
+type ParentOption = { value: string; label: string };
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   account?: AccountRow | null;
+  parentOptions: ParentOption[];
   onSaved: () => void;
 };
 
@@ -39,10 +42,11 @@ function stripPrefix(accountNumber: string | undefined): string {
   return accountNumber.startsWith(ACCOUNT_PREFIX) ? accountNumber.slice(ACCOUNT_PREFIX.length) : accountNumber;
 }
 
-export function AccountForm({ open, onOpenChange, account, onSaved }: Props) {
+export function AccountForm({ open, onOpenChange, account, parentOptions, onSaved }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const isEdit = Boolean(account);
+  const selectableParents = parentOptions.filter((p) => p.value !== account?.id);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -119,6 +123,17 @@ export function AccountForm({ open, onOpenChange, account, onSaved }: Props) {
             required
           />
 
+          <Select
+            label="Parent Account"
+            name="parent_account_id"
+            placeholder="None (top-level account)"
+            options={selectableParents}
+            defaultValue={account?.parent_account_id ?? ""}
+          />
+          <p className="-mt-2 text-xs text-(--color-text-muted)">
+            Parent must be the same category as this account.
+          </p>
+
           <TextArea
             label="Description"
             name="description"
@@ -126,6 +141,24 @@ export function AccountForm({ open, onOpenChange, account, onSaved }: Props) {
             placeholder="Optional"
             rows={2}
           />
+
+          <div className="flex items-start gap-2.5">
+            <input
+              type="checkbox"
+              id="is_postable"
+              name="is_postable"
+              defaultChecked={account?.is_postable ?? true}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border border-(--color-border-strong) bg-(--color-surface) accent-(--color-primary) transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) focus-visible:ring-offset-1"
+            />
+            <div className="flex flex-col">
+              <label htmlFor="is_postable" className="cursor-pointer text-sm font-medium text-(--color-text)">
+                Allow journal entries
+              </label>
+              <span className="text-xs text-(--color-text-muted)">
+                Turn off for a summary/parent account that should only group other accounts.
+              </span>
+            </div>
+          </div>
 
           {error && <p className="text-sm text-(--color-danger)">{error}</p>}
 

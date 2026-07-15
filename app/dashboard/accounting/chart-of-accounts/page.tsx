@@ -37,7 +37,7 @@ export default async function ChartOfAccountsPage() {
 
   const { data, error } = await supabase
     .from("accounts")
-    .select("id, account_number, name, category, description, is_active")
+    .select("id, account_number, name, category, description, is_active, parent_account_id, is_postable")
     .order("account_number");
 
   const rows: AccountRow[] = data ?? [];

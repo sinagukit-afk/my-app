@@ -88,7 +88,7 @@ conventions worth keeping are:
 
 > **Migration renumber (2026-07-02, ACCT-3):** ACCT-3 wasn't originally assigned a migration, but the Rent/Transportation decision added account `6015 Rent Expense`, which needed one. Created during ACCT-3 (chronologically before ACCT-4..7, none of which exist yet), it correctly takes the next free label `0015` — so the reserved labels for ACCT-4 (`0015→0016`), ACCT-5 (`0016→0017`), ACCT-6 (`0017→0018`), and ACCT-7 (`0018→0019`) each shift up by one, preserving the "lower label = created earlier" invariant the earlier amendments established.
 | ACCT-8 | BIR tax estimate calculator | Not started | — | Lowest priority, optional |
-| ACCT-9 | Module restructure — COA hierarchy, Financial Settings nav, mapping generalization, foundation-only Taxes | Not started | — | Kickoff plan (assessment + 7 sub-phases) in the 2026-07-15 session log entry below. Sub-phases ACCT-9.1..9.7 have no ordering dependency on each other except: 9.5 needs 9.3, 9.6 needs 9.3, 9.7 needs 9.1 |
+| ACCT-9 | Module restructure — COA hierarchy, Financial Settings nav, mapping generalization, foundation-only Taxes | In progress | `acct9_1_chart_of_accounts_hierarchy` | Kickoff plan (assessment + 7 sub-phases) in the 2026-07-15 session log entry below. Sub-phases ACCT-9.1..9.7 have no ordering dependency on each other except: 9.5 needs 9.3, 9.6 needs 9.3, 9.7 needs 9.1. **9.1 done** (see session log) — 9.2 (Financial Settings shell) is next in the plan's order but any of 9.2/9.3/9.4 can go next. |
 
 ## Session log
 
@@ -1490,5 +1490,101 @@ any ACCT-9.x sub-phase, re-verify `generate_draft_journal_entries()`'s
 current body against live schema first (standing lesson from every ACCT-7.x
 session — RPC bodies drift). See [[project_acct7_v2_event_architecture]] and
 [[project_expense_treatment_engine]] for the pipeline this extends.
+
+---
+
+### 2026-07-15 — ACCT-9.1 (Chart of Accounts hierarchy)
+
+Re-verified the live `accounts` schema and `post_journal_entry()` body
+directly (both via Supabase MCP and a parallel Explore agent) before
+touching anything, per the prior session's own "re-verify before starting"
+note — both matched the kickoff assessment exactly, no drift.
+
+**Migration `acct9_1_chart_of_accounts_hierarchy`:** additive only —
+`accounts` gains `parent_account_id uuid references accounts(id)` and
+`is_postable boolean not null default true`. All 109 existing rows
+confirmed to stay leaf/postable (`parent_account_id` null, `is_postable`
+true) — zero disruption, as planned. New index on `parent_account_id`.
+
+Two new triggers, both intentionally **not** `SECURITY DEFINER` (matches
+`set_updated_at`'s existing convention on this table — they run inside
+whichever context fired the write, which already has the needed `accounts`
+access via RLS or via a `SECURITY DEFINER` caller's elevated context; no
+need to widen the `SECURITY DEFINER` surface the 2026-07-14 security audit
+was tightening):
+- `accounts_validate_hierarchy` (`before insert or update of
+  parent_account_id, category`) — rejects self-parenting, a child whose
+  `category` doesn't match its parent's, and any parent assignment that
+  would create a cycle (walks the ancestor chain, 100-hop guard against a
+  corrupt loop).
+- `journal_entry_lines_validate_postable` (`before insert`) — rejects a
+  journal line against an account with `is_postable = false`. Deliberately
+  a table-level trigger rather than a `post_journal_entry()` body edit, so
+  the guard holds even for a direct-SQL insert (same class of write ACCT-6
+  used for the opening balance) not just the RPC path.
+
+All four guard behaviors verified live in rolled-back-by-hand test blocks
+(category mismatch rejected, self-parent rejected, valid same-category
+parent succeeds, cycle attempt on that same pair rejected, non-postable
+journal-line insert rejected) — all cleaned up afterward, confirmed via a
+follow-up count query (0 parented accounts, 0 non-postable accounts, 0
+leftover test journal entries). `get_advisors(security)` shows no new
+findings tied to the migration (the two trigger functions aren't
+`SECURITY DEFINER`, so they don't add to the existing anon/authenticated
+baseline WARN either).
+
+**UI** (`app/dashboard/accounting/chart-of-accounts/`): `chart-of-accounts-table.tsx`
+rebuilt as a tree — parent/child grouping via a `parent_account_id` map,
+indent-by-depth rendering, per-row expand/collapse chevron, "Expand
+all"/"Collapse all" buttons, and a "Group" badge on non-postable rows.
+Dropped the shared `DataTable` component for this page specifically (its
+sort/paginate model doesn't compose with contiguous parent-child ordering)
+in favor of a bespoke table matching the same visual language; no mobile
+card-fallback equivalent was built for the tree specifically (scope trim —
+this is an admin/manager-only settings screen, kept usable on narrow
+screens via horizontal scroll instead). Search/category/status filters
+still work: any active filter now shows matches plus their ancestor chain
+(so a matched child's parent stays visible for context) and force-expands
+across that path. `account-form.tsx` gained a Parent Account `<select>`
+(same category enforced server-side by the trigger, client-side just
+excludes the account itself) and a native "Allow journal entries" checkbox
+bound to `is_postable` (native, not the shared `Checkbox` component — this
+form is already fully uncontrolled/FormData-driven, matching the precedent
+`feedback_create_or_replace_function_signature_change`-adjacent choice
+made in ACCT-7.2's `manual-incoming-form.tsx`). `actions.ts` threads both
+new fields through create/update and maps Postgres `23503` (bad parent FK)
+to a friendly message.
+
+`lib/supabase/types.ts` regenerated (worked around the MCP tool's
+oversized-response limit the same way as the SCA-prefix session — raw JSON
+dump to a file, unescaped via a one-off Node script). `npm run build`
+passes zero errors.
+
+**Browser-verified end-to-end** (admin `claude-code@sinagukit.internal`,
+own session's own dev server, no other-session lock conflict this time):
+created a real group account (`SCA-9001`, "Allow journal entries"
+unchecked) and a real child under it (`SCA-9002`, same category, parent =
+SCA-9001) through the actual dialogs — tree rendered with correct
+indentation, chevron, and "Group" badge; collapse-while-filtering
+auto-expand behavior confirmed (searching "900" kept the child visible
+even after clicking the parent's collapse chevron); clearing the search
+returned to the full flat 109-row view with no console errors. Both test
+accounts hard-deleted afterward via direct SQL (same cleanup precedent as
+ACCT-7.1's `SCA-9999`) — confirmed back to 109 rows.
+
+**Not done / left for later phases, on purpose:** no existing account was
+actually re-parented (that's real data entry, Sinag's to do once Financial
+Settings/9.2+ exists to make it useful); Trial Balance/Balance
+Sheet/Income Statement still group by flat `category` only (9.7, needs
+this phase, not done yet); the Journal Entries "new entry" account picker
+still lists every active account undifferentiated by `is_postable` (a
+manual entry against a group account would still be caught by the new
+trigger, just with a raw Postgres exception message rather than the picker
+filtering it out up front — acceptable for now, not in this sub-phase's
+scope). No git commit (standing project rule — stopped at DoD for manual
+review). Next per the plan: 9.2 (Financial Settings shell + relocating
+Product/Category Mapping under it), or 9.3 (`system_account_mappings`,
+highest-value for closing the hardcoded-`account_number` FK gap) — either
+can go next, no ordering dependency between them.
 
 ---
