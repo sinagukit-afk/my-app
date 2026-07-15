@@ -30,6 +30,9 @@ export const EVENT_TYPE_LABELS: Record<string, string> = {
   asset_acquired: "Asset Acquired",
   expense_payment: "Expense Payment",
   asset_payment: "Asset Payment",
+  depreciation: "Depreciation",
+  prepaid_amortization: "Prepaid Amortization",
+  schedule_terminated: "Schedule Terminated",
 };
 
 const STATUS_VARIANT: Record<string, "warning" | "success" | "danger"> = {

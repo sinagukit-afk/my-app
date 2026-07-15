@@ -80,6 +80,21 @@ export function CategoriesDialogButton({ categories, accounts }: Props) {
               options={accounts.map((a) => ({ value: a.id, label: `${a.account_number} — ${a.name}` }))}
               required
             />
+            <Select
+              label="Accounting Treatment"
+              name="accounting_treatment"
+              defaultValue="immediate"
+              options={[
+                { value: "immediate", label: "Immediate Expense" },
+                { value: "prepaid", label: "Prepaid Expense" },
+                { value: "fixed_asset", label: "Fixed Asset" },
+              ]}
+              required
+            />
+            <p className="text-xs text-(--color-text-muted)">
+              Prepaid / Fixed Asset accounts and schedule defaults are configured in Category Mapping after adding
+              the category.
+            </p>
             {error && <p className="text-sm text-(--color-danger)">{error}</p>}
             <DialogFooter>
               <DialogClose asChild>

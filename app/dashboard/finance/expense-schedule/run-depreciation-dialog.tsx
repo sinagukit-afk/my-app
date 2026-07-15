@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { previewDepreciation, runDepreciation, type DepreciationPreviewLine } from "./actions";
+import { previewDepreciation, runDepreciation, type DepreciationPreviewLine } from "../fixed-assets/actions";
 
 function peso(n: number) {
   return `₱${n.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -74,14 +74,15 @@ export function RunDepreciationDialog() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button>Run Depreciation</Button>
+        <Button variant="secondary">Run Depreciation</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Run Monthly Depreciation</DialogTitle>
           <DialogDescription>
-            Preview what will be posted before confirming. Assets already posted for this month, fully
-            depreciated, or disposed are skipped automatically.
+            Preview what will be drafted before confirming. Assets already posted for this month, fully
+            depreciated, paused, or disposed are skipped automatically. Each line becomes a draft journal
+            entry routed to Accounting Review — nothing posts to the Journal until it&apos;s approved.
           </DialogDescription>
         </DialogHeader>
 
@@ -101,8 +102,8 @@ export function RunDepreciationDialog() {
 
           {lines !== null && lines.length === 0 && !error && (
             <p className="text-sm text-(--color-text-muted)">
-              Nothing to post for this month — every active asset is already posted, fully depreciated, or
-              disposed.
+              Nothing to draft for this month — every active asset is already posted, fully depreciated,
+              paused, or disposed.
             </p>
           )}
 
@@ -149,7 +150,7 @@ export function RunDepreciationDialog() {
             onClick={handleConfirm}
             disabled={isPending || lines === null || lines.length === 0}
           >
-            {isPending ? "Posting…" : "Confirm & Post"}
+            {isPending ? "Generating…" : "Generate Drafts"}
           </Button>
         </DialogFooter>
       </DialogContent>

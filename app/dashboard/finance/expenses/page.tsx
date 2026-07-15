@@ -47,7 +47,11 @@ export default async function ExpensesPage() {
       )
       .is("deleted_at", null)
       .order("expense_date", { ascending: false }),
-    supabase.from("expense_categories").select("id, name").eq("is_active", true).order("name"),
+    supabase
+      .from("expense_categories")
+      .select("id, name, accounting_treatment")
+      .eq("is_active", true)
+      .order("name"),
     supabase.from("suppliers").select("id, name").eq("is_active", true).order("name"),
     supabase.from("accounts").select("id, account_number, name").eq("category", "expense").eq("is_active", true).order("account_number"),
   ]);
@@ -82,7 +86,14 @@ export default async function ExpensesPage() {
           canWrite ? (
             <div className="flex items-center gap-2">
               <CategoriesDialogButton categories={categories ?? []} accounts={accounts ?? []} />
-              <NewExpenseButton categories={categories ?? []} suppliers={suppliers ?? []} />
+              <NewExpenseButton
+                categories={(categories ?? []).map((c) => ({
+                  id: c.id,
+                  name: c.name,
+                  accounting_treatment: c.accounting_treatment as "immediate" | "prepaid" | "fixed_asset",
+                }))}
+                suppliers={suppliers ?? []}
+              />
             </div>
           ) : undefined
         }

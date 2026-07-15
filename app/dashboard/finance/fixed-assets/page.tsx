@@ -1,7 +1,8 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { RunDepreciationDialog } from "./run-depreciation-dialog";
+import { Button } from "@/components/ui/button";
 import { AddAssetButton } from "./add-asset-button";
 import { FixedAssetsTable, type AssetRow, type AssetStatus } from "./fixed-assets-table";
 
@@ -21,7 +22,6 @@ export default async function FixedAssetsPage() {
 
   const role = profile?.role ?? "";
   const hasAccess = ["admin", "manager"].includes(role);
-  const canRun = role === "admin";
   const canWrite = role === "admin";
 
   if (!hasAccess) {
@@ -46,7 +46,7 @@ export default async function FixedAssetsPage() {
       supabase
         .from("fixed_assets")
         .select(
-          "id, name, purchased_date, cost, salvage_value, useful_life_months, disposed_at, asset_account_id, supplier_id, asset_categories(name)"
+          "id, name, purchased_date, cost, salvage_value, useful_life_months, disposed_at, schedule_status, asset_account_id, supplier_id, asset_categories(name)"
         )
         .order("purchased_date"),
       supabase.from("depreciation_entries").select("fixed_asset_id, amount"),
@@ -81,6 +81,7 @@ export default async function FixedAssetsPage() {
       accumulated,
       book_value: bookValue,
       status,
+      schedule_status: a.schedule_status as AssetRow["schedule_status"],
     };
   });
 
@@ -95,7 +96,9 @@ export default async function FixedAssetsPage() {
         actions={
           <div className="flex items-center gap-2">
             {canWrite && <AddAssetButton categories={categories ?? []} suppliers={suppliers ?? []} />}
-            {canRun && <RunDepreciationDialog />}
+            <Link href="/dashboard/finance/expense-schedule">
+              <Button variant="secondary">Manage Schedule →</Button>
+            </Link>
           </div>
         }
       />

@@ -23,7 +23,19 @@ export type ExpenseCategoryRow = {
   id: string;
   name: string;
   default_expense_account_id: string;
+  accounting_treatment: "immediate" | "prepaid" | "fixed_asset";
+  default_prepaid_account_id: string;
+  default_amortization_months: number | null;
+  default_asset_category_id: string;
 };
+
+export type AssetCategoryOption = { id: string; name: string };
+
+const TREATMENT_OPTIONS = [
+  { value: "immediate", label: "Immediate Expense" },
+  { value: "prepaid", label: "Prepaid Expense" },
+  { value: "fixed_asset", label: "Fixed Asset" },
+];
 
 export type AssetCategoryRow = {
   id: string;
@@ -37,11 +49,18 @@ export type AssetCategoryRow = {
 type Props = {
   expenseCategories: ExpenseCategoryRow[];
   assetCategories: AssetCategoryRow[];
+  assetCategoryOptions: AssetCategoryOption[];
   accounts: AccountOption[];
   canEdit: boolean;
 };
 
-export function CategoryMappingTable({ expenseCategories, assetCategories, accounts, canEdit }: Props) {
+export function CategoryMappingTable({
+  expenseCategories,
+  assetCategories,
+  assetCategoryOptions,
+  accounts,
+  canEdit,
+}: Props) {
   const router = useRouter();
   const [expenseRows, setExpenseRows] = useState(expenseCategories);
   const [assetRows, setAssetRows] = useState(assetCategories);
@@ -104,6 +123,10 @@ export function CategoryMappingTable({ expenseCategories, assetCategories, accou
     const payload: ExpenseCategoryMapping[] = expenseRows.map((r) => ({
       id: r.id,
       default_expense_account_id: r.default_expense_account_id || null,
+      accounting_treatment: r.accounting_treatment,
+      default_prepaid_account_id: r.default_prepaid_account_id || null,
+      default_amortization_months: r.default_amortization_months,
+      default_asset_category_id: r.default_asset_category_id || null,
     }));
     startTransition(async () => {
       const res = await saveExpenseCategoryMappings(payload);
@@ -126,8 +149,28 @@ export function CategoryMappingTable({ expenseCategories, assetCategories, accou
     });
   }
 
+  const assetCategorySelectOptions = useMemo(
+    () => assetCategoryOptions.map((c) => ({ value: c.id, label: c.name })),
+    [assetCategoryOptions]
+  );
+
   const expenseColumns: Column<ExpenseCategoryRow>[] = [
     { key: "name", header: "Expense Category", sortable: true },
+    {
+      key: "accounting_treatment",
+      header: "Accounting Treatment",
+      render: (_v, row) => (
+        <Select
+          value={row.accounting_treatment}
+          onChange={(e) =>
+            updateExpenseRow(row.id, { accounting_treatment: e.target.value as ExpenseCategoryRow["accounting_treatment"] })
+          }
+          options={TREATMENT_OPTIONS}
+          disabled={!canEdit}
+          className="min-w-[180px]"
+        />
+      ),
+    },
     {
       key: "default_expense_account_id",
       header: "Expense Account",
@@ -141,6 +184,56 @@ export function CategoryMappingTable({ expenseCategories, assetCategories, accou
           className="min-w-[240px]"
         />
       ),
+    },
+    {
+      key: "default_prepaid_account_id",
+      header: "Prepaid Account",
+      render: (_v, row) =>
+        row.accounting_treatment === "prepaid" ? (
+          <Select
+            value={row.default_prepaid_account_id}
+            onChange={(e) => updateExpenseRow(row.id, { default_prepaid_account_id: e.target.value })}
+            placeholder="Not mapped"
+            options={assetAccountOptions}
+            disabled={!canEdit}
+            className="min-w-[220px]"
+          />
+        ) : (
+          <span className="text-(--color-text-subtle)">—</span>
+        ),
+    },
+    {
+      key: "default_amortization_months",
+      header: "Amortization Months",
+      render: (_v, row) =>
+        row.accounting_treatment === "prepaid" ? (
+          <NumberInput
+            className="w-24"
+            min={1}
+            value={row.default_amortization_months ?? ""}
+            onChange={(e) => updateExpenseRow(row.id, { default_amortization_months: Number(e.target.value) || null })}
+            disabled={!canEdit}
+          />
+        ) : (
+          <span className="text-(--color-text-subtle)">—</span>
+        ),
+    },
+    {
+      key: "default_asset_category_id",
+      header: "Asset Category",
+      render: (_v, row) =>
+        row.accounting_treatment === "fixed_asset" ? (
+          <Select
+            value={row.default_asset_category_id}
+            onChange={(e) => updateExpenseRow(row.id, { default_asset_category_id: e.target.value })}
+            placeholder="Not linked"
+            options={assetCategorySelectOptions}
+            disabled={!canEdit}
+            className="min-w-[200px]"
+          />
+        ) : (
+          <span className="text-(--color-text-subtle)">—</span>
+        ),
     },
   ];
 

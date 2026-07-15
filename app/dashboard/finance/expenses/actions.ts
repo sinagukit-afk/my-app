@@ -4,7 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export type ActionResult = { success: true } | { success: false; error: string }
-export type CreateResult = { success: true; id: string } | { success: false; error: string }
+export type CreateResult =
+  | { success: true; id: string; kind: 'expense' | 'fixed_asset' }
+  | { success: false; error: string }
 
 const LIST_PATH = '/dashboard/finance/expenses'
 
@@ -23,6 +25,10 @@ export async function recordDirectExpense(formData: FormData): Promise<CreateRes
   const expense_date = (formData.get('expense_date') as string) || new Date().toISOString().slice(0, 10)
   const supplier_id = (formData.get('supplier_id') as string) || null
   const payment_status = (formData.get('payment_status') as string) || 'unpaid'
+  const treatment_override = (formData.get('treatment_override') as string) || null
+  const term_override = Number(formData.get('term_override')) || null
+  const useful_life_override = Number(formData.get('useful_life_override')) || null
+  const salvage_override = formData.get('salvage_override') ? Number(formData.get('salvage_override')) : null
 
   if (!category_id) return { success: false, error: 'Select an expense category.' }
   if (!description) return { success: false, error: 'Enter a description.' }
@@ -36,12 +42,18 @@ export async function recordDirectExpense(formData: FormData): Promise<CreateRes
     p_expense_date: expense_date,
     p_supplier_id: supplier_id,
     p_payment_status: payment_status,
+    p_treatment_override: treatment_override,
+    p_term_override: term_override,
+    p_useful_life_override: useful_life_override,
+    p_salvage_override: salvage_override,
   })
 
   if (error) return { success: false, error: friendlyError(error) }
 
+  const result = data as { id: string; kind: 'expense' | 'fixed_asset' }
   revalidatePath(LIST_PATH)
-  return { success: true, id: data as string }
+  if (result.kind === 'fixed_asset') revalidatePath('/dashboard/finance/fixed-assets')
+  return { success: true, id: result.id, kind: result.kind }
 }
 
 export async function updateDirectExpense(id: string, formData: FormData): Promise<ActionResult> {
@@ -139,11 +151,14 @@ export async function getAttachmentUrl(filePath: string): Promise<string | null>
 export async function createExpenseCategory(formData: FormData): Promise<ActionResult> {
   const name = (formData.get('name') as string)?.trim()
   const default_expense_account_id = (formData.get('default_expense_account_id') as string) || null
+  const accounting_treatment = (formData.get('accounting_treatment') as string) || 'immediate'
 
   if (!name) return { success: false, error: 'Enter a category name.' }
 
   const supabase = await createClient()
-  const { error } = await supabase.from('expense_categories').insert({ name, default_expense_account_id })
+  const { error } = await supabase
+    .from('expense_categories')
+    .insert({ name, default_expense_account_id, accounting_treatment })
 
   if (error) return { success: false, error: error.message }
 

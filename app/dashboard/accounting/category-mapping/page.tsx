@@ -38,7 +38,9 @@ export default async function CategoryMappingPage() {
   const [{ data: expenseCategories }, { data: assetCategories }, { data: accounts }] = await Promise.all([
     supabase
       .from("expense_categories")
-      .select("id, name, default_expense_account_id")
+      .select(
+        "id, name, default_expense_account_id, accounting_treatment, default_prepaid_account_id, default_amortization_months, default_asset_category_id"
+      )
       .eq("is_active", true)
       .order("name"),
     supabase
@@ -52,6 +54,7 @@ export default async function CategoryMappingPage() {
   ]);
 
   const accountOptions: AccountOption[] = accounts ?? [];
+  const assetCategoryOptions = (assetCategories ?? []).map((c) => ({ id: c.id, name: c.name }));
 
   return (
     <div className="space-y-6">
@@ -64,6 +67,10 @@ export default async function CategoryMappingPage() {
           id: c.id,
           name: c.name,
           default_expense_account_id: c.default_expense_account_id ?? "",
+          accounting_treatment: c.accounting_treatment as "immediate" | "prepaid" | "fixed_asset",
+          default_prepaid_account_id: c.default_prepaid_account_id ?? "",
+          default_amortization_months: c.default_amortization_months,
+          default_asset_category_id: c.default_asset_category_id ?? "",
         }))}
         assetCategories={(assetCategories ?? []).map((c) => ({
           id: c.id,
@@ -73,6 +80,7 @@ export default async function CategoryMappingPage() {
           default_depreciation_expense_account_id: c.default_depreciation_expense_account_id ?? "",
           default_useful_life_months: c.default_useful_life_months,
         }))}
+        assetCategoryOptions={assetCategoryOptions}
         accounts={accountOptions}
         canEdit={canEdit}
       />

@@ -19,6 +19,7 @@ import { disposeFixedAsset } from "./actions";
 import { formatDate } from "@/lib/utils/format-date";
 
 export type AssetStatus = "active" | "fully_depreciated" | "disposed";
+export type ScheduleStatus = "active" | "paused" | "terminated";
 
 export type AssetRow = {
   id: string;
@@ -33,6 +34,19 @@ export type AssetRow = {
   accumulated: number;
   book_value: number;
   status: AssetStatus;
+  schedule_status: ScheduleStatus;
+};
+
+const SCHEDULE_STATUS_LABEL: Record<ScheduleStatus, string> = {
+  active: "Active",
+  paused: "Paused",
+  terminated: "Terminated",
+};
+
+const SCHEDULE_STATUS_VARIANT: Record<ScheduleStatus, "success" | "warning" | "neutral"> = {
+  active: "success",
+  paused: "warning",
+  terminated: "neutral",
 };
 
 function peso(n: number) {
@@ -99,6 +113,16 @@ export function FixedAssetsTable({ data, canWrite, categories, suppliers }: Prop
       header: "Status",
       sortable: true,
       render: (value) => <Badge variant={STATUS_VARIANT[value as AssetStatus]}>{STATUS_LABEL[value as AssetStatus]}</Badge>,
+    },
+    {
+      key: "schedule_status",
+      header: "Schedule",
+      sortable: true,
+      render: (value) => (
+        <Badge variant={SCHEDULE_STATUS_VARIANT[value as ScheduleStatus]}>
+          {SCHEDULE_STATUS_LABEL[value as ScheduleStatus]}
+        </Badge>
+      ),
     },
     ...(canWrite
       ? [

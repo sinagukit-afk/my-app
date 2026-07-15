@@ -15,6 +15,10 @@ function friendlyError(error: { code?: string; message: string }): string {
 export type ExpenseCategoryMapping = {
   id: string
   default_expense_account_id: string | null
+  accounting_treatment: 'immediate' | 'prepaid' | 'fixed_asset'
+  default_prepaid_account_id: string | null
+  default_amortization_months: number | null
+  default_asset_category_id: string | null
 }
 
 export async function saveExpenseCategoryMappings(rows: ExpenseCategoryMapping[]): Promise<SaveResult> {
@@ -23,12 +27,19 @@ export async function saveExpenseCategoryMappings(rows: ExpenseCategoryMapping[]
   for (const row of rows) {
     const { error } = await supabase
       .from('expense_categories')
-      .update({ default_expense_account_id: row.default_expense_account_id || null })
+      .update({
+        default_expense_account_id: row.default_expense_account_id || null,
+        accounting_treatment: row.accounting_treatment,
+        default_prepaid_account_id: row.default_prepaid_account_id || null,
+        default_amortization_months: row.default_amortization_months || null,
+        default_asset_category_id: row.default_asset_category_id || null,
+      })
       .eq('id', row.id)
     if (error) return { success: false, error: friendlyError(error) }
   }
 
   revalidatePath(LIST_PATH)
+  revalidatePath('/dashboard/finance/expenses')
   return { success: true }
 }
 
