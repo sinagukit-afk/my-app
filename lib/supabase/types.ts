@@ -163,6 +163,50 @@ export type Database = {
           },
         ]
       }
+      bank_accounts: {
+        Row: {
+          account_number_masked: string | null
+          bank: string
+          created_at: string
+          currency: string
+          gl_account_id: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          account_number_masked?: string | null
+          bank: string
+          created_at?: string
+          currency?: string
+          gl_account_id: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          account_number_masked?: string | null
+          bank?: string
+          created_at?: string
+          currency?: string
+          gl_account_id?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_accounts_gl_account_id_fkey"
+            columns: ["gl_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_events: {
         Row: {
           created_at: string
@@ -2425,6 +2469,7 @@ export type Database = {
       payment_type_accounting_mappings: {
         Row: {
           account_id: string
+          bank_account_id: string | null
           created_at: string
           id: string
           payment_type_id: string
@@ -2433,6 +2478,7 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          bank_account_id?: string | null
           created_at?: string
           id?: string
           payment_type_id: string
@@ -2441,6 +2487,7 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          bank_account_id?: string | null
           created_at?: string
           id?: string
           payment_type_id?: string
@@ -2453,6 +2500,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_type_accounting_mappings_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
             referencedColumns: ["id"]
           },
           {

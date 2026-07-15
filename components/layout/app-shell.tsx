@@ -127,6 +127,8 @@ const NAV: NavEntry[] = [
         kind: "subgroup",
         label: "Financial Settings",
         children: [
+          { kind: "item", label: "Bank Accounts", href: "/dashboard/accounting/financial-settings/bank-accounts", icon: LedgerIcon },
+          { kind: "item", label: "Payment Methods", href: "/dashboard/accounting/financial-settings/payment-methods", icon: LedgerIcon },
           { kind: "item", label: "Product Account Mapping", href: "/dashboard/accounting/financial-settings/product-mapping", icon: LedgerIcon },
           { kind: "item", label: "Expense Categories", href: "/dashboard/accounting/financial-settings/expense-categories", icon: LedgerIcon },
         ],

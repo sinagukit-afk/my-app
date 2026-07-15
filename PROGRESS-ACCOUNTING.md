@@ -88,7 +88,7 @@ conventions worth keeping are:
 
 > **Migration renumber (2026-07-02, ACCT-3):** ACCT-3 wasn't originally assigned a migration, but the Rent/Transportation decision added account `6015 Rent Expense`, which needed one. Created during ACCT-3 (chronologically before ACCT-4..7, none of which exist yet), it correctly takes the next free label `0015` — so the reserved labels for ACCT-4 (`0015→0016`), ACCT-5 (`0016→0017`), ACCT-6 (`0017→0018`), and ACCT-7 (`0018→0019`) each shift up by one, preserving the "lower label = created earlier" invariant the earlier amendments established.
 | ACCT-8 | BIR tax estimate calculator | Not started | — | Lowest priority, optional |
-| ACCT-9 | Module restructure — COA hierarchy, Financial Settings nav, mapping generalization, foundation-only Taxes | In progress | `acct9_1_chart_of_accounts_hierarchy`, `acct9_3_system_account_mappings` | Kickoff plan (assessment + 7 sub-phases) in the 2026-07-15 session log entry below. Sub-phases ACCT-9.1..9.7 have no ordering dependency on each other except: 9.5 needs 9.3, 9.6 needs 9.3, 9.7 needs 9.1. **9.1, 9.2, 9.3 done** (see session log) — 9.4 (Bank Accounts) is next in the plan's order but 9.5/9.6/9.7 could also go next now that 9.3 is done. |
+| ACCT-9 | Module restructure — COA hierarchy, Financial Settings nav, mapping generalization, foundation-only Taxes | In progress | `acct9_1_chart_of_accounts_hierarchy`, `acct9_3_system_account_mappings`, `acct9_4_bank_accounts` | Kickoff plan (assessment + 7 sub-phases) in the 2026-07-15 session log entry below. Sub-phases ACCT-9.1..9.7 have no ordering dependency on each other except: 9.5 needs 9.3, 9.6 needs 9.3, 9.7 needs 9.1. **9.1, 9.2, 9.3, 9.4 done** (see session log) — 9.5/9.6/9.7 next, no ordering dependency between them (all only needed 9.3/9.1, already done). |
 
 ## Session log
 
@@ -1615,5 +1615,102 @@ Both done in the same session, per Sinag's explicit "start 9.2 and 9.3" request.
 `npm run build` passes zero errors both before and after the `*-table.tsx` title fix; all `/dashboard/accounting/financial-settings/*` routes registered, old `/product-mapping`/`/category-mapping` routes gone.
 
 No git commit (standing project rule — stopped at DoD for manual review). Next per the plan: 9.4 (Bank Accounts) is next in order, but 9.5/9.6/9.7 are all now unblocked too since they only needed 9.3.
+
+---
+
+### 2026-07-15 — ACCT-9.4 (Bank Accounts + first-ever Payment Methods UI)
+
+Sinag asked to start 9.4. Re-verified live schema first (standing "re-verify
+before starting" note): `accounts`/`payment_type_accounting_mappings`/
+`system_account_mappings` all matched the kickoff assessment, no drift.
+
+**Scope gap surfaced before writing code:** the kickoff plan's 9.4 bullet
+only specs a `bank_accounts` table + page, but also has `payment_type_
+accounting_mappings` gain a `bank_account_id` FK — and no sub-phase in the
+plan ever assigns building an admin UI for `payment_type_accounting_
+mappings` itself (it's been seed-only via raw SQL since ACCT-7.5, despite
+"Payment Methods" appearing as its own Financial Settings nav item in the
+target IA). Flagged to Sinag rather than guessing which was intended; he
+confirmed building both in this session, since the new `bank_account_id`
+column would otherwise have no UI to set it.
+
+**Migration `acct9_4_bank_accounts`:**
+- New table `bank_accounts` (`name`, `bank`, `account_number_masked`
+  nullable, `gl_account_id → accounts` not null, `currency` default
+  `'PHP'`, `is_active` default true, `set_updated_at` trigger reused
+  as-is). RLS mirrors `system_account_mappings`/`payment_type_accounting_
+  mappings` exactly: select admin+manager, insert/update admin-only, `TO
+  authenticated`, no delete policy (deactivate-via-`is_active`, same
+  convention as `accounts` itself rather than a `deleted_at` column).
+- `payment_type_accounting_mappings` gains nullable `bank_account_id →
+  bank_accounts`. `account_id` (existing, not null) stays the sole account
+  posting resolves through — deliberately did **not** touch `generate_
+  draft_journal_entries()` this phase. `bank_account_id` is a reconciliation-
+  reference link only (foundation for a future bank-reconciliation module,
+  per the original target requirements), same "foundation-only, no engine
+  wiring yet" shape as how 9.6 Taxes is scoped — not a behavior change to
+  what currently posts.
+- `get_advisors(security)`: no new findings tied to `bank_accounts` or the
+  new column — same pre-existing baseline as every other table in the
+  project.
+
+**UI — two new pages** under `app/dashboard/accounting/financial-settings/`:
+- `bank-accounts/` (`page.tsx`/`bank-accounts-table.tsx`/`bank-account-
+  form.tsx`/`actions.ts`) — full CRUD, byte-for-byte following the Chart of
+  Accounts precedent (Add/Edit dialog, Deactivate/Reactivate confirmation
+  dialog, `friendlyError()` mapping `42501`/`23503`). GL Account picker
+  filtered to `category = 'asset' AND is_active AND is_postable`. Admin
+  write, manager read-only, others restricted — matches every other
+  Accounting page's `hasAccess`/`canWrite` split.
+- `payment-methods/` (`page.tsx`/`payment-methods-table.tsx`/`actions.ts`)
+  — grid-edit + "Save All Mappings" pattern copied from Product Account
+  Mapping, one row per active `payment_types` row with two selects: **GL
+  Account** (required — same asset-account filter as Bank Accounts, upsert
+  skips any row left unmapped rather than guessing, surfaces which
+  payment types got skipped in the save-result message) and **Bank
+  Account** (optional, `bank_accounts` active rows, placeholder "Direct to
+  GL account"). `onConflict: 'payment_type_id'` (confirmed a real unique
+  constraint exists on that column before relying on it).
+- `app-shell.tsx`: added **Bank Accounts** and **Payment Methods** as the
+  first two children of the Financial Settings subgroup (ahead of Product
+  Account Mapping/Expense Categories, matching the plan's target nav
+  order).
+- `lib/supabase/types.ts` regenerated (same oversized-MCP-response
+  workaround as every prior ACCT-9 session).
+
+**Verified:**
+- `npm run build` passes zero errors; both new routes registered.
+- **Browser-verified end-to-end** (admin `claude-code@sinagukit.internal`)
+  — killed another session's `next dev` (PID 4056, Sinag confirmed first)
+  holding the single-instance dev lock, cleared `.next/` per the standing
+  stale-Turbopack-cache lesson, started clean: created a real bank account
+  (`BDO Main Checking`, BDO, `****1234`, GL account `SCA-1020 — Bank
+  Account`, currency `PHP`) through the dialog — appeared correctly in the
+  list; Edit re-opened with all fields pre-filled including the stripped
+  GL Account selection; Deactivate → Reactivate round-tripped the status
+  badge correctly. On Payment Methods, the 6 existing payment types (seeded
+  back in ACCT-7.5) rendered with their real existing GL Account mappings
+  intact (Cash → `SCA-1000 Cash on hand`, BDO/BPI/Gcash/Maribank/Other →
+  `SCA-1020 Bank Account`); set BDO's Bank Account to the new `BDO Main
+  Checking` row and saved — "Mappings saved" confirmation shown, and a
+  direct DB query confirmed the join lands correctly (`BDO → SCA-1020 /
+  BDO Main Checking`, all 5 other rows unchanged with `bank_account_id`
+  still null). No console errors on either page at any step. Left both the
+  real bank account and the real BDO↔bank-account mapping in place
+  afterward, per this project's standing convention for self-contained
+  verification data.
+- **RLS role-impersonation checks** (rolled-back transactions against real
+  manager/encoder profile rows): manager sees the 1 real `bank_accounts`
+  row on select but a direct insert is rejected by RLS (`new row violates
+  row-level security policy`); encoder sees 0 rows on select — matches the
+  intended admin-write/manager-read/encoder-none shape exactly.
+
+**Not built this session, on purpose:** no change to `generate_draft_
+journal_entries()` — `bank_account_id` has no effect on posting yet (see
+the design note above); that would be a deliberate future decision, not an
+oversight. No git commit (standing project rule — stopped at DoD for
+manual review). Next per the plan: 9.5 (Sales/Purchase/Inventory Mapping
+screens) or 9.6 (Taxes, foundation-only) or 9.7 (Reports) — no ordering
+dependency between them.
 
 ---

@@ -304,8 +304,16 @@ stale); Journal→Journal Entries, Review→Pending Review, Income
 Statement→Profit & Loss renames applied. **9.3 done 2026-07-15**: new
 `system_account_mappings` table (7 seeded keys) closes the hardcoded-
 `account_number` gap in `generate_draft_journal_entries()` — every account
-it resolves is now FK'd via `mapping_key`, not a literal string. 9.4–9.7
-not started.
+it resolves is now FK'd via `mapping_key`, not a literal string. **9.4 done
+2026-07-15**: new `bank_accounts` table (name, bank, masked account #,
+`gl_account_id → accounts`, currency, active) + admin CRUD page at
+`/dashboard/accounting/financial-settings/bank-accounts`;
+`payment_type_accounting_mappings` gained an optional `bank_account_id`, and
+a first-ever admin UI for that table shipped alongside it at
+`/financial-settings/payment-methods` (previously seed-only via SQL) — GL
+Account (required, drives posting) stays separate from Bank Account
+(optional, reconciliation reference only, no posting-logic change this
+round). 9.5–9.7 not started.
 
 Tracked separately in `PROGRESS-ACCOUNTING.md`, not this file's usual phase log.
 
