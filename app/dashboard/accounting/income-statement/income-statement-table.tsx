@@ -1,49 +1,42 @@
 "use client";
 
-import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
+import { HierarchicalReportTable } from "@/components/business/hierarchical-report-table";
 
 export type IncomeStatementRow = {
+  account_id: string;
   account_number: string;
   account_name: string;
   category: string;
+  depth: number;
+  is_postable: boolean;
   amount: number;
+  rollup_amount: number;
 };
 
 function money(v: number) {
   return `₱${v.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-const columns: Column<IncomeStatementRow>[] = [
-  { key: "account_number", header: "Account #", sortable: true },
-  { key: "account_name", header: "Account Name", sortable: true },
-  {
-    key: "category",
-    header: "Category",
-    sortable: true,
-    render: (value) => (
-      <Badge variant={value === "revenue" ? "success" : "danger"}>{value as string}</Badge>
-    ),
-  },
-  {
-    key: "amount",
-    header: "Amount",
-    sortable: true,
-    render: (value, row) => (
-      <span className={row.category === "revenue" ? "text-(--color-success)" : "text-(--color-danger)"}>
-        {money(Number(value))}
-      </span>
-    ),
-  },
-];
-
 export function IncomeStatementTable({ data }: { data: IncomeStatementRow[] }) {
   return (
-    <DataTable
-      columns={columns}
-      data={data}
+    <HierarchicalReportTable
+      rows={data}
+      categoryBadge={(category) => (
+        <Badge variant={category === "revenue" ? "success" : "danger"}>{category}</Badge>
+      )}
+      valueColumns={[
+        {
+          key: "amount",
+          header: "Amount",
+          render: (row) => (
+            <span className={row.category === "revenue" ? "text-(--color-success)" : "text-(--color-danger)"}>
+              {money(Number(row.rollup_amount))}
+            </span>
+          ),
+        },
+      ]}
       searchPlaceholder="Search accounts…"
-      pageSize={20}
       emptyMessage="No activity in this period"
       emptyDescription="No revenue or expense entries were posted in the selected date range."
     />

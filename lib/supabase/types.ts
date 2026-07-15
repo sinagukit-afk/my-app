@@ -3779,6 +3779,33 @@ export type Database = {
           },
         ]
       }
+      tax_rates: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          rate_percent: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          rate_percent: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          rate_percent?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       web_faqs: {
         Row: {
           answer: string
@@ -3990,6 +4017,28 @@ export type Database = {
       }
     }
     Functions: {
+      _account_rollup: {
+        Args: { p_end: string; p_start: string }
+        Returns: {
+          account_id: string
+          own_credit: number
+          own_debit: number
+          subtree_credit: number
+          subtree_debit: number
+        }[]
+      }
+      _account_tree: {
+        Args: never
+        Returns: {
+          account_id: string
+          account_name: string
+          account_number: string
+          category: string
+          depth: number
+          is_postable: boolean
+          sort_path: string[]
+        }[]
+      }
       _deduct_shipment_stock: {
         Args: {
           p_shipment_id: string
@@ -4524,30 +4573,43 @@ export type Database = {
       get_balance_sheet: {
         Args: { p_as_of?: string }
         Returns: {
+          account_id: string
           account_name: string
           account_number: string
           amount: number
           category: string
+          depth: number
+          is_postable: boolean
+          rollup_amount: number
         }[]
       }
       get_email_for_username: { Args: { p_username: string }; Returns: string }
       get_income_statement: {
         Args: { p_end: string; p_start: string }
         Returns: {
+          account_id: string
           account_name: string
           account_number: string
           amount: number
           category: string
+          depth: number
+          is_postable: boolean
+          rollup_amount: number
         }[]
       }
       get_trial_balance: {
         Args: { p_as_of?: string }
         Returns: {
+          account_id: string
           account_name: string
           account_number: string
           category: string
           credit_balance: number
           debit_balance: number
+          depth: number
+          is_postable: boolean
+          rollup_credit_balance: number
+          rollup_debit_balance: number
         }[]
       }
       hold_order: {

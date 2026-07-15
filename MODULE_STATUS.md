@@ -313,7 +313,18 @@ a first-ever admin UI for that table shipped alongside it at
 `/financial-settings/payment-methods` (previously seed-only via SQL) — GL
 Account (required, drives posting) stays separate from Bank Account
 (optional, reconciliation reference only, no posting-logic change this
-round). 9.5–9.7 not started.
+round). **9.5 done 2026-07-15**: Sales/Purchase/Inventory Mapping pages
+(thin admin screens over `system_account_mappings`) + `categories` gained
+default revenue/inventory/expense accounts, auto-applied to new items via
+an `AFTER INSERT` trigger. **9.6 done 2026-07-15** (by a concurrent
+session, discovered via `list_migrations`): new `tax_rates` table +
+`output_tax_payable` mapping key, `sale_recognized` now splits `total_tax`
+into its own credit line, new Taxes page. **9.7 done 2026-07-15**: Trial
+Balance/Balance Sheet/Profit & Loss now roll up through the `accounts`
+hierarchy (indented tree, parent group rows show a subtree subtotal)
+instead of grouping by flat `category` only — see `PROGRESS-ACCOUNTING.md`
+for the own-vs-rollup design note. **ACCT-9 module restructure is now
+fully done, all 7 sub-phases.**
 
 Tracked separately in `PROGRESS-ACCOUNTING.md`, not this file's usual phase log.
 

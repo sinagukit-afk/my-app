@@ -88,7 +88,7 @@ conventions worth keeping are:
 
 > **Migration renumber (2026-07-02, ACCT-3):** ACCT-3 wasn't originally assigned a migration, but the Rent/Transportation decision added account `6015 Rent Expense`, which needed one. Created during ACCT-3 (chronologically before ACCT-4..7, none of which exist yet), it correctly takes the next free label `0015` — so the reserved labels for ACCT-4 (`0015→0016`), ACCT-5 (`0016→0017`), ACCT-6 (`0017→0018`), and ACCT-7 (`0018→0019`) each shift up by one, preserving the "lower label = created earlier" invariant the earlier amendments established.
 | ACCT-8 | BIR tax estimate calculator | Not started | — | Lowest priority, optional |
-| ACCT-9 | Module restructure — COA hierarchy, Financial Settings nav, mapping generalization, foundation-only Taxes | In progress | `acct9_1_chart_of_accounts_hierarchy`, `acct9_3_system_account_mappings`, `acct9_4_bank_accounts`, `acct9_5_sales_purchase_inventory_mapping` | Kickoff plan (assessment + 7 sub-phases) in the 2026-07-15 session log entry below. Sub-phases ACCT-9.1..9.7 have no ordering dependency on each other except: 9.5 needs 9.3, 9.6 needs 9.3, 9.7 needs 9.1. **9.1, 9.2, 9.3, 9.4, 9.5 done** (see session log) — 9.6/9.7 next, no ordering dependency between them. |
+| ACCT-9 | Module restructure — COA hierarchy, Financial Settings nav, mapping generalization, foundation-only Taxes | **All 7 sub-phases done** | `acct9_1_chart_of_accounts_hierarchy`, `acct9_3_system_account_mappings`, `acct9_4_bank_accounts`, `acct9_5_sales_purchase_inventory_mapping`, `acct9_6_taxes_foundation`, `acct9_7_hierarchical_reports`, `acct9_7_hierarchical_reports_own_vs_rollup`, `acct9_7_revoke_anon_execute` | Kickoff plan (assessment + 7 sub-phases) in the 2026-07-15 session log entry below. **9.6 was done by a concurrent session** (not this workstream's own doc — see the ACCT-9.7 session log entry's note on discovering it) while 9.7 was being worked in this session; no schema conflict between the two (9.6 touched `system_account_mappings`/`close_order_payment`/`generate_draft_journal_entries`, 9.7 touched only the report RPCs). |
 
 ## Session log
 
@@ -1847,5 +1847,304 @@ enters the real data" convention as the rest of this module). No git
 commit (standing project rule — stopped at DoD for manual review). Next
 per the plan: 9.6 (Taxes, foundation-only) or 9.7 (Reports) — no ordering
 dependency between them.
+
+---
+
+### 2026-07-15 — ACCT-9.6 (Taxes, foundation-only)
+
+Sinag asked to start 9.6. Re-verified live schema first (standing
+"re-verify before starting" note): the 7 `system_account_mappings` keys and
+`generate_draft_journal_entries()`'s `sale_recognized` branch both matched
+the kickoff assessment exactly — confirmed `orders.total_tax` exists but is
+currently always `0` app-wide (`quotation/actions.ts` hardcodes
+`total_tax: 0`, no UI computes a nonzero value yet), and that
+`close_order_payment()`'s `sale_recognized` payload didn't carry
+`total_tax` at all — matching the kickoff finding that tax collected isn't
+posted separately today.
+
+**Migration `acct9_6_taxes_foundation`:**
+- New table `tax_rates` (`name`, `rate_percent numeric(5,2)`, `is_active`,
+  timestamps). RLS mirrors `bank_accounts`/`system_account_mappings`
+  exactly: select admin+manager, insert/update admin-only, `TO
+  authenticated`, no delete policy (deactivate via `is_active`,
+  consistent with this whole mapping-table family).
+- `system_account_mappings` gains an 8th key, `output_tax_payable`
+  ("Output Tax Payable"), seeded unmapped (`account_id = null`) — same
+  pattern as the original 7 keys before Sinag configures them.
+- `close_order_payment()` widened (`CREATE OR REPLACE`, same `()`
+  signature, no `DROP FUNCTION` needed): `sale_recognized` payload gains
+  `'total_tax', coalesce(v_order.total_tax, 0)`.
+- `generate_draft_journal_entries()`'s `sale_recognized` branch rewritten
+  to split tax out of the revenue allocation instead of adding a parallel
+  code path: introduced `v_tax_amount` and `v_revenue_total := total_money
+  - tax_amount`, then allocate `v_revenue_total` (not raw `total_money`)
+  proportionally across the revenue accounts exactly as before. When
+  `tax_amount > 0`, one more credit line posts to the `output_tax_payable`
+  mapped account at `line_order = 92` (after write-off's 90 and tip's 91).
+  This keeps the invariant that total credits always equal `total_money +
+  tip_amount` — tax is carved out of the revenue side, not added on top —
+  so every existing branch (payments, write-off, tip) needed zero changes.
+  Every other event-type branch in the function is byte-for-byte unchanged
+  from the live `acct9_3` body.
+- Followed the existing (not-fully-robust) precedent for `tip_income`/
+  `write_off_expense` rather than inventing new guard logic:
+  `output_tax_payable` is **not** added to the initial skip-check (which
+  only validates revenue/payment mappings before generating a draft at
+  all) — if tax is nonzero but the mapping is left unset, the insert would
+  hit `journal_entry_draft_lines.account_id`'s `NOT NULL` constraint and
+  raise, same latent risk tip/write-off already carry. Not fixed here
+  (out of scope, consistency over new robustness), but worth flagging if
+  it's ever addressed for one of the three it'd need addressing for all.
+- `get_advisors(security)` and `get_advisors(performance)`: zero findings
+  reference `tax_rates` in either — no missing-RLS or missing-index
+  warnings, clean.
+
+**Verified live** (rolled-back-transaction tests via Supabase MCP,
+role-impersonated, no data left behind):
+- Synthetic `sale_recognized` event (`total_money` 1120.00, `total_tax`
+  120.00, one revenue line 1000.00, one payment 1120.00, tax mapped
+  temporarily to a real liability account) → `generate_draft_journal_
+  entries()` produced exactly 3 balanced lines: revenue credit 1000.00
+  (= 1120 − 120, not the raw 1120), payment debit 1120.00, tax credit
+  120.00 at `line_order` 92 on the mapped account. Total debit = total
+  credit = 1120.00.
+  interesting incidental finding: the liability account used for this test,
+  `SCA-2010 "Income taxes payable"`, is a plausible real fit for the
+  eventual `output_tax_payable` mapping — flagging for Sinag's actual
+  decision, not set permanently by this session (reset to unmapped after
+  the test, see below).
+- RLS role-impersonation on `tax_rates`: admin insert succeeds; manager
+  select returns the row but insert is rejected (`42501`); encoder sees 0
+  rows on select.
+
+**UI** — new `Taxes` page under
+`app/dashboard/accounting/financial-settings/taxes/`
+(`page.tsx`/`tax-rates-table.tsx`/`tax-rate-form.tsx`/`actions.ts`):
+top panel reuses the existing `SystemMappingTable` component (from 9.5)
+filtered to the new `output_tax_payable` key via a new `TAX_MAPPING_KEYS`
+export in `lib/accounting/system-mapping-keys.ts`
+(`MAPPING_KEY_ACCOUNT_CATEGORY.output_tax_payable = "liability"`); below
+it, a full CRUD `Tax Rates` table byte-for-byte following the Bank
+Accounts precedent (Add/Edit dialog with `NumberInput` for the
+percentage, Deactivate/Reactivate confirmation dialog, `friendlyError()`
+mapping `42501`/`23503`). Added **Taxes** to `app-shell.tsx`'s Financial
+Settings subgroup between Payment Methods and Product Account Mapping,
+matching the kickoff plan's finalized nav order exactly. `lib/supabase/
+types.ts` regenerated (same oversized-MCP-response workaround as every
+prior ACCT-9 session).
+
+**Browser-verified end-to-end** (admin `claude-code@sinagukit.internal`,
+own dev server, no lock conflict this session): Taxes page renders with
+the Output Tax Payable picker correctly filtered to liability accounts
+only (`SCA-2000`/`SCA-2010`/`SCA-2020`); set it to `SCA-2010`, saved,
+confirmed persisted via direct DB query, then reset back to "Not mapped"
+and saved again (a real GL-account decision is Sinag's to make, not
+self-evidently fake the way a labeled test row is — same judgment call
+ACCT-9.5 made for category defaults). Added a labeled test tax rate
+("ACCT-9.6 verification (test)", 12.00%) through the dialog, edited its
+rate to 12.50%, deactivated it (status flipped to "Inactive" + action
+flipped to "Reactivate"), reactivated it — all four confirmed via server
+logs showing the real `createTaxRate`/`updateTaxRate`/`setTaxRateActive`
+calls firing, and via re-fetched page state. Hard-deleted the test row
+afterward via direct SQL (self-evidently-fake, same cleanup convention as
+`SCA-9999`/ACCT-9.1's test accounts). No console errors at any step.
+`npm run build` passes zero errors; new route
+`/dashboard/accounting/financial-settings/taxes` registered.
+
+**Not built this session, on purpose:** no tax-rate calculation engine
+wired into POS/Orders — `tax_rates` is a reference table only, and
+`total_tax` still has to be populated by something upstream of
+`close_order_payment()` before any of this actually posts a nonzero tax
+line in practice (today it's always 0 app-wide). That wiring, and
+`tax_rates`→order-line integration generally, is explicitly out of scope
+per the kickoff plan's "foundation-only" framing.
+
+**Concurrent-session note:** another session was working ACCT-9.7
+(Reports) at the same time on a different dev server; see that session's
+own log entry immediately below for the full account of how the two
+sessions' changes were reconciled — no schema conflict (9.6 touched
+`system_account_mappings`/`close_order_payment`/`generate_draft_journal_
+entries`, 9.7 touched only the 3 report RPCs + 2 new internal helpers) —
+and for the Status table update marking all 7 ACCT-9 sub-phases done.
+
+No git commit (standing project rule — stopped at DoD for manual
+review).
+
+---
+
+### 2026-07-15 — ACCT-9.7 (Reports — hierarchical rollup)
+
+Sinag asked to start 9.7 directly (skipping 9.6, no ordering dependency
+between them). Re-verified live schema first (standing "re-verify before
+starting" note): `accounts.parent_account_id`/`is_postable` and all three
+report RPC bodies matched the ACCT-9.1/kickoff assessment exactly, no
+drift. Also found real live hierarchy data already in place beyond what
+9.1's own session left behind — Sinag (or another session) has since
+re-parented 28 accounts and created 3 group accounts, all under `asset`
+(`SCA-1000 Asset` root → `SCA-1020 Bank Account`/`SCA-1200 Inventory`
+subgroups → real leaf children); liability/equity/revenue/expense have no
+hierarchy yet. This live data ended up mattering for a design decision
+below, not just a sanity check.
+
+**Migrations `acct9_7_hierarchical_reports` → `acct9_7_hierarchical_reports_own_vs_rollup` → `acct9_7_revoke_anon_execute`** (three passes, each fixing something the previous one's verification caught — see below):
+
+- Two new internal helpers (naming convention: underscore prefix for
+  internal/dispatcher functions, matching the existing
+  `_record_expense_with_treatment()` precedent): `_account_tree()` returns
+  every account's `depth` and a materialized `sort_path` (array of
+  `account_number`s from root down) via a recursive CTE, so callers can
+  `order by sort_path` and get parents immediately followed by their
+  children at any depth. `_account_rollup(p_start, p_end)` returns, per
+  account, both its **own** direct-posting sums and its **subtree**
+  (self + all descendants) sums, via a recursive "ancestor closure" CTE
+  (each account paired with every ancestor up to the root, itself included)
+  joined back to summed `journal_entry_lines` — this is what makes a group
+  account's subtotal correctly include a grandchild's postings without a
+  fixed-depth assumption. Both helpers are `SECURITY INVOKER` (not
+  DEFINER) — `accounts`/`journal_entries`/`journal_entry_lines`'s existing
+  `TO public` + `current_user_role() = admin/manager` RLS policies already
+  gate them correctly, no need to widen the DEFINER surface (same reasoning
+  ACCT-9.1's two triggers used).
+- `get_trial_balance`/`get_income_statement`/`get_balance_sheet` all
+  `DROP FUNCTION` + recreated (return-column-set change, this project's
+  standing `CREATE OR REPLACE` pitfall) with `account_id`/`depth`/
+  `is_postable` added, ordered by `sort_path` instead of `account_number`.
+  Row inclusion stays an inner-join-equivalent (only accounts with any
+  activity in their own subtree appear), same as pre-9.7.
+- **Design correction found during verification, before touching the
+  frontend:** the first pass returned only ONE rolled-up figure per row.
+  Cross-checked the rollup arithmetic by hand against a real group account
+  (`SCA-1200 Inventory`, now non-postable) and found its reported subtotal
+  didn't match the sum of its visible children — traced it to a real
+  ₱280.00 direct credit posted to `SCA-1200` on 2026-07-11 (a COGS entry),
+  from *before* it was reorganized into a group account. The `is_postable`
+  trigger only blocks new postings against group accounts going forward; it
+  doesn't retroactively hide history. This meant a single rolled-up figure
+  per row would make the page-level "Total Debits/Total Credits" (etc.)
+  stat cards ambiguous — summing only `is_postable = true` rows would
+  silently drop that ₱280, while summing every row's rolled-up figure would
+  double-count it against its children. Fixed by returning **two** figures
+  per row: `debit_balance`/`credit_balance`/`amount` (the account's own,
+  unrolled figure — bit-for-bit the same formula the pre-9.7 flat report
+  used) alongside a new `rollup_debit_balance`/`rollup_credit_balance`/
+  `rollup_amount` (subtree-inclusive, for the tree display only). This
+  means **the three `page.tsx` files' existing `rows.reduce(...)` total
+  computations needed zero changes** — they still sum the "own" field,
+  which is a superset of the same accounts the old flat query would have
+  summed, so the totals are provably unaffected by hierarchy. Verified by
+  hand: own-debit total (₱42,150.72) exactly equals own-credit total
+  (₱42,150.72) across the whole ledger, confirming the double-entry
+  identity holds computed this way (it would NOT hold if totals were
+  computed from rolled-up group subtotals instead — rolling up first then
+  clipping to `greatest(x,0)` is a non-linear operation that can silently
+  net offsetting sibling balances against each other before the total
+  check, which is why "sum only the roots" was considered and rejected as
+  a totaling strategy).
+- **Second issue found by `get_advisors(security)` after the first two
+  migrations:** all 5 new/changed functions showed up as `anon`-executable
+  `SECURITY DEFINER` — worse than this project's usual accepted baseline
+  WARN (anon+authenticated both flagged, accepted everywhere as "the
+  internal role check is the real gate"). The pre-9.7 versions of the 3
+  report RPCs had `anon` explicitly revoked (2026-07-14 security audit);
+  `DROP FUNCTION` + `CREATE FUNCTION` resets grants to this Supabase
+  project's default-privilege baseline, which grants `anon` execute
+  *directly* (not via the `PUBLIC` pseudo-role), so `revoke all ... from
+  public` in the first two migrations didn't remove it. Third migration
+  explicitly `revoke execute ... from anon` on all 5 functions, confirmed
+  via `information_schema.routine_privileges` back down to
+  authenticated/postgres/service_role only, matching the pre-9.7 grant
+  shape exactly.
+
+**UI** — new shared `components/business/hierarchical-report-table.tsx`
+(one component, used by all 3 report tables rather than tripling the same
+tree-rendering logic): dropped the shared `DataTable` for these three pages
+specifically, same reasoning ACCT-9.1 used for the Chart of Accounts page
+("sort/paginate model doesn't compose with contiguous parent-child
+ordering") — rows arrive from the RPC already in tree pre-order, so the
+table just renders them in sequence, indenting by `depth * 20px` and
+bolding/tinting non-`is_postable` (group) rows to read as branch subtotals.
+No collapse/expand (unlike Chart of Accounts) — reports only show accounts
+with actual activity, a much shorter list than the full 114-row Chart of
+Accounts, so collapsing wasn't judged worth the complexity this round.
+Kept a search box: since rows are already in pre-order, a row's ancestor
+chain can be recovered client-side just by tracking, at each depth, the
+most recently-seen row (no `parent_account_id` needed in the payload) —
+searching keeps matched rows' ancestors visible for context, same idea as
+Chart of Accounts' `visibleIds` filter. `trial-balance-table.tsx`/
+`income-statement-table.tsx`/`balance-sheet-table.tsx` all became thin
+wrappers passing `rollup_*` fields into the shared component's value
+columns; none of the three `page.tsx` files changed at all.
+
+**Verified:**
+- `npx tsc --noEmit` passes zero errors (used in place of `npm run build`
+  this session — another session's `next dev` held the port-3000
+  single-instance lock; asked Sinag first, confirmed, killed PID 17524,
+  cleared `.next/` per the standing stale-Turbopack-cache lesson, started
+  clean, then ran the full browser verification below anyway).
+- **DB-level, rolled-back-transaction role impersonation:** null-role
+  caller blocked with the existing "Not authorized to view financial
+  reports" message on all three RPCs (role check unchanged, still the
+  first statement).
+- `get_advisors(security)`: after the third migration, back to this
+  project's standard pre-existing baseline WARN (anon+authenticated can
+  execute `SECURITY DEFINER` — the internal role check is the real gate),
+  no new class of finding, matching the pre-9.7 grant shape exactly.
+- **Browser-verified end-to-end** (admin `claude-code@sinagukit.internal`,
+  own session's own dev server): Trial Balance renders the real live
+  hierarchy correctly — `SCA-1000` (root, bold, ₱31,037.28) →
+  `SCA-1020`/`SCA-1200` (bold subgroups) → their leaf children indented
+  further, `SCA-1300`/`SCA-1530` (plain leaves) at the middle indent level,
+  every other category flat (no hierarchy exists there yet) — Total
+  Debits/Total Credits both ₱42,150.72, "Balanced". Confirmed indentation
+  and bolding via computed styles (`paddingLeft` 0/20/40px matching depth
+  0/1/2, `font-weight` 600 for the 3 group rows vs 400 for every leaf).
+  Search for "Keychain" correctly narrowed to the 1 matching leaf plus its
+  2 ancestors (`SCA-1000`, `SCA-1200`), dropping the unrelated `SCA-1020`
+  sibling branch. Balance Sheet renders the same hierarchy; "Balance
+  Check" shows "Out of balance" by exactly ₱3,292.72 — cross-checked
+  against Profit & Loss's Net Income (₱-3,292.72) for the same period,
+  confirming this is the expected open-period accounting identity (Assets
+  = Liabilities + Equity + Net Income for an unclosed period with no
+  closing entry yet), not a regression from this session — the "own"
+  formula is byte-for-byte the pre-9.7 formula, applied to the same
+  account set. Profit & Loss itself renders flat (no revenue/expense
+  hierarchy exists yet) with Total Revenue ₱6,211.00 / Total Expenses
+  ₱9,503.72 / Net Income -₱3,292.72, matching pre-9.7 figures exactly (this
+  session's own regression check, not just a design argument). No console
+  errors on any of the 3 pages.
+
+**Not built this session, on purpose:** no collapse/expand on the report
+tables (see UI note above).
+
+**Concurrent-session discovery, after the fact:** `list_migrations` at the
+end of this session showed `acct9_6_taxes_foundation` (applied
+2026-07-15 13:06:27) sitting between this session's own migrations and the
+prior ACCT-9.5 one — **not done by this session.** A separate concurrent
+session (almost certainly the one whose `next dev` was holding port 3000,
+killed earlier this session with Sinag's go-ahead so this session's own
+preview could start) completed ACCT-9.6 in parallel: new `tax_rates` table,
+`output_tax_payable` system-mapping key, `close_order_payment()` widened to
+carry `total_tax` in the `sale_recognized` payload, and
+`generate_draft_journal_entries()`'s `sale_recognized` branch extended to
+split it into its own credit line — plus a new
+`financial-settings/taxes/` page and nav entry (confirmed via `git status`:
+`components/layout/app-shell.tsx` and `lib/accounting/system-mapping-
+keys.ts` modified, `financial-settings/taxes/` untracked, none of it this
+session's own edits). **No schema conflict with 9.7** — 9.6 only touched
+`system_account_mappings`/`close_order_payment`/
+`generate_draft_journal_entries`; 9.7 only touched the 3 report RPCs plus
+the 2 new internal helpers, no overlap. `lib/supabase/types.ts` as
+regenerated by this session already includes 9.6's `tax_rates` table too
+(regenerated after 9.6's migration had already landed). **Flagging for
+Sinag:** two sessions' uncommitted changes are sitting together in the same
+working tree right now (this session's ACCT-9.7 files + the other
+session's ACCT-9.6 files) — nothing here conflicts, but worth knowing
+before anyone commits, and the other session's dev server was killed so it
+may need restarting on its end.
+
+ACCT-9 module restructure is now **fully done, all 7 sub-phases** (per the
+Status table above) — combining this session's 9.7 with the concurrent
+session's 9.6. No git commit (standing project rule — stopped at DoD for
+manual review).
 
 ---

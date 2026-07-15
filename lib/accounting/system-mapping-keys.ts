@@ -9,6 +9,7 @@
 export const SALES_MAPPING_KEYS = ["tip_income", "write_off_expense"] as const;
 export const PURCHASE_MAPPING_KEYS = ["credit_card_payable", "credit_card_interest_expense"] as const;
 export const INVENTORY_MAPPING_KEYS = ["inventory_adjustment_gain", "inventory_adjustment_loss"] as const;
+export const TAX_MAPPING_KEYS = ["output_tax_payable"] as const;
 
 export const MAPPING_KEY_ACCOUNT_CATEGORY: Record<string, string> = {
   tip_income: "revenue",
@@ -17,4 +18,5 @@ export const MAPPING_KEY_ACCOUNT_CATEGORY: Record<string, string> = {
   credit_card_interest_expense: "expense",
   inventory_adjustment_gain: "revenue",
   inventory_adjustment_loss: "expense",
+  output_tax_payable: "liability",
 };
