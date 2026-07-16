@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
+import { headers } from 'next/headers'
 
 export type ActionResult = { success: true } | { success: false; error: string }
 
@@ -35,8 +36,13 @@ export async function inviteUser(formData: FormData): Promise<ActionResult> {
     return { success: false, error: 'Invalid role.' }
   }
 
+  const headersList = await headers()
+  const origin = headersList.get('origin') ?? `http://${headersList.get('host')}`
+
   const adminClient = createAdminClient()
-  const { data, error } = await adminClient.auth.admin.inviteUserByEmail(email)
+  const { data, error } = await adminClient.auth.admin.inviteUserByEmail(email, {
+    redirectTo: `${origin}/auth/update-password`,
+  })
   if (error) return { success: false, error: error.message }
 
   const newUserId = data.user.id
