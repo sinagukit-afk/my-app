@@ -18,7 +18,7 @@ export default async function CustomersPage() {
   const { data, error } = await supabase
     .from("customers")
     .select(
-      "id, name, phone_number, email, total_visits, total_spent, customer_sources(source, external_username, linked_at)"
+      "id, customer_code, name, phone_number, email, total_visits, total_spent, customer_sources(source, external_username, linked_at)"
     )
     .is("deleted_at", null)
     .order("name");
@@ -44,6 +44,7 @@ export default async function CustomersPage() {
 
   const rows: CustomerRow[] = (data ?? []).map((c) => ({
     id: c.id,
+    customer_code: c.customer_code,
     name: c.name ?? "",
     phone_number: c.phone_number,
     email: c.email,

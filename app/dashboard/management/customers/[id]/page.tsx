@@ -20,7 +20,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
   const { data: customer } = await supabase
     .from("customers")
     .select(
-      "id, name, phone_number, email, address_line1, barangay, city, province, postal_code, note, total_visits, total_spent, total_points"
+      "id, customer_code, name, phone_number, email, address_line1, barangay, city, province, postal_code, note, total_visits, total_spent, total_points"
     )
     .eq("id", id)
     .is("deleted_at", null)
@@ -89,6 +89,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
     <CustomerDetail
       customer={{
         id: customer.id,
+        customer_code: customer.customer_code,
         name: customer.name ?? "",
         phone_number: customer.phone_number,
         email: customer.email,

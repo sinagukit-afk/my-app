@@ -13,6 +13,7 @@ const LIST_PATH = '/dashboard/management/items'
 export type VariantInput = {
   id?: string
   sku: string
+  sku_category: string
   barcode?: string
   option1_value?: string
   option2_value?: string
@@ -107,6 +108,15 @@ export async function upsertItem(formData: FormData): Promise<UpsertItemResult> 
 
   revalidatePath(LIST_PATH)
   return { success: true, itemId: data.id }
+}
+
+export type PreviewSkuResult = { success: true; sku: string } | { success: false; error: string }
+
+export async function previewItemSku(category: string): Promise<PreviewSkuResult> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('next_item_sku', { p_category: category })
+  if (error) return { success: false, error: error.message }
+  return { success: true, sku: data as string }
 }
 
 export async function archiveItem(itemId: string): Promise<UpsertItemResult> {

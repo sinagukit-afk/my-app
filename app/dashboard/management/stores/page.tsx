@@ -19,7 +19,7 @@ export default async function StoresPage() {
 
   const { data, error } = await supabase
     .from("stores")
-    .select("id, name, address, phone, email, is_active, loyverse_store_id")
+    .select("id, store_code, name, address, phone, email, is_active, loyverse_store_id")
     .order("name");
 
   const rows: StoreRow[] = data ?? [];

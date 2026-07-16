@@ -50,7 +50,7 @@ export default async function EditItemPage({ params }: { params: Promise<{ id: s
       supabase
         .from("item_variants")
         .select(
-          "id, sku, barcode, option1_value, option2_value, option3_value, cost, default_price, pricing_type, default_purchase_cost, inventory_levels(in_stock, low_stock_threshold)"
+          "id, sku, sku_category, barcode, option1_value, option2_value, option3_value, cost, default_price, pricing_type, default_purchase_cost, inventory_levels(in_stock, low_stock_threshold)"
         )
         .eq("item_id", id)
         .is("deleted_at", null)
@@ -96,6 +96,7 @@ export default async function EditItemPage({ params }: { params: Promise<{ id: s
   const variants: ExistingVariant[] = (variantRows ?? []).map((v) => ({
     id: v.id,
     sku: v.sku,
+    sku_category: v.sku_category,
     barcode: v.barcode,
     option1_value: v.option1_value,
     option2_value: v.option2_value,

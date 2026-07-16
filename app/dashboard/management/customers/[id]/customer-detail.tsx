@@ -86,7 +86,7 @@ export function CustomerDetail({ customer, sources, history, canWrite }: Props) 
     <div className="space-y-6">
       <PageHeader
         title={customer.name}
-        description="Customer profile, linked accounts, and order history."
+        description={`${customer.customer_code} — Customer profile, linked accounts, and order history.`}
         actions={
           <div className="flex gap-2">
             <Link href="/dashboard/management/customers">

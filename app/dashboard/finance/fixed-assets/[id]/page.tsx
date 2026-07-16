@@ -27,7 +27,7 @@ export default async function AssetDetailPage({ params }: { params: Params }) {
   const { data: asset, error } = await supabase
     .from("fixed_assets")
     .select(
-      "id, name, cost, payment_status, purchased_date, supplier_id, purchase_order_id, asset_categories(name), suppliers(name), purchase_orders(reference)"
+      "id, asset_code, name, cost, payment_status, purchased_date, supplier_id, purchase_order_id, asset_categories(name), suppliers(name), purchase_orders(reference)"
     )
     .eq("id", id)
     .single();
@@ -52,6 +52,7 @@ export default async function AssetDetailPage({ params }: { params: Params }) {
 
   const detail: AssetDetailData = {
     id: asset.id,
+    asset_code: asset.asset_code,
     name: asset.name,
     category_name: category?.name ?? "—",
     supplier_name: supplier?.name ?? null,

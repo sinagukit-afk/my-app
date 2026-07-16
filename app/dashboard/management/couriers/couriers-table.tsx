@@ -12,6 +12,7 @@ import { setCourierActive } from "./actions";
 
 export type CourierRow = {
   id: string;
+  courier_code: string;
   name: string;
   contact_number: string | null;
   is_active: boolean;
@@ -49,6 +50,12 @@ export function CouriersTable({ data, canWrite }: Props) {
   }
 
   const columns: Column<CourierRow>[] = [
+    {
+      key: "courier_code",
+      header: "Code",
+      sortable: true,
+      className: "font-mono text-xs",
+    },
     {
       key: "name",
       header: "Courier",

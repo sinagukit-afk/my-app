@@ -18,7 +18,7 @@ export default async function CouriersPage() {
 
   const { data, error } = await supabase
     .from("couriers")
-    .select("id, name, contact_number, is_active")
+    .select("id, courier_code, name, contact_number, is_active")
     .order("name");
 
   const rows: CourierRow[] = data ?? [];

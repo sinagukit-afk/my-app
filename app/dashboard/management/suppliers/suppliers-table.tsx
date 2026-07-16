@@ -21,6 +21,7 @@ import { setSupplierActive, deleteSupplier } from "./actions";
 
 export type SupplierRow = {
   id: string;
+  supplier_code: string;
   name: string;
   contact_name: string | null;
   phone: string | null;
@@ -80,6 +81,12 @@ export function SuppliersTable({ data, canWrite, canDelete }: Props) {
   }
 
   const columns: Column<SupplierRow>[] = [
+    {
+      key: "supplier_code",
+      header: "Code",
+      sortable: true,
+      className: "font-mono text-xs",
+    },
     {
       key: "name",
       header: "Supplier",

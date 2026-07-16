@@ -18,6 +18,7 @@ export type CustomerSource = {
 
 export type CustomerRow = {
   id: string;
+  customer_code: string;
   name: string;
   phone_number: string | null;
   email: string | null;
@@ -72,6 +73,12 @@ export function CustomersTable({ data, canWrite }: Props) {
   }, [data, sourceFilter]);
 
   const columns: Column<CustomerRow>[] = [
+    {
+      key: "customer_code",
+      header: "Code",
+      sortable: true,
+      className: "font-mono text-xs",
+    },
     {
       key: "name",
       header: "Name",

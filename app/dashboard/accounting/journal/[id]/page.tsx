@@ -56,7 +56,7 @@ export default async function JournalEntryDetailPage({
   const { data: entry } = await supabase
     .from("journal_entries")
     .select(
-      "id, entry_date, description, source_type, source_id, created_at, journal_entry_lines(id, debit, credit, memo, line_order, accounts(account_number, name))"
+      "id, journal_number, entry_date, description, source_type, source_id, created_at, journal_entry_lines(id, debit, credit, memo, line_order, accounts(account_number, name))"
     )
     .eq("id", id)
     .single();
@@ -93,7 +93,7 @@ export default async function JournalEntryDetailPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Journal Entry"
+        title={`Journal Entry — ${entry.journal_number}`}
         description={entry.description}
         actions={
           <div className="flex gap-2">
@@ -109,6 +109,10 @@ export default async function JournalEntryDetailPage({
 
       <Card className="max-w-xl">
         <CardContent className="grid grid-cols-1 gap-4 p-6 text-sm sm:grid-cols-2">
+          <div>
+            <p className="text-(--color-text-muted)">Journal No.</p>
+            <p className="font-mono font-medium text-(--color-text)">{entry.journal_number}</p>
+          </div>
           <div>
             <p className="text-(--color-text-muted)">Date</p>
             <p className="font-medium text-(--color-text)">

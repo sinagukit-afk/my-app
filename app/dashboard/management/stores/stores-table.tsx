@@ -21,6 +21,7 @@ import { setStoreActive, deleteStore } from "./actions";
 
 export type StoreRow = {
   id: string;
+  store_code: string;
   name: string;
   address: string | null;
   phone: string | null;
@@ -79,6 +80,12 @@ export function StoresTable({ data, canWrite, canDelete }: Props) {
   }
 
   const columns: Column<StoreRow>[] = [
+    {
+      key: "store_code",
+      header: "Code",
+      sortable: true,
+      className: "font-mono text-xs",
+    },
     {
       key: "name",
       header: "Store",

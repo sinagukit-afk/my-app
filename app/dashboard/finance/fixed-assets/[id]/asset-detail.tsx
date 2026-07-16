@@ -25,6 +25,7 @@ import { formatDate } from "@/lib/utils/format-date";
 
 export type AssetDetailData = {
   id: string;
+  asset_code: string;
   name: string;
   category_name: string;
   supplier_name: string | null;
@@ -89,7 +90,7 @@ export function AssetDetail({ asset, payments, remainingBalance, paymentTypes, c
 
       <PageHeader
         title={asset.name}
-        description={`Purchased ${formatDate(asset.purchased_date)}`}
+        description={`${asset.asset_code} — Purchased ${formatDate(asset.purchased_date)}`}
         actions={canShowPay ? <Button onClick={() => setPayOpen(true)}>Log Payment</Button> : undefined}
       />
 

@@ -18,6 +18,7 @@ import { createCustomer, updateCustomer, type ActionResult, type CreateResult } 
 
 export type EditableCustomer = {
   id: string;
+  customer_code: string;
   name: string;
   phone_number: string | null;
   email: string | null;

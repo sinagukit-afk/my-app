@@ -24,6 +24,7 @@ export type AssetPaymentStatus = "unpaid" | "partial" | "paid";
 
 export type AssetRow = {
   id: string;
+  asset_code: string;
   name: string;
   account_number: string;
   category_name: string;
@@ -102,6 +103,7 @@ export function FixedAssetsTable({ data, canWrite, categories, suppliers }: Prop
   }
 
   const columns: Column<AssetRow>[] = [
+    { key: "asset_code", header: "Code", sortable: true, className: "font-mono text-xs" },
     { key: "name", header: "Asset", sortable: true },
     { key: "category_name", header: "Category", sortable: true },
     { key: "account_number", header: "Asset Account #", sortable: true },

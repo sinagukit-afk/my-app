@@ -10,6 +10,7 @@ import { formatDate } from "@/lib/utils/format-date";
 
 export type JournalRow = {
   id: string;
+  journal_number: string;
   entry_date: string;
   description: string;
   source_type: string;
@@ -45,6 +46,12 @@ export function JournalTable({ data }: Props) {
   const router = useRouter();
 
   const columns: Column<JournalRow>[] = [
+    {
+      key: "journal_number",
+      header: "Journal No.",
+      sortable: true,
+      className: "font-mono text-xs",
+    },
     {
       key: "entry_date",
       header: "Date",

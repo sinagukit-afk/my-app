@@ -19,8 +19,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { NumberInput } from "@/components/ui/number-input";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Button } from "@/components/ui/button";
-import { upsertItem } from "./actions";
+import { upsertItem, previewItemSku } from "./actions";
 import { randomId } from "@/lib/utils/random-id";
+
+const SKU_CATEGORIES = [
+  { value: "SIM", label: "Materials (SIM)" },
+  { value: "SPR", label: "Products (SPR)" },
+  { value: "SSV", label: "Services (SSV)" },
+  { value: "SPK", label: "Packaging (SPK)" },
+  { value: "STS", label: "Other / Test (STS)" },
+];
 
 export type CategoryOption = { id: string; name: string };
 export type SupplierOption = { id: string; name: string };
@@ -35,6 +43,7 @@ export type ExistingComponent = {
 export type ExistingVariant = {
   id: string;
   sku: string;
+  sku_category: string;
   barcode: string | null;
   option1_value: string | null;
   option2_value: string | null;
@@ -84,6 +93,7 @@ type ComponentRow = {
 type VariantRow = {
   id?: string;
   sku: string;
+  sku_category: string;
   barcode: string;
   cost: string;
   default_price: string;
@@ -98,6 +108,7 @@ type VariantRow = {
 function emptyVariantRow(): VariantRow {
   return {
     sku: "",
+    sku_category: "",
     barcode: "",
     cost: "",
     default_price: "",
@@ -120,6 +131,7 @@ function seedVariant(initial: ItemFormInitial | undefined): VariantRow {
   return {
     id: v.id,
     sku: v.sku,
+    sku_category: v.sku_category,
     barcode: v.barcode ?? "",
     cost: v.cost != null ? String(v.cost) : "",
     default_price: v.default_price != null ? String(v.default_price) : "",
@@ -156,6 +168,7 @@ export function ItemForm({
   const [selectedModifierIds, setSelectedModifierIds] = useState<string[]>(
     initial?.modifier_ids ?? []
   );
+  const [skuPending, setSkuPending] = useState(false);
 
   useEffect(() => {
     if (itemType === "composite" && trackStock) setTrackStock(false);
@@ -187,6 +200,19 @@ export function ItemForm({
     setSelectedModifierIds((prev) => (checked ? [...prev, id] : prev.filter((m) => m !== id)));
   }
 
+  async function handleCategoryChange(category: string) {
+    updateVariant({ sku_category: category, sku: "" });
+    if (!category) return;
+    setSkuPending(true);
+    const res = await previewItemSku(category);
+    setSkuPending(false);
+    if (res.success) {
+      updateVariant({ sku: res.sku });
+    } else {
+      setError(res.error);
+    }
+  }
+
   const ownVariantIds = new Set(variant.id ? [variant.id] : []);
   const availableComponentOptions = componentOptions.filter((v) => !ownVariantIds.has(v.id));
 
@@ -195,8 +221,12 @@ export function ItemForm({
     setError(null);
     const formData = new FormData(e.currentTarget);
 
+    if (!variant.sku_category) {
+      setError("A SKU category is required.");
+      return;
+    }
     if (!variant.sku.trim()) {
-      setError("A SKU is required.");
+      setError("SKU is still being generated — wait a moment and try again.");
       return;
     }
     if (variant.pricing_type === "FIXED" && !variant.default_price) {
@@ -219,6 +249,7 @@ export function ItemForm({
       {
         id: variant.id,
         sku: variant.sku,
+        sku_category: variant.sku_category,
         barcode: variant.barcode || undefined,
         cost: variant.cost === "" ? null : Number(variant.cost),
         default_price: variant.default_price === "" ? null : Number(variant.default_price),
@@ -350,11 +381,19 @@ export function ItemForm({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Select
+              label="SKU Category"
+              value={variant.sku_category}
+              onChange={(e) => handleCategoryChange(e.target.value)}
+              placeholder="Select a category…"
+              options={SKU_CATEGORIES}
+              required
+            />
             <Input
               label="SKU"
-              value={variant.sku}
-              onChange={(e) => updateVariant({ sku: e.target.value })}
-              required
+              value={skuPending ? "Generating…" : variant.sku}
+              disabled
+              readOnly
             />
             <Input
               label="Barcode"

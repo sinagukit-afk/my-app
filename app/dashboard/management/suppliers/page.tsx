@@ -19,7 +19,7 @@ export default async function SuppliersPage() {
 
   const { data, error } = await supabase
     .from("suppliers")
-    .select("id, name, contact_name, phone, email, address, note, is_active")
+    .select("id, supplier_code, name, contact_name, phone, email, address, note, is_active")
     .order("name");
 
   const rows: SupplierRow[] = data ?? [];

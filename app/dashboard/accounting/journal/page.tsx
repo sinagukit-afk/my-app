@@ -39,7 +39,7 @@ export default async function JournalPage() {
   const { data, error } = await supabase
     .from("journal_entries")
     .select(
-      "id, entry_date, description, source_type, created_at, journal_entry_lines(debit, credit)"
+      "id, journal_number, entry_date, description, source_type, created_at, journal_entry_lines(debit, credit)"
     )
     .order("entry_date", { ascending: false })
     .order("created_at", { ascending: false });
@@ -49,6 +49,7 @@ export default async function JournalPage() {
     const total = lines.reduce((s, l) => s + Number(l.debit || 0), 0);
     return {
       id: e.id,
+      journal_number: e.journal_number,
       entry_date: e.entry_date,
       description: e.description,
       source_type: e.source_type,
