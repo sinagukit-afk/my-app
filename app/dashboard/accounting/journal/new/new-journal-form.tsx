@@ -20,7 +20,7 @@ export type AccountOption = {
 
 type LineRow = {
   rowId: string;
-  accountNumber: string; // account_number, e.g. "SCA-1000"
+  accountNumber: string; // account_number, e.g. "1000"
   debit: string;
   credit: string;
   memo: string;

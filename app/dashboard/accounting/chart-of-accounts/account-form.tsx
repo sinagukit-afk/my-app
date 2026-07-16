@@ -35,13 +35,6 @@ const CATEGORY_OPTIONS = [
   { value: "expense", label: "Expense" },
 ];
 
-const ACCOUNT_PREFIX = "SCA-";
-
-function stripPrefix(accountNumber: string | undefined): string {
-  if (!accountNumber) return "";
-  return accountNumber.startsWith(ACCOUNT_PREFIX) ? accountNumber.slice(ACCOUNT_PREFIX.length) : accountNumber;
-}
-
 export function AccountForm({ open, onOpenChange, account, parentOptions, onSaved }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -86,27 +79,17 @@ export function AccountForm({ open, onOpenChange, account, parentOptions, onSave
           </DialogHeader>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-[140px_1fr]">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="account_number" className="text-sm font-medium text-(--color-text)">
-                Account #
-              </label>
-              <div className="flex items-center">
-                <span className="flex h-9 shrink-0 items-center rounded-l-md border border-r-0 border-(--color-border) bg-(--color-bg) px-3 text-sm text-(--color-text-muted)">
-                  {ACCOUNT_PREFIX}
-                </span>
-                <input
-                  id="account_number"
-                  name="account_number"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="\d+"
-                  defaultValue={stripPrefix(account?.account_number)}
-                  required
-                  autoFocus
-                  className="flex h-9 w-full rounded-r-md border border-(--color-border) bg-(--color-surface) px-3 py-1 text-sm text-(--color-text) shadow-(--shadow-sm) transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) focus-visible:ring-offset-1"
-                />
-              </div>
-            </div>
+            <Input
+              label="Account #"
+              id="account_number"
+              name="account_number"
+              type="text"
+              inputMode="numeric"
+              pattern="\d+"
+              defaultValue={account?.account_number ?? ""}
+              required
+              autoFocus
+            />
             <Input
               label="Account Name"
               name="name"

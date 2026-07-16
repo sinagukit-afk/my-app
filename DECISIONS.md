@@ -1215,3 +1215,38 @@ call site.
   introduced (the 8 pre-existing lint errors in `data-table.tsx`/`app-shell.tsx`/
   `item-form.tsx` are unrelated `react-hooks` rules, confirmed by line number to be
   outside every edit made here).
+
+## D048
+
+**`SCA-` prefix removed from Chart of Accounts account numbers (2026-07-16).** Reverses
+the account-numbering decision from PROGRESS-ACCOUNTING.md's 2026-07-10 entry (`1000` →
+`SCA-1000` etc., `ALTER ... USING ('SCA-' || account_number::text)`). Explicit request
+from Sinag, made with full awareness this undoes that prior choice.
+
+- Data migration stripped the prefix from all 108 `accounts.account_number` values
+  (`SCA-1000` → `1000`). No account was renumbered or reordered — same 108 rows, same
+  digits, prefix only.
+- `log_credit_card_installment_payment()` had `SCA-2020` hardcoded for its outstanding-
+  balance lookup; updated to `2020` (`CREATE OR REPLACE` required an explicit parameter-
+  default restatement to avoid the duplicate-overload pitfall from the SCA-prefix
+  session, see PROGRESS-ACCOUNTING.md).
+- UI: `chart-of-accounts/actions.ts` and `account-form.tsx` dropped the `ACCOUNT_PREFIX`
+  constant, the fixed `SCA-` input adornment, and the prefix-aware validation message —
+  the Account # field now takes and stores the plain number directly.
+  `credit-card-payable/page.tsx`'s hardcoded account-number filter updated to match.
+- One account description (`6052 Other Marketing Expenses`) referenced `SCA-6050`/
+  `SCA-6051` in prose; corrected to `6050`/`6051`. Full-column sweep (`journal_entries.
+  description`, `journal_entry_lines.memo`, drafts, `activity_logs.description`,
+  `expense_categories.name`, `system_account_mappings.label`) found no other stale
+  `SCA-` text.
+- **Unrelated bug found during verification, deliberately left unfixed**: Credit Card
+  Payable's outstanding-balance query (both the page and the RPC above) reads account
+  `2020`, which is actually "Income taxes payable" — the real Credit Card Payable ledger
+  activity (₱6,080 net per `journal_entry_lines`) sits on account `2030`. This mismatch
+  pre-dates this change (it was already querying the wrong account under the `SCA-2020`
+  string); out of scope for a prefix-removal pass, flagged to Sinag separately rather
+  than silently fixed here.
+- Verified live (browser preview, Claude admin test account): Chart of Accounts list and
+  the Add/Edit Account dialog (including the Parent Account dropdown) render bare numbers
+  with no `SCA-`; created and deleted a real `9999` test account round-trip, confirmed by
+  direct DB query it stored as `9999` not `SCA-9999`. `tsc --noEmit` clean.

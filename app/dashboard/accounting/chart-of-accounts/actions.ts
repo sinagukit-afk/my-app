@@ -7,7 +7,6 @@ export type ActionResult = { success: true } | { success: false; error: string }
 
 const LIST_PATH = '/dashboard/accounting/chart-of-accounts'
 const CATEGORIES = ['asset', 'liability', 'equity', 'revenue', 'expense'] as const
-const ACCOUNT_PREFIX = 'SCA-'
 
 function friendlyError(error: { code?: string; message: string }): string {
   if (error.code === '23505') return 'That account number is already in use.'
@@ -17,8 +16,7 @@ function friendlyError(error: { code?: string; message: string }): string {
 }
 
 function readAccountFields(formData: FormData) {
-  const digits = (formData.get('account_number') as string)?.trim() ?? ''
-  const account_number = digits ? `${ACCOUNT_PREFIX}${digits}` : ''
+  const account_number = (formData.get('account_number') as string)?.trim() ?? ''
   const name = (formData.get('name') as string)?.trim()
   const category = (formData.get('category') as string)?.trim()
   const description = (formData.get('description') as string)?.trim() || null
@@ -28,8 +26,8 @@ function readAccountFields(formData: FormData) {
 }
 
 function validate(fields: ReturnType<typeof readAccountFields>): string | null {
-  if (!/^\d+$/.test(fields.account_number.slice(ACCOUNT_PREFIX.length))) {
-    return 'Account number must be a positive whole number (the "SCA-" prefix is added automatically).'
+  if (!/^\d+$/.test(fields.account_number)) {
+    return 'Account number must be a positive whole number.'
   }
   if (!fields.name) return 'Account name is required.'
   if (!CATEGORIES.includes(fields.category as (typeof CATEGORIES)[number])) {

@@ -41,7 +41,7 @@ export default async function CreditCardPayablePage() {
   const { data: lines } = await supabase
     .from("journal_entry_lines")
     .select("debit, credit, accounts!inner(account_number)")
-    .eq("accounts.account_number", "SCA-2020");
+    .eq("accounts.account_number", "2020");
 
   const outstandingBalance = (lines ?? []).reduce(
     (s, l) => s + Number(l.credit || 0) - Number(l.debit || 0),
