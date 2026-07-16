@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
+import { resolveSiteUrl } from '@/lib/utils/site-url'
 
 export type ActionResult = { success: true } | { success: false; error: string }
 
@@ -45,7 +46,7 @@ export async function requestPasswordReset(): Promise<ActionResult> {
   if (authError || !user || !user.email) return { success: false, error: 'Not authenticated.' }
 
   const headersList = await headers()
-  const origin = headersList.get('origin') ?? `http://${headersList.get('host')}`
+  const origin = resolveSiteUrl(headersList.get('origin'), headersList.get('host'))
 
   const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
     redirectTo: `${origin}/auth/update-password`,

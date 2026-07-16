@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
+import { resolveSiteUrl } from '@/lib/utils/site-url'
 
 export type ActionResult = { success: true } | { success: false; error: string }
 
@@ -37,7 +38,7 @@ export async function inviteUser(formData: FormData): Promise<ActionResult> {
   }
 
   const headersList = await headers()
-  const origin = headersList.get('origin') ?? `http://${headersList.get('host')}`
+  const origin = resolveSiteUrl(headersList.get('origin'), headersList.get('host'))
 
   const adminClient = createAdminClient()
   const { data, error } = await adminClient.auth.admin.inviteUserByEmail(email, {
