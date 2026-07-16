@@ -17,6 +17,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useNotifications } from "@/components/providers/notification-provider";
+import { downloadCsv, type Column } from "@/components/ui/data-table";
 import { AccountForm } from "./account-form";
 import { setAccountActive } from "./actions";
 
@@ -110,6 +111,42 @@ export function ChartOfAccountsTable({ data, canWrite }: Props) {
         .map((r) => ({ value: r.id, label: `${r.account_number} — ${r.name}` })),
     [data]
   );
+
+  const exportRows = useMemo(() => {
+    function flatten(rows: AccountRow[]): AccountRow[] {
+      return rows.flatMap((row) => {
+        if (visibleIds && !visibleIds.has(row.id)) return [];
+        const children = childrenOf.get(row.id) ?? [];
+        return [row, ...flatten(children)];
+      });
+    }
+    return flatten(childrenOf.get(null) ?? []);
+  }, [childrenOf, visibleIds]);
+
+  const exportColumns: Column<AccountRow>[] = [
+    { key: "account_number", header: "Account #" },
+    { key: "name", header: "Name" },
+    {
+      key: "category",
+      header: "Category",
+      exportValue: (value) => CATEGORY_BADGE[value as string]?.label ?? (value as string),
+    },
+    { key: "description", header: "Description", exportValue: (value) => (value as string) ?? "" },
+    { key: "is_active", header: "Status", exportValue: (value) => (value ? "Active" : "Inactive") },
+    { key: "is_postable", header: "Type", exportValue: (value) => (value ? "Postable" : "Group") },
+    {
+      key: "parent_account_id",
+      header: "Parent Account",
+      exportValue: (value) => {
+        const parent = value ? byId.get(value as string) : undefined;
+        return parent ? `${parent.account_number} — ${parent.name}` : "";
+      },
+    },
+  ];
+
+  function handleExport() {
+    downloadCsv(exportRows, exportColumns, "chart-of-accounts");
+  }
 
   function toggleCollapse(id: string) {
     setCollapsed((prev) => {
@@ -258,7 +295,14 @@ export function ChartOfAccountsTable({ data, canWrite }: Props) {
       <PageHeader
         title="Chart of Accounts"
         description="The full list of accounts used across Journal entries, Fixed Assets, and Product Mapping."
-        actions={canWrite ? <Button onClick={openAdd}>Add Account</Button> : undefined}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="secondary" onClick={handleExport} disabled={exportRows.length === 0}>
+              Export to Excel
+            </Button>
+            {canWrite && <Button onClick={openAdd}>Add Account</Button>}
+          </div>
+        }
       />
 
       <div className="flex flex-wrap items-center gap-3">
