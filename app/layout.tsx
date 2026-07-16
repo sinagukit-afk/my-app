@@ -1,10 +1,19 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 
 export const metadata: Metadata = {
   title: "Sinag Ukit ERP",
   description: "Sign in to manage your POS dashboard.",
+  appleWebApp: {
+    capable: true,
+    title: "Sinag Ukit",
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#B68E44",
 };
 
 export default function RootLayout({
