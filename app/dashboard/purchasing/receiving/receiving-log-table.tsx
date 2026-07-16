@@ -19,8 +19,13 @@ export type ReceivingLogRow = {
   purchase_order_reference: string | null;
   notes: string | null;
   received_by_email: string | null;
-  payment_type_name: string | null;
-  is_credit_card: boolean;
+  payment_status: "unpaid" | "partial" | "paid";
+};
+
+const PAYMENT_STATUS_VARIANT: Record<ReceivingLogRow["payment_status"], "danger" | "warning" | "success"> = {
+  unpaid: "danger",
+  partial: "warning",
+  paid: "success",
 };
 
 type Props = {
@@ -93,21 +98,14 @@ export function ReceivingLogTable({ data }: Props) {
         ),
     },
     {
-      key: "payment_type_name",
-      header: "Payment",
-      render: (value, row) =>
-        value || row.is_credit_card ? (
-          <span className="text-sm text-(--color-text)">
-            {value ? String(value) : "—"}
-            {row.is_credit_card && (
-              <Badge variant="warning" className="ml-1.5">
-                Credit Card
-              </Badge>
-            )}
-          </span>
-        ) : (
-          <span className="text-(--color-text-subtle)">—</span>
-        ),
+      key: "payment_status",
+      header: "Payment Status",
+      sortable: true,
+      render: (value) => (
+        <Badge variant={PAYMENT_STATUS_VARIANT[value as ReceivingLogRow["payment_status"]]}>
+          {(value as string).charAt(0).toUpperCase() + (value as string).slice(1)}
+        </Badge>
+      ),
     },
     {
       key: "status",

@@ -36,7 +36,7 @@ export default async function ReceivingPage() {
     supabase
       .from("incoming_items")
       .select(
-        "id, reference, status, date_received, item_name_snapshot, variant_id, quantity, unit_price, total_price, supplier_id, supplier, notes, received_by_email, is_credit_card, item_variants(option1_value, option2_value), suppliers(name), purchase_orders(reference), payment_types(name)"
+        "id, reference, status, date_received, item_name_snapshot, variant_id, quantity, unit_price, total_price, supplier_id, supplier, notes, received_by_email, payment_status, item_variants(option1_value, option2_value), suppliers(name), purchase_orders(reference)"
       )
       .order("date_received", { ascending: false })
       .order("created_at", { ascending: false }),
@@ -62,7 +62,6 @@ export default async function ReceivingPage() {
     const variantRel = firstOf(row.item_variants);
     const supplierRel = firstOf(row.suppliers);
     const poRel = firstOf(row.purchase_orders);
-    const paymentTypeRel = firstOf(row.payment_types);
 
     const variantLabel = variantRel
       ? [variantRel.option1_value, variantRel.option2_value].filter(Boolean).join(" / ") || null
@@ -82,8 +81,7 @@ export default async function ReceivingPage() {
       purchase_order_reference: poRel?.reference ?? null,
       notes: row.notes ?? null,
       received_by_email: row.received_by_email ?? null,
-      payment_type_name: paymentTypeRel?.name ?? null,
-      is_credit_card: row.is_credit_card,
+      payment_status: row.payment_status,
     };
   });
 

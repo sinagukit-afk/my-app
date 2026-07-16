@@ -30,7 +30,6 @@ export type VariantOption = {
 };
 
 type SupplierOption = { id: string; name: string };
-type PaymentTypeOption = { id: string; name: string };
 
 type ItemRow = {
   rowId: string;
@@ -46,10 +45,9 @@ function emptyRow(): ItemRow {
 type Props = {
   suppliers: SupplierOption[];
   variantOptions: VariantOption[];
-  paymentTypeOptions: PaymentTypeOption[];
 };
 
-export function NewManualIncomingForm({ suppliers, variantOptions, paymentTypeOptions }: Props) {
+export function NewManualIncomingForm({ suppliers, variantOptions }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [rows, setRows] = useState<ItemRow[]>([emptyRow()]);
@@ -198,26 +196,6 @@ export function NewManualIncomingForm({ suppliers, variantOptions, paymentTypeOp
                 required
               />
             </AiFieldHighlight>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Select
-              label="Payment Method"
-              name="payment_type_id"
-              placeholder="— Not specified —"
-              options={paymentTypeOptions.map((pt) => ({ value: pt.id, label: pt.name }))}
-            />
-            <div className="flex items-center gap-2 pt-6">
-              <input
-                type="checkbox"
-                id="is_credit_card"
-                name="is_credit_card"
-                value="true"
-                className="h-4 w-4 rounded border border-(--color-border-strong) bg-(--color-surface) accent-(--color-primary)"
-              />
-              <label htmlFor="is_credit_card" className="text-sm text-(--color-text)">
-                Paid via credit card
-              </label>
-            </div>
           </div>
           <AiFieldHighlight active={aiFilledKeys.has("note")}>
             <TextArea

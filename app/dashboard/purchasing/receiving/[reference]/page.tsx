@@ -43,12 +43,6 @@ export default async function ReceivePurchaseOrderPage({ params }: { params: Pro
     .eq("purchase_order_id", po.id)
     .order("created_at");
 
-  const { data: paymentTypesData } = await supabase
-    .from("payment_types")
-    .select("id, name")
-    .eq("is_active", true)
-    .order("name");
-
   const items: ReceivableItem[] = (itemsData ?? [])
     .map((row) => {
       const variant = firstOf(row.item_variants);
@@ -109,7 +103,6 @@ export default async function ReceivePurchaseOrderPage({ params }: { params: Pro
           purchaseOrderId={po.id}
           reference={po.reference}
           items={items}
-          paymentTypeOptions={paymentTypesData ?? []}
         />
       )}
     </div>

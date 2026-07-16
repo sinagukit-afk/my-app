@@ -25,8 +25,6 @@ export async function createManualIncomingWithItems(formData: FormData): Promise
   const supplier_id = (formData.get('supplier_id') as string)?.trim() || null
   const date_received = (formData.get('date_received') as string)?.trim()
   const notes = (formData.get('notes') as string)?.trim() || null
-  const payment_type_id = (formData.get('payment_type_id') as string)?.trim() || null
-  const is_credit_card = formData.get('is_credit_card') === 'true'
 
   if (!date_received) return { success: false, error: 'Date received is required.' }
 
@@ -71,8 +69,6 @@ export async function createManualIncomingWithItems(formData: FormData): Promise
       purchase_order_id: null,
       shipping_fee: 0,
       discount_amount: 0,
-      payment_type_id,
-      is_credit_card,
     }))
   )
 

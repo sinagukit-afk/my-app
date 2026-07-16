@@ -20,6 +20,7 @@ import { formatDate } from "@/lib/utils/format-date";
 
 export type AssetStatus = "active" | "fully_depreciated" | "disposed";
 export type ScheduleStatus = "active" | "paused" | "terminated";
+export type AssetPaymentStatus = "unpaid" | "partial" | "paid";
 
 export type AssetRow = {
   id: string;
@@ -35,6 +36,13 @@ export type AssetRow = {
   book_value: number;
   status: AssetStatus;
   schedule_status: ScheduleStatus;
+  payment_status: AssetPaymentStatus;
+};
+
+const PAYMENT_STATUS_VARIANT: Record<AssetPaymentStatus, "danger" | "warning" | "success"> = {
+  unpaid: "danger",
+  partial: "warning",
+  paid: "success",
 };
 
 const SCHEDULE_STATUS_LABEL: Record<ScheduleStatus, string> = {
@@ -124,6 +132,16 @@ export function FixedAssetsTable({ data, canWrite, categories, suppliers }: Prop
         </Badge>
       ),
     },
+    {
+      key: "payment_status",
+      header: "Payment",
+      sortable: true,
+      render: (value) => (
+        <Badge variant={PAYMENT_STATUS_VARIANT[value as AssetPaymentStatus]}>
+          {(value as string).charAt(0).toUpperCase() + (value as string).slice(1)}
+        </Badge>
+      ),
+    },
     ...(canWrite
       ? [
           {
@@ -131,7 +149,14 @@ export function FixedAssetsTable({ data, canWrite, categories, suppliers }: Prop
             header: "Actions",
             render: (_value: unknown, row: AssetRow) => (
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={() => setEditTarget(row)}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditTarget(row);
+                  }}
+                >
                   Edit
                 </Button>
                 {row.status !== "disposed" && (
@@ -139,7 +164,8 @@ export function FixedAssetsTable({ data, canWrite, categories, suppliers }: Prop
                     variant="ghost"
                     size="sm"
                     className="text-(--color-danger)"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setDisposeTarget(row);
                       setDisposeError(null);
                     }}
@@ -162,6 +188,7 @@ export function FixedAssetsTable({ data, canWrite, categories, suppliers }: Prop
         searchPlaceholder="Search assets…"
         emptyMessage="No fixed assets yet"
         emptyDescription="Add your first asset, or receive one through Purchasing → Asset PO."
+        onRowClick={(row) => router.push(`/dashboard/finance/fixed-assets/${row.id}`)}
       />
 
       {canWrite && editTarget && (

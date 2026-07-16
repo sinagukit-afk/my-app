@@ -46,7 +46,7 @@ export default async function FixedAssetsPage() {
       supabase
         .from("fixed_assets")
         .select(
-          "id, name, purchased_date, cost, salvage_value, useful_life_months, disposed_at, schedule_status, asset_account_id, supplier_id, asset_categories(name)"
+          "id, name, purchased_date, cost, salvage_value, useful_life_months, disposed_at, schedule_status, payment_status, asset_account_id, supplier_id, asset_categories(name)"
         )
         .order("purchased_date"),
       supabase.from("depreciation_entries").select("fixed_asset_id, amount"),
@@ -82,6 +82,7 @@ export default async function FixedAssetsPage() {
       book_value: bookValue,
       status,
       schedule_status: a.schedule_status as AssetRow["schedule_status"],
+      payment_status: a.payment_status as AssetRow["payment_status"],
     };
   });
 

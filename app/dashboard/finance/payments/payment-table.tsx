@@ -125,7 +125,7 @@ export function PaymentOrdersTable({ data, from, to }: Props) {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Payment"
+        title="Customer Payment"
         description="Orders from confirmation through completion. Click a row to record or review payments."
       />
 

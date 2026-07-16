@@ -741,6 +741,7 @@ export type Database = {
           disposed_at: string | null
           id: string
           name: string
+          payment_status: string
           purchase_order_id: string | null
           purchased_date: string
           salvage_value: number
@@ -759,6 +760,7 @@ export type Database = {
           disposed_at?: string | null
           id?: string
           name: string
+          payment_status?: string
           purchase_order_id?: string | null
           purchased_date: string
           salvage_value?: number
@@ -777,6 +779,7 @@ export type Database = {
           disposed_at?: string | null
           id?: string
           name?: string
+          payment_status?: string
           purchase_order_id?: string | null
           purchased_date?: string
           salvage_value?: number
@@ -880,12 +883,11 @@ export type Database = {
           date_received: string
           discount_amount: number
           id: string
-          is_credit_card: boolean
           item_id: string
           item_name_snapshot: string
           notes: string | null
           order_id: string | null
-          payment_type_id: string | null
+          payment_status: string
           purchase_order_id: string | null
           quantity: number
           received_by: string
@@ -905,12 +907,11 @@ export type Database = {
           date_received: string
           discount_amount?: number
           id?: string
-          is_credit_card?: boolean
           item_id: string
           item_name_snapshot: string
           notes?: string | null
           order_id?: string | null
-          payment_type_id?: string | null
+          payment_status?: string
           purchase_order_id?: string | null
           quantity: number
           received_by: string
@@ -930,12 +931,11 @@ export type Database = {
           date_received?: string
           discount_amount?: number
           id?: string
-          is_credit_card?: boolean
           item_id?: string
           item_name_snapshot?: string
           notes?: string | null
           order_id?: string | null
-          payment_type_id?: string | null
+          payment_status?: string
           purchase_order_id?: string | null
           quantity?: number
           received_by?: string
@@ -964,13 +964,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_item_catalog"
             referencedColumns: ["item_id"]
-          },
-          {
-            foreignKeyName: "incoming_items_payment_type_id_fkey"
-            columns: ["payment_type_id"]
-            isOneToOne: false
-            referencedRelation: "payment_types"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "incoming_items_purchase_order_id_fkey"
@@ -5012,12 +5005,7 @@ export type Database = {
         Returns: undefined
       }
       receive_purchase_order: {
-        Args: {
-          p_is_credit_card?: boolean
-          p_lines: Json
-          p_payment_type_id?: string
-          p_purchase_order_id: string
-        }
+        Args: { p_lines: Json; p_purchase_order_id: string }
         Returns: undefined
       }
       recompute_order_status: {

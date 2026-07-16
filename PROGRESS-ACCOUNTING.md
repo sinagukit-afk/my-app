@@ -89,6 +89,7 @@ conventions worth keeping are:
 > **Migration renumber (2026-07-02, ACCT-3):** ACCT-3 wasn't originally assigned a migration, but the Rent/Transportation decision added account `6015 Rent Expense`, which needed one. Created during ACCT-3 (chronologically before ACCT-4..7, none of which exist yet), it correctly takes the next free label `0015` — so the reserved labels for ACCT-4 (`0015→0016`), ACCT-5 (`0016→0017`), ACCT-6 (`0017→0018`), and ACCT-7 (`0018→0019`) each shift up by one, preserving the "lower label = created earlier" invariant the earlier amendments established.
 | ACCT-8 | BIR tax estimate calculator | Not started | — | Lowest priority, optional |
 | ACCT-9 | Module restructure — COA hierarchy, Financial Settings nav, mapping generalization, foundation-only Taxes | **All 7 sub-phases done** | `acct9_1_chart_of_accounts_hierarchy`, `acct9_3_system_account_mappings`, `acct9_4_bank_accounts`, `acct9_5_sales_purchase_inventory_mapping`, `acct9_6_taxes_foundation`, `acct9_7_hierarchical_reports`, `acct9_7_hierarchical_reports_own_vs_rollup`, `acct9_7_revoke_anon_execute` | Kickoff plan (assessment + 7 sub-phases) in the 2026-07-15 session log entry below. **9.6 was done by a concurrent session** (not this workstream's own doc — see the ACCT-9.7 session log entry's note on discovering it) while 9.7 was being worked in this session; no schema conflict between the two (9.6 touched `system_account_mappings`/`close_order_payment`/`generate_draft_journal_entries`, 9.7 touched only the report RPCs). |
+| SP | Supplier Payment — rename `Payments` → `Customer Payment`; new `Supplier Payment` covering Inventory PO, Expense PO, Asset PO, Manual Incoming (+ Direct Expense, per Sinag) | **All 8 sub-phases done** | `finpur_13_supplier_payment_schema`, `finpur_14_supplier_payment_rpcs` | Full kickoff plan + Sinag's 3 decisions in the first 2026-07-16 session log entry below; SP-5..SP-8 (Fixed Assets payment UI, Inventory/Manual payable detail page, unified Supplier Payment list + nav, end-to-end verification) in the second. Also fixed a pre-existing gap found along the way: `log_payable_payment('asset', ...)` had no status-recompute branch at all before this session. |
 
 ## Session log
 
@@ -2146,5 +2147,203 @@ ACCT-9 module restructure is now **fully done, all 7 sub-phases** (per the
 Status table above) — combining this session's 9.7 with the concurrent
 session's 9.6. No git commit (standing project rule — stopped at DoD for
 manual review).
+
+---
+
+### 2026-07-16 — Supplier Payment kickoff (assessment + SP-1..SP-4)
+
+Sinag asked to rename Finance's `Payments` page to **Customer Payment** and
+add a new **Supplier Payment** to cover Inventory PO, Expense PO, Asset PO,
+and Manual Incoming. Assessed the live schema/RPCs (not just code) before
+proposing a plan.
+
+**What was found already in place:**
+- **Expense PO / Direct Expense** (`opex_expenses`): full payment lifecycle
+  already exists — `payment_status` column, `payable_payments` ledger,
+  `log_payable_payment()` RPC, and a working Log Payment UI on
+  `/dashboard/finance/expenses/[id]` (built in the 2026-07-15 Expense
+  Treatment Engine session).
+- **Asset PO** (`fixed_assets`): acquisition already posts to
+  `SCA-2000 Accounts Payable` at `asset_acquired` (deferred by design since
+  ACCT-7.9) — but `log_payable_payment('asset', ...)` was **silently
+  incomplete**: it emits the `asset_payment` business event correctly, but
+  has no branch to recompute a payment status, and `fixed_assets` has no
+  `payment_status` column at all. No UI exists either. This was a real gap,
+  not by design.
+- **Inventory PO / Manual Incoming** (`incoming_items`): no liability concept
+  at all — `receive_purchase_order()` and the manual-incoming insert capture
+  `payment_type_id`/`is_credit_card` and the rule engine
+  (`generate_draft_journal_entries()`) books cash/bank (or
+  `SCA-2020 Credit Card Payable`) **immediately** at receiving. No unpaid
+  state, no `payable_payments` rows, nothing to pay later.
+
+**Decision (asked Sinag directly since it changes real GL posting behavior
+on an active flow):** Inventory PO / Manual Incoming become a **deferred
+liability** model, mirroring Expense PO exactly — receiving posts to AP,
+Supplier Payment is where the real payment gets logged later. Sinag
+confirmed (Recommended option).
+
+**Sinag's 3 follow-up decisions:**
+1. Include **Direct Expense** (not just Expense PO) in the Supplier Payment
+   list — both already share `opex_expenses`/`payment_status`.
+2. **Drop** `incoming_items.payment_type_id`/`is_credit_card` in the same
+   migration (not kept for historical display) — new rows never populate
+   them anyway once receiving stops asking.
+3. Supplier Payment sits in the nav **directly below Customer Payment**
+   (wiring deferred to SP-7, when the page itself is built).
+
+**Full phase plan** (SP-1..SP-4 are this session's scope; SP-5..SP-8 later):
+- **SP-1** — Rename `Payment` → `Customer Payment` (nav label +
+  `PageHeader` title only, same route).
+- **SP-2** (`finpur_13_supplier_payment_schema`) — `incoming_items` gets
+  `payment_status` (default `'unpaid'`, then **backfill all existing rows to
+  `'paid'`** since they were genuinely cash-settled under the old model);
+  `fixed_assets` gets `payment_status` (default `'unpaid'`, no backfill —
+  every asset has been AP-deferred since acquisition and never had a
+  payment logged); widen `payable_payments_payable_type_check` and
+  `business_events_event_type_check` to add `'inventory'`/
+  `'inventory_payment'`; update the `apply_incoming_item_inventory_movement()`
+  trigger to stop passing `payment_type_id`/`is_credit_card` into the
+  `business_events` payload; then drop both columns from `incoming_items`
+  (in that order, so the trigger never references a dropped column).
+- **SP-3** (`finpur_14_supplier_payment_rpcs`) — `receive_purchase_order()`
+  loses its 2 payment params (old 4-arg signature explicitly dropped first,
+  per the standing `CREATE OR REPLACE`-with-new-params pitfall — see
+  ACCT-7.2's incident above); `generate_draft_journal_entries()`'s
+  `purchase_received`/`manual_incoming` branch always credits
+  `accounts_payable_default` now (no more is_credit_card/payment_type_id
+  branching), and its `expense_payment`/`asset_payment` branch widens to
+  `inventory_payment` (identical Debit AP / Credit payment-type-account
+  logic, no new branching needed); `log_payable_payment()` accepts
+  `'inventory'`, gains the missing `'asset'` status-recompute branch (fixes
+  the pre-existing gap above), and a new `'inventory'` branch keyed on
+  `total_price + shipping_fee - discount_amount`.
+- **SP-4** — Receiving UI: remove the Payment Method select + credit-card
+  checkbox from the Inventory PO receive form and the Manual Incoming
+  dialog; Receiving Log's Payment column becomes a Payment Status badge.
+- **SP-5** (not started) — Fixed Assets gets a real `[id]` detail page with
+  Log Payment, cloned from `expense-detail.tsx`.
+- **SP-6** (not started) — New Inventory/Manual Incoming payable detail
+  page (no per-row detail page exists today for `incoming_items`).
+- **SP-7** (not started) — Unified Supplier Payment list
+  (`/dashboard/finance/supplier-payments`, Select-based Type + Payment
+  Status filters per the project's no-Tabs convention, `UNION ALL` across
+  `opex_expenses` + `fixed_assets` + `incoming_items`), nav entry below
+  Customer Payment.
+- **SP-8** (not started) — End-to-end browser verification: receive an
+  Inventory PO, confirm it posts to AP not cash, log a partial + full
+  payment via Supplier Payment, confirm the journal entries are correct.
+
+**Important consequence flagged to Sinag:** between SP-4 landing and SP-6/7
+landing, Inventory PO / Manual Incoming receipts will correctly book to AP
+as unpaid, but there is **no UI yet to pay them off** (`log_payable_payment
+('inventory', ...)` is callable once SP-3 lands, just not wired to a page
+until SP-6/7).
+
+**SP-1..SP-4 implemented and verified this session.** Applied
+`finpur_13_supplier_payment_schema` and `finpur_14_supplier_payment_rpcs` via
+Supabase MCP exactly as planned above (trigger updated before the column
+drop, old 4-arg `receive_purchase_order` explicitly dropped before the new
+2-arg version per the ACCT-7.2 pitfall, grants re-checked post-recreate —
+`pg_proc.proacl` confirmed identical to the pre-migration baseline, no
+public/anon regression). Removed the Payment Method select + credit-card
+checkbox from the Inventory PO receive form and the Manual Incoming dialog;
+`receiving-log-table.tsx`'s Payment column is now a Payment Status badge.
+Regenerated `lib/supabase/types.ts` (confirmed `payment_status` on both
+`incoming_items`/`fixed_assets`, no more `payment_type_id`/`is_credit_card`
+anywhere on `incoming_items`).
+
+Verified live (`npx tsc --noEmit` clean, `npm run build` clean, browser as
+the Claude admin test account): received real open PO `SPO-2026-07150001`
+(2 lines, E-gosyo) through the updated receive form — no payment fields
+shown. Receiving Log shows both new rows (`SRI26-0716-0026/0027`) as
+**Unpaid**, while every pre-existing row backfilled correctly to **Paid**.
+Confirmed the actual posted `journal_entry_draft_lines` for both events:
+Debit the mapped Inventory account / Credit `2010 Accounts payable` — no
+cash/bank or Credit Card Payable touched, exactly the deferred-liability
+model Sinag approved. Customer Payment rename confirmed in both the page
+title and the sidebar nav label, no console errors anywhere. No git commit
+(standing project rule — stopped for manual review). Next: SP-5 (Fixed
+Assets payment UI) through SP-8 (Supplier Payment list + nav wiring), not
+started.
+
+---
+
+### 2026-07-16 — SP-5..SP-8 (Fixed Assets payment UI, Inventory/Manual detail page, unified list, verification)
+
+Closed out the remaining Supplier Payment phases in the same session as
+SP-1..SP-4.
+
+**SP-5 — Fixed Assets payment parity.** New `/dashboard/finance/
+fixed-assets/[id]` detail page (`asset-detail.tsx`), cloned from
+`expense-detail.tsx`'s Payment History + Log Payment dialog pattern. New
+`logAssetPayment()` action calling `log_payable_payment('asset', ...)`.
+`fixed-assets-table.tsx` gained a Payment Status column and `onRowClick`
+navigation to the new detail page — the existing Edit/Dispose buttons
+needed `e.stopPropagation()` added (matching the established pattern in
+`items-for-review-table.tsx`) so they don't also trigger row navigation.
+
+**SP-6 — Inventory/Manual Incoming payable detail page.** New shared
+`app/dashboard/finance/supplier-payments/actions.ts` (`logInventoryPayment()`
+→ `log_payable_payment('inventory', ...)`) and new `/dashboard/finance/
+supplier-payments/incoming/[id]` page — same Payment History + Log Payment
+pattern, keyed on `total_price + shipping_fee - discount_amount` as the
+payable amount (matching the RPC's own formula), shows item/qty/unit price,
+supplier, and links back to the Inventory PO or "Manual Incoming".
+
+**SP-7 — Unified Supplier Payment list.** New `/dashboard/finance/
+supplier-payments` page — deliberately **not** a new SQL view/RPC; mirrors
+the existing app-layer pattern (3 parallel Supabase queries merged in JS,
+same shape as how `receiving/page.tsx` already merges 2 queries) since RLS
+already permits admin/manager to read `opex_expenses`/`fixed_assets`/
+`incoming_items`/`payable_payments` directly — no new RLS or migration
+needed. Merges `opex_expenses` (both `direct` and `purchase_order` source,
+per Sinag's decision to include Direct Expense), `fixed_assets`, and
+`incoming_items` into one `SupplierPayableRow` shape, with a separate
+`payable_payments` query reduced into a `payable_type:payable_id → paid sum`
+map. Type + Payment Status filters are both `FilterBar` (dropdown) per
+[[feedback_filters_must_be_dropdowns]] — no tabs. Nav entry added directly
+below Customer Payment per Sinag's decision.
+
+**Bug caught and fixed before shipping:** the list's Paid/Remaining columns
+initially showed `Paid: ₱0.00` for rows already marked `payment_status =
+'paid'` that predate the `payable_payments` ledger for their type (e.g. the
+26 historical `incoming_items` rows backfilled to `'paid'` in SP-2, and any
+`opex_expenses` row created with `payment_status = 'paid'` directly at
+entry time, bypassing `log_payable_payment` entirely) — the ledger sum
+alone under-reports "paid" for rows that were never logged through it.
+Fixed by treating `payment_status` as the ground truth: when a row's status
+is `'paid'`, `paid` is forced to `total` and `remaining` to `0` regardless
+of what the ledger sums to; partial/unpaid rows still use the real ledger
+sum (`paidAndRemaining()` helper in `page.tsx`). The existing per-row detail
+pages (`expense-detail.tsx` and this session's new Asset/Incoming detail
+pages) never had this bug since they already hide the remaining-balance
+text entirely once `payment_status === 'paid'`.
+
+**Verified live** (browser, Claude admin test account, real data — nothing
+rolled back):
+- Supplier Payment list loads 36 rows across all 5 types with correct
+  Paid/Remaining after the fix above; Type filter and Payment Status filter
+  both narrow correctly (tested "Partial" → exactly 1 row).
+- Logged a real ₱200 Gcash partial payment against `SRI26-0716-0026`
+  (₱525 total, one of SP-4's own test receipts) via its new detail page —
+  status flipped Unpaid → Partial, ₱325 remaining, Payment History shows
+  the entry. Confirmed the posted journal entry: Debit `2010 Accounts
+  payable` ₱200 / Credit `1124 Gcash` ₱200.
+- Logged a real ₱15,000 BDO full payment against the "Water Filtration
+  Unit" fixed asset (previously Unpaid, no payments existed anywhere for
+  any asset since the module was built) via its new detail page — status
+  flipped Unpaid → **Paid**, Log Payment button correctly disappeared,
+  confirmed in both the detail page and the Fixed Assets list. This is the
+  first time `log_payable_payment('asset', ...)`'s status recompute has
+  ever actually run — confirms the ACCT-7.9-era gap (flagged in the
+  SP-1..4 session log entry above) is fixed, not just theoretically wired.
+  Confirmed the posted journal entry: Debit `2010 Accounts payable`
+  ₱15,000 / Credit `1121 Bank - BDO` ₱15,000.
+- No console errors on any page throughout. `npx tsc --noEmit` and
+  `npm run build` both clean after every change.
+
+All 8 Supplier Payment phases (SP-1..SP-8) are now **done**. No git commit
+(standing project rule — stopped for manual review).
 
 ---

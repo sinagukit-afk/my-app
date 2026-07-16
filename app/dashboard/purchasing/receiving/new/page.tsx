@@ -18,7 +18,7 @@ export default async function NewManualIncomingPage() {
 
   if (!canWrite) redirect("/dashboard/purchasing/receiving");
 
-  const [{ data: supplierData }, { data: itemData }, { data: paymentTypesData }] = await Promise.all([
+  const [{ data: supplierData }, { data: itemData }] = await Promise.all([
     supabase.from("suppliers").select("id, name").eq("is_active", true).order("name"),
 
     supabase
@@ -27,8 +27,6 @@ export default async function NewManualIncomingPage() {
       .is("deleted_at", null)
       .is("item_variants.deleted_at", null)
       .order("name"),
-
-    supabase.from("payment_types").select("id, name").eq("is_active", true).order("name"),
   ]);
 
   const variantOptions: VariantOption[] = (itemData ?? []).flatMap((item) => {
@@ -47,7 +45,6 @@ export default async function NewManualIncomingPage() {
     <NewManualIncomingForm
       suppliers={supplierData ?? []}
       variantOptions={variantOptions}
-      paymentTypeOptions={paymentTypesData ?? []}
     />
   );
 }

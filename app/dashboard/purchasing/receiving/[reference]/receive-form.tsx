@@ -4,8 +4,6 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { NumberInput } from "@/components/ui/number-input";
-import { Select } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { receivePurchaseOrder } from "./actions";
 
@@ -18,23 +16,18 @@ export type ReceivableItem = {
   remaining: number;
 };
 
-export type PaymentTypeOption = { id: string; name: string };
-
 type Props = {
   purchaseOrderId: string;
   reference: string;
   items: ReceivableItem[];
-  paymentTypeOptions: PaymentTypeOption[];
 };
 
-export function ReceiveForm({ purchaseOrderId, reference, items, paymentTypeOptions }: Props) {
+export function ReceiveForm({ purchaseOrderId, reference, items }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [quantities, setQuantities] = useState<Record<string, string>>(
     Object.fromEntries(items.map((item) => [item.id, String(item.remaining)]))
   );
-  const [paymentTypeId, setPaymentTypeId] = useState("");
-  const [isCreditCard, setIsCreditCard] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -46,13 +39,7 @@ export function ReceiveForm({ purchaseOrderId, reference, items, paymentTypeOpti
     }));
 
     startTransition(async () => {
-      const res = await receivePurchaseOrder(
-        purchaseOrderId,
-        reference,
-        lines,
-        paymentTypeId || null,
-        isCreditCard
-      );
+      const res = await receivePurchaseOrder(purchaseOrderId, reference, lines);
       if (res.success) {
         router.push("/dashboard/purchasing/receiving");
         router.refresh();
@@ -92,23 +79,6 @@ export function ReceiveForm({ purchaseOrderId, reference, items, paymentTypeOpti
               />
             </div>
           ))}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Select
-              label="Payment Method (optional)"
-              placeholder="Not specified"
-              value={paymentTypeId}
-              onChange={(e) => setPaymentTypeId(e.target.value)}
-              options={paymentTypeOptions.map((pt) => ({ value: pt.id, label: pt.name }))}
-            />
-            <div className="flex items-end pb-2">
-              <Checkbox
-                label="Paid via credit card"
-                description="Books against Credit Card Payable instead of Cash/Bank"
-                checked={isCreditCard}
-                onChange={setIsCreditCard}
-              />
-            </div>
-          </div>
         </CardContent>
         <CardFooter className="flex-col items-end gap-2">
           {error && <p className="text-sm text-(--color-danger)">{error}</p>}
