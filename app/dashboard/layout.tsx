@@ -3,6 +3,11 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { logout } from "@/app/logout/actions";
 
+function arrayOf<T>(value: T | T[] | null | undefined): T[] {
+  if (Array.isArray(value)) return value;
+  return value ? [value] : [];
+}
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -47,6 +52,7 @@ export default async function DashboardLayout({
     { count: prepaidDueCount },
     { data: dueDepreciationAssets },
     { data: depreciationEntries },
+    { data: trackedStockData },
   ] = await Promise.all([
     supabase
       .from("purchase_orders")
@@ -148,6 +154,12 @@ export default async function DashboardLayout({
       .eq("schedule_status", "active")
       .is("disposed_at", null),
     supabase.from("depreciation_entries").select("fixed_asset_id, amount, period_month"),
+    supabase
+      .from("items")
+      .select("item_variants(deleted_at, inventory_levels(available_qty, low_stock_threshold))")
+      .eq("track_stock", true)
+      .is("deleted_at", null)
+      .is("item_variants.deleted_at", null),
   ]);
 
   const ordersShippingCount = (shipmentsNotDeliveredCount ?? 0) + (ordersReadyForShippingCount ?? 0);
@@ -187,6 +199,19 @@ export default async function DashboardLayout({
 
   const expenseScheduleDueCount = (prepaidDueCount ?? 0) + dueDepreciationCount;
 
+  // Mirrors getStockStatus() on the Inventory Monitoring page: a row needs attention
+  // once available stock hits zero (out) or drops to/below its minimum threshold (low).
+  const inventoryAttentionCount = (trackedStockData ?? []).reduce((count, item) => {
+    for (const variant of arrayOf(item.item_variants).filter((v) => !v.deleted_at)) {
+      for (const level of arrayOf(variant.inventory_levels)) {
+        const available = Number(level.available_qty);
+        const threshold = level.low_stock_threshold != null ? Number(level.low_stock_threshold) : null;
+        if (available <= 0 || (threshold != null && available <= threshold)) count++;
+      }
+    }
+    return count;
+  }, 0);
+
   return (
     <AppShell
       userEmail={user.email ?? ""}
@@ -208,6 +233,7 @@ export default async function DashboardLayout({
         supplierPayment: supplierPaymentCount,
         expenseScheduleDue: expenseScheduleDueCount,
         accountingReview: accountingReviewCount ?? 0,
+        inventoryAttention: inventoryAttentionCount,
       }}
     >
       {children}

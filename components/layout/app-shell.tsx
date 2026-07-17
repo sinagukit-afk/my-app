@@ -22,7 +22,8 @@ type NavCountKey =
   | "ordersPayment"
   | "supplierPayment"
   | "expenseScheduleDue"
-  | "accountingReview";
+  | "accountingReview"
+  | "inventoryAttention";
 
 type NavLeaf = {
   kind: "item";
@@ -85,7 +86,7 @@ const NAV: NavEntry[] = [
         kind: "subgroup",
         label: "Inventory",
         children: [
-          { kind: "item", label: "Inventory Monitoring", href: "/dashboard/inventory/monitoring", icon: LayersIcon },
+          { kind: "item", label: "Inventory Monitoring", href: "/dashboard/inventory/monitoring", icon: LayersIcon, countKey: "inventoryAttention" },
           { kind: "item", label: "Items for Review", href: "/dashboard/inventory/items-for-review", icon: LayersIcon, countKey: "itemsForReview" },
           { kind: "item", label: "Item Adjustment", href: "/dashboard/inventory/adjustment", icon: LayersIcon },
         ],
