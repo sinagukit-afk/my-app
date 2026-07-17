@@ -1,7 +1,9 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { ACTIVITY_COOKIE, activityCookieOptions } from '@/lib/auth/activity-cookie'
 
 export async function login(formData: FormData) {
   const supabase = await createClient()
@@ -26,6 +28,11 @@ export async function login(formData: FormData) {
   if (error) {
     redirect(`/login?error=${encodeURIComponent(error.message)}`)
   }
+
+  // Stamp a fresh timestamp so a leftover/stale cookie from a prior session can
+  // never immediately re-trigger proxy.ts's idle-timeout on the very next request.
+  const cookieStore = await cookies()
+  cookieStore.set(ACTIVITY_COOKIE, String(Date.now()), activityCookieOptions())
 
   redirect('/dashboard')
 }

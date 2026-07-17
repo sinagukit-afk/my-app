@@ -1,8 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-
-const ACTIVITY_COOKIE = 'last_activity'
-const IDLE_LIMIT_MS = 5 * 60 * 60 * 1000 // 5 hours
+import { ACTIVITY_COOKIE, IDLE_LIMIT_MS, activityCookieOptions } from '@/lib/auth/activity-cookie'
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
@@ -48,17 +46,15 @@ export async function proxy(request: NextRequest) {
       new URL('/login?error=Signed out due to inactivity. Please sign in again.', request.url)
     )
     response.cookies.getAll().forEach((cookie) => redirectResponse.cookies.set(cookie))
-    redirectResponse.cookies.delete(ACTIVITY_COOKIE)
+    // Clear with the same attributes it was set with (not .delete(), which omits
+    // secure/sameSite) -- a mismatched clear cookie can fail to overwrite the
+    // original in some browsers/proxies, leaving a stale timestamp that re-trips
+    // this branch on every subsequent request, including right after a fresh login.
+    redirectResponse.cookies.set(ACTIVITY_COOKIE, '', { ...activityCookieOptions(), maxAge: 0 })
     return redirectResponse
   }
 
-  response.cookies.set(ACTIVITY_COOKIE, String(now), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 60 * 60 * 24 * 7,
-  })
+  response.cookies.set(ACTIVITY_COOKIE, String(now), activityCookieOptions())
 
   return response
 }
