@@ -77,7 +77,9 @@ export default async function InventoryPOPaymentDetailPage({ params }: { params:
     };
   });
 
-  const totalPayable = lines.reduce((s, l) => s + l.total_price + l.shipping_fee - l.discount_amount, 0);
+  // Line Cost (total_price) already IS the payable — discount_amount only adjusts
+  // inventory valuation vs. registered cost, it doesn't reduce what's owed.
+  const totalPayable = lines.reduce((s, l) => s + l.total_price + l.shipping_fee, 0);
 
   const detail: InventoryPOPaymentDetailData = {
     id: po.id,

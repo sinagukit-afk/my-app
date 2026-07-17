@@ -3,7 +3,7 @@
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils/format-date";
-import { formatQty } from "@/lib/utils/format";
+import { formatQty, formatCurrency } from "@/lib/utils/format";
 
 export type ReceivingLogRow = {
   id: string;
@@ -15,6 +15,8 @@ export type ReceivingLogRow = {
   quantity: number;
   unit_price: number;
   total_price: number;
+  total_payable: number;
+  shipping_fee: number;
   supplier_name: string | null;
   purchase_order_reference: string | null;
   notes: string | null;
@@ -68,13 +70,18 @@ export function ReceivingLogTable({ data }: Props) {
       render: (value) => <span className="tabular-nums">{formatQty(value as number)}</span>,
     },
     {
-      key: "total_price",
+      key: "total_payable",
       header: "Total",
       sortable: true,
-      render: (value) => (
-        <span className="tabular-nums font-medium">
-          ₱{Number(value).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </span>
+      render: (value, row) => (
+        <div>
+          <span className="tabular-nums font-medium">{formatCurrency(value as number)}</span>
+          {row.shipping_fee > 0 && (
+            <p className="text-xs text-(--color-text-muted)">
+              incl. {formatCurrency(row.shipping_fee)} shipping
+            </p>
+          )}
+        </div>
       ),
     },
     {

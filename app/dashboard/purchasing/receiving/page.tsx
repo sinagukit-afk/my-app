@@ -36,7 +36,7 @@ export default async function ReceivingPage() {
     supabase
       .from("incoming_items")
       .select(
-        "id, reference, status, date_received, item_name_snapshot, variant_id, quantity, unit_price, total_price, supplier_id, supplier, notes, received_by_email, payment_status, item_variants(option1_value, option2_value), suppliers(name), purchase_orders(reference)"
+        "id, reference, status, date_received, item_name_snapshot, variant_id, quantity, unit_price, total_price, shipping_fee, supplier_id, supplier, notes, received_by_email, payment_status, item_variants(option1_value, option2_value), suppliers(name), purchase_orders(reference)"
       )
       .order("date_received", { ascending: false })
       .order("created_at", { ascending: false }),
@@ -77,6 +77,10 @@ export default async function ReceivingPage() {
       quantity: Number(row.quantity),
       unit_price: Number(row.unit_price),
       total_price: Number(row.total_price),
+      // Line Cost (total_price) already IS the payable — discount_amount only adjusts
+      // inventory valuation vs. registered cost, it doesn't reduce what's owed.
+      total_payable: Number(row.total_price) + Number(row.shipping_fee),
+      shipping_fee: Number(row.shipping_fee),
       supplier_name: supplierRel?.name ?? row.supplier ?? null,
       purchase_order_reference: poRel?.reference ?? null,
       notes: row.notes ?? null,

@@ -90,7 +90,10 @@ export default async function SupplierPaymentsPage({ searchParams }: { searchPar
   const poGroups = new Map<string, { total: number; latestDate: string }>();
   for (const row of poIncoming ?? []) {
     const poId = row.purchase_order_id as string;
-    const lineTotal = Number(row.total_price) + Number(row.shipping_fee) - Number(row.discount_amount);
+    // Line Cost (total_price) already IS the payable — discount_amount is only the
+    // gap vs. registered/default cost, posted to the Supplier Discount account for
+    // inventory valuation. It does not reduce what's owed to the supplier.
+    const lineTotal = Number(row.total_price) + Number(row.shipping_fee);
     const g = poGroups.get(poId);
     if (g) {
       g.total += lineTotal;
@@ -160,7 +163,7 @@ export default async function SupplierPaymentsPage({ searchParams }: { searchPar
 
   const manualIncomingRows: SupplierPayableRow[] = (manualIncoming ?? []).map((i) => {
     const supplier = firstOf(i.suppliers);
-    const total = Number(i.total_price) + Number(i.shipping_fee) - Number(i.discount_amount);
+    const total = Number(i.total_price) + Number(i.shipping_fee);
     const { paid, remaining } = paidAndRemaining(i.payment_status, total, paidByKey.get(`inventory:${i.id}`) ?? 0);
     return {
       key: `inventory:${i.id}`,

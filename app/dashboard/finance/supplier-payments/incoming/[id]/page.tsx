@@ -55,7 +55,9 @@ export default async function IncomingPaymentDetailPage({ params }: { params: Pa
     : null;
 
   const shippingFee = Number(item.shipping_fee);
-  const totalPayable = Number(item.total_price) + shippingFee - Number(item.discount_amount);
+  // Line Cost (total_price) already IS the payable — discount_amount only adjusts
+  // inventory valuation vs. registered cost, it doesn't reduce what's owed.
+  const totalPayable = Number(item.total_price) + shippingFee;
 
   const detail: IncomingPaymentDetailData = {
     id: item.id,
