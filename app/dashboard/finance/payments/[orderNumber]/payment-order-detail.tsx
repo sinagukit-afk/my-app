@@ -29,6 +29,8 @@ export type PaymentOrderData = {
   createdAt: string;
   fulfillmentMethod: string | null;
   totalMoney: number;
+  shippingFeeTotal: number;
+  allShipmentsDispatched: boolean;
   customerName: string | null;
   customerPhone: string | null;
   customerAddress: string | null;
@@ -115,6 +117,8 @@ export function PaymentOrderDetail({ data, logs }: { data: PaymentOrderData; log
           id: data.id,
           orderNumber: data.orderNumber,
           totalMoney: data.totalMoney,
+          shippingFeeTotal: data.shippingFeeTotal,
+          allShipmentsDispatched: data.allShipmentsDispatched,
           payments: data.payments,
           paymentTypeOptions: data.paymentTypeOptions,
           canAddPayment: data.canAddPayment,

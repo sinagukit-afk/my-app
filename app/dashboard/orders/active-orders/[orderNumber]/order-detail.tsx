@@ -59,6 +59,8 @@ export type OrderDetailData = {
   subtotal: number;
   totalDiscount: number;
   totalMoney: number;
+  shippingFeeTotal: number;
+  allShipmentsDispatched: boolean;
   customerName: string | null;
   customerPhone: string | null;
   customerEmail: string | null;
@@ -411,6 +413,7 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
               shippableItems={data.shippableItems}
               packagingOptions={data.packagingOptions}
               courierOptions={data.courierOptions}
+              paymentTypeOptions={data.paymentTypeOptions}
               customer={data.shipmentCustomer}
               canAddShipment={data.canAddShipment}
               isShippingRole={data.isShippingRole}
@@ -423,6 +426,8 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
               id: data.id,
               orderNumber: data.orderNumber,
               totalMoney: data.totalMoney,
+              shippingFeeTotal: data.shippingFeeTotal,
+              allShipmentsDispatched: data.allShipmentsDispatched,
               payments: data.payments,
               paymentTypeOptions: data.paymentTypeOptions,
               canAddPayment: data.canAddPayment,

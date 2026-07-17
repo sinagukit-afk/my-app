@@ -49,6 +49,15 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
 
   const preparer = firstOf(order.preparer);
 
+  const { data: shipmentsData } = await supabase
+    .from("order_shipments")
+    .select("status, shipping_fee_charged")
+    .eq("order_id", order.id);
+
+  const shippingFeeTotal = (shipmentsData ?? [])
+    .filter((s) => s.status === "shipped" || s.status === "delivered")
+    .reduce((sum, s) => sum + (s.shipping_fee_charged != null ? Number(s.shipping_fee_charged) : 0), 0);
+
   const { data: paymentsData } = await supabase
     .from("order_payments")
     .select("payment_date, amount, reference_no, payment_types(name)")
@@ -63,9 +72,10 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
   const payments = paymentsData ?? [];
   const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
   const totalMoney = Number(order.total_money);
-  const remainingBalance = Math.max(0, totalMoney - totalPaid);
-  const overpaid = Math.max(0, totalPaid - totalMoney);
-  const paymentStatusLabel = paymentStatus(totalPaid, totalMoney);
+  const totalDue = totalMoney + shippingFeeTotal;
+  const remainingBalance = Math.max(0, totalDue - totalPaid);
+  const overpaid = Math.max(0, totalPaid - totalDue);
+  const paymentStatusLabel = paymentStatus(totalPaid, totalDue);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -164,6 +174,18 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
               <span>Order Total</span>
               <span>{peso(totalMoney)}</span>
             </div>
+            {shippingFeeTotal > 0 && (
+              <>
+                <div className="flex justify-between text-(--color-text-muted)">
+                  <span>Shipping Fee</span>
+                  <span>{peso(shippingFeeTotal)}</span>
+                </div>
+                <div className="flex justify-between font-medium text-(--color-text)">
+                  <span>Amount Due</span>
+                  <span>{peso(totalDue)}</span>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="border-t border-(--color-border) pt-4">

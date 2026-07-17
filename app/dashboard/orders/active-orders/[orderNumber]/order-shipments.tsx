@@ -78,6 +78,7 @@ export type OrderShipmentRow = {
   trackingNumber: string | null;
   shippingCost: number | null;
   shippingFeeCharged: number | null;
+  courierPaymentTypeId: string | null;
   shippedAt: string | null;
   deliveredAt: string | null;
   note: string | null;
@@ -118,6 +119,7 @@ export function OrderShipments({
   shippableItems,
   packagingOptions,
   courierOptions,
+  paymentTypeOptions,
   customer,
   canAddShipment,
   isShippingRole,
@@ -129,6 +131,7 @@ export function OrderShipments({
   shippableItems: ShippableOrderItem[];
   packagingOptions: PackagingVariantOption[];
   courierOptions: { id: string; name: string }[];
+  paymentTypeOptions: { id: string; name: string }[];
   customer: ShipmentCustomer | null;
   canAddShipment: boolean;
   isShippingRole: boolean;
@@ -159,6 +162,7 @@ export function OrderShipments({
   const [trackingNumber, setTrackingNumber] = useState("");
   const [shippingCost, setShippingCost] = useState("");
   const [shippingFeeCharged, setShippingFeeCharged] = useState("");
+  const [courierPaymentTypeId, setCourierPaymentTypeId] = useState("");
   const [note, setNote] = useState("");
   const [lineQtys, setLineQtys] = useState<Record<string, string>>({});
   const [packagingRows, setPackagingRows] = useState<PackagingRow[]>([emptyPackagingRow()]);
@@ -241,6 +245,7 @@ export function OrderShipments({
     setTrackingNumber("");
     setShippingCost("");
     setShippingFeeCharged("");
+    setCourierPaymentTypeId("");
     setNote("");
     setLineQtys({});
     setPackagingRows([emptyPackagingRow()]);
@@ -265,6 +270,7 @@ export function OrderShipments({
     setTrackingNumber(s.trackingNumber ?? "");
     setShippingCost(s.shippingCost != null ? String(s.shippingCost) : "");
     setShippingFeeCharged(s.shippingFeeCharged != null ? String(s.shippingFeeCharged) : "");
+    setCourierPaymentTypeId(s.courierPaymentTypeId ?? "");
     setNote(s.note ?? "");
     setLineQtys(Object.fromEntries(s.productLines.map((p) => [p.orderItemId, String(p.quantityShipped)])));
     setPackagingRows(
@@ -310,6 +316,12 @@ export function OrderShipments({
       return;
     }
 
+    const shippingCostValue = isPickup ? null : shippingCost ? Number(shippingCost) : null;
+    if (shippingCostValue != null && shippingCostValue > 0 && !courierPaymentTypeId) {
+      setFormError("Select how the courier was paid — required whenever a shipping cost is entered.");
+      return;
+    }
+
     const input = {
       fulfillmentType,
       shipsToCustomer: isPickup ? true : shipsToCustomer,
@@ -322,8 +334,9 @@ export function OrderShipments({
       receiverPostalCode: null,
       courierId: isPickup ? null : courierId || null,
       trackingNumber: isPickup ? null : trackingNumber.trim() || null,
-      shippingCost: isPickup ? null : shippingCost ? Number(shippingCost) : null,
+      shippingCost: shippingCostValue,
       shippingFeeCharged: isPickup ? null : shippingFeeCharged ? Number(shippingFeeCharged) : null,
+      courierPaymentTypeId: isPickup ? null : courierPaymentTypeId || null,
       note: note.trim() || null,
       items,
       packagingItems,
@@ -687,6 +700,15 @@ export function OrderShipments({
                     onChange={(e) => setShippingFeeCharged(e.target.value)}
                   />
                 </div>
+                {shippingCost && Number(shippingCost) > 0 && (
+                  <Select
+                    label="Paid Via"
+                    placeholder="Select payment method…"
+                    value={courierPaymentTypeId}
+                    onChange={(e) => setCourierPaymentTypeId(e.target.value)}
+                    options={paymentTypeOptions.map((pt) => ({ value: pt.id, label: pt.name }))}
+                  />
+                )}
               </>
             )}
             <AiFieldHighlight active={aiFilledKeys.has("note")}>

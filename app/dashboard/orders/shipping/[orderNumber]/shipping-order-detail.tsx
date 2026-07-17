@@ -31,6 +31,7 @@ export type ShippingOrderData = {
   shippableItems: ShippableOrderItem[];
   packagingOptions: PackagingVariantOption[];
   courierOptions: { id: string; name: string }[];
+  paymentTypeOptions: { id: string; name: string }[];
 };
 
 export function ShippingOrderDetail({ data }: { data: ShippingOrderData }) {
@@ -75,6 +76,7 @@ export function ShippingOrderDetail({ data }: { data: ShippingOrderData }) {
         shippableItems={data.shippableItems}
         packagingOptions={data.packagingOptions}
         courierOptions={data.courierOptions}
+        paymentTypeOptions={data.paymentTypeOptions}
         customer={data.shipmentCustomer}
         canAddShipment={data.canAddShipment}
         isShippingRole={data.isShippingRole}

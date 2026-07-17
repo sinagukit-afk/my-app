@@ -24,12 +24,17 @@ export default async function PaymentOrderPage({ params }: { params: Promise<{ o
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, order_number, status, target_date, created_at, fulfillment_method, total_money, payment_closed_at, payment_close_note, tip_amount, payment_closed_by_profile:profiles!orders_payment_closed_by_fkey(full_name, email), customers(name, phone_number, email, address_line1, barangay, city, province)"
+      "id, order_number, status, target_date, created_at, fulfillment_method, total_money, payment_closed_at, payment_close_note, tip_amount, payment_closed_by_profile:profiles!orders_payment_closed_by_fkey(full_name, email), customers(name, phone_number, email, address_line1, barangay, city, province), order_items(id, quantity)"
     )
     .eq("order_number", orderNumber)
     .single();
 
   if (!order) notFound();
+
+  const { data: shipmentsData } = await supabase
+    .from("order_shipments")
+    .select("status, shipping_fee_charged, shipment_items(order_item_id, quantity_shipped)")
+    .eq("order_id", order.id);
 
   const { data: paymentsData } = await supabase
     .from("order_payments")
@@ -66,6 +71,19 @@ export default async function PaymentOrderPage({ params }: { params: Promise<{ o
   const canAddPayment = ["admin", "manager", "encoder"].includes(role);
   const canClosePayment = ["admin", "manager", "encoder"].includes(role);
 
+  // Mirrors close_order_payment()'s own dispatch gate: the final shipping fee isn't
+  // known until every order item has been allocated to a shipment and none is still Preparing.
+  const totalOrderedQty = (order.order_items ?? []).reduce((sum, it) => sum + Number(it.quantity), 0);
+  const totalShippedQty = (shipmentsData ?? []).reduce(
+    (sum, s) => sum + (s.shipment_items ?? []).reduce((qSum, si) => qSum + Number(si.quantity_shipped), 0),
+    0
+  );
+  const hasPreparingShipment = (shipmentsData ?? []).some((s) => s.status === "preparing");
+  const allShipmentsDispatched = totalOrderedQty - totalShippedQty <= 0 && !hasPreparingShipment;
+  const shippingFeeTotal = (shipmentsData ?? [])
+    .filter((s) => s.status === "shipped" || s.status === "delivered")
+    .reduce((sum, s) => sum + (s.shipping_fee_charged != null ? Number(s.shipping_fee_charged) : 0), 0);
+
   const data: PaymentOrderData = {
     id: order.id,
     orderNumber: order.order_number,
@@ -74,6 +92,8 @@ export default async function PaymentOrderPage({ params }: { params: Promise<{ o
     createdAt: order.created_at,
     fulfillmentMethod: order.fulfillment_method,
     totalMoney: Number(order.total_money),
+    shippingFeeTotal,
+    allShipmentsDispatched,
     customerName: customer?.name ?? null,
     customerPhone: customer?.phone_number ?? null,
     customerAddress:

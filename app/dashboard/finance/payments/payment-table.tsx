@@ -15,6 +15,7 @@ export type OrderRow = {
   status: string;
   orderDate: string;
   totalMoney: number;
+  shippingFeeTotal: number;
   totalPaid: number;
   remainingBalance: number;
   paymentStatus: "Unpaid" | "Partially Paid" | "Paid" | "Overpaid";
@@ -99,6 +100,12 @@ export function PaymentOrdersTable({ data, from, to }: Props) {
       header: "Order Total",
       sortable: true,
       render: (value) => peso(value as number),
+    },
+    {
+      key: "shippingFeeTotal",
+      header: "Shipping Fee",
+      sortable: true,
+      render: (value) => (value ? peso(value as number) : <span className="text-(--color-text-subtle)">—</span>),
     },
     {
       key: "totalPaid",

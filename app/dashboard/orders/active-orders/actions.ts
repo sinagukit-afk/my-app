@@ -254,6 +254,7 @@ export type CreateShipmentInput = {
   trackingNumber: string | null
   shippingCost: number | null
   shippingFeeCharged: number | null
+  courierPaymentTypeId: string | null
   note: string | null
   items: { orderItemId: string; quantityShipped: number }[]
   packagingItems: { variantId: string; quantityUsed: number }[]
@@ -267,6 +268,7 @@ export async function createShipment(orderId: string, input: CreateShipmentInput
     p_tracking_number: input.trackingNumber,
     p_shipping_cost: input.shippingCost,
     p_shipping_fee_charged: input.shippingFeeCharged,
+    p_courier_payment_type_id: input.courierPaymentTypeId,
     p_note: input.note,
     p_items: input.items.map((i) => ({ order_item_id: i.orderItemId, quantity_shipped: i.quantityShipped })),
     p_packaging_items: input.packagingItems.map((p) => ({ variant_id: p.variantId, quantity_used: p.quantityUsed })),
@@ -302,6 +304,7 @@ export async function updateShipment(
     p_tracking_number: input.trackingNumber,
     p_shipping_cost: input.shippingCost,
     p_shipping_fee_charged: input.shippingFeeCharged,
+    p_courier_payment_type_id: input.courierPaymentTypeId,
     p_note: input.note,
     p_items: input.items.map((i) => ({ order_item_id: i.orderItemId, quantity_shipped: i.quantityShipped })),
     p_packaging_items: input.packagingItems.map((p) => ({ variant_id: p.variantId, quantity_used: p.quantityUsed })),

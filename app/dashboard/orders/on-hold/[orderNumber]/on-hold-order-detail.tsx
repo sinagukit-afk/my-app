@@ -60,6 +60,7 @@ export type OnHoldOrderData = {
   shippableItems: ShippableOrderItem[];
   packagingOptions: PackagingVariantOption[];
   courierOptions: { id: string; name: string }[];
+  paymentTypeOptions: { id: string; name: string }[];
   canResume: boolean;
   canCancel: boolean;
   isShippingRole: boolean;
@@ -266,6 +267,7 @@ export function OnHoldOrderDetail({ data }: { data: OnHoldOrderData }) {
           shippableItems={data.shippableItems}
           packagingOptions={data.packagingOptions}
           courierOptions={data.courierOptions}
+          paymentTypeOptions={data.paymentTypeOptions}
           customer={data.shipmentCustomer}
           canAddShipment={false}
           isShippingRole={data.isShippingRole}

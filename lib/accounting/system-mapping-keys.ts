@@ -6,7 +6,13 @@
  * expected to resolve to, so the Sales/Purchase/Inventory Mapping pages
  * can filter their pickers without hardcoding the label text.
  */
-export const SALES_MAPPING_KEYS = ["tip_income", "write_off_expense"] as const;
+export const SALES_MAPPING_KEYS = [
+  "tip_income",
+  "write_off_expense",
+  "shipping_clearing",
+  "shipping_out_expense",
+  "shipping_income",
+] as const;
 export const PURCHASE_MAPPING_KEYS = [
   "credit_card_payable",
   "credit_card_interest_expense",
@@ -19,6 +25,9 @@ export const TAX_MAPPING_KEYS = ["output_tax_payable"] as const;
 export const MAPPING_KEY_ACCOUNT_CATEGORY: Record<string, string> = {
   tip_income: "revenue",
   write_off_expense: "expense",
+  shipping_clearing: "liability",
+  shipping_out_expense: "expense",
+  shipping_income: "revenue",
   credit_card_payable: "liability",
   credit_card_interest_expense: "expense",
   shipping_in_expense: "expense",

@@ -31,6 +31,7 @@ export function NewShipmentForm({
   shippableItems,
   packagingOptions,
   courierOptions,
+  paymentTypeOptions,
   customer,
 }: {
   orderId: string;
@@ -38,6 +39,7 @@ export function NewShipmentForm({
   shippableItems: ShippableOrderItem[];
   packagingOptions: PackagingVariantOption[];
   courierOptions: { id: string; name: string }[];
+  paymentTypeOptions: { id: string; name: string }[];
   customer: ShipmentCustomer | null;
 }) {
   const router = useRouter();
@@ -57,6 +59,7 @@ export function NewShipmentForm({
   const [trackingNumber, setTrackingNumber] = useState("");
   const [shippingCost, setShippingCost] = useState("");
   const [shippingFeeCharged, setShippingFeeCharged] = useState("");
+  const [courierPaymentTypeId, setCourierPaymentTypeId] = useState("");
   const [note, setNote] = useState("");
   const [lineQtys, setLineQtys] = useState<Record<string, string>>(() =>
     Object.fromEntries(shippableItems.map((si) => [si.orderItemId, String(si.remainingQty)]))
@@ -153,6 +156,12 @@ export function NewShipmentForm({
       return;
     }
 
+    const shippingCostValue = isPickup ? null : shippingCost ? Number(shippingCost) : null;
+    if (shippingCostValue != null && shippingCostValue > 0 && !courierPaymentTypeId) {
+      setFormError("Select how the courier was paid — required whenever a shipping cost is entered.");
+      return;
+    }
+
     const input = {
       fulfillmentType,
       shipsToCustomer: isPickup ? true : shipsToCustomer,
@@ -165,8 +174,9 @@ export function NewShipmentForm({
       receiverPostalCode: null,
       courierId: isPickup ? null : courierId || null,
       trackingNumber: isPickup ? null : trackingNumber.trim() || null,
-      shippingCost: isPickup ? null : shippingCost ? Number(shippingCost) : null,
+      shippingCost: shippingCostValue,
       shippingFeeCharged: isPickup ? null : shippingFeeCharged ? Number(shippingFeeCharged) : null,
+      courierPaymentTypeId: isPickup ? null : courierPaymentTypeId || null,
       note: note.trim() || null,
       items,
       packagingItems,
@@ -324,6 +334,15 @@ export function NewShipmentForm({
                     onChange={(e) => setShippingFeeCharged(e.target.value)}
                   />
                 </div>
+                {shippingCost && Number(shippingCost) > 0 && (
+                  <Select
+                    label="Paid Via"
+                    placeholder="Select payment method…"
+                    value={courierPaymentTypeId}
+                    onChange={(e) => setCourierPaymentTypeId(e.target.value)}
+                    options={paymentTypeOptions.map((pt) => ({ value: pt.id, label: pt.name }))}
+                  />
+                )}
               </>
             )}
             <AiFieldHighlight active={aiFilledKeys.has("note")}>

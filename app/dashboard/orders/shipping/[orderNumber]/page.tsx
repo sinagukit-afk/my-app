@@ -39,13 +39,19 @@ export default async function ShippingOrderPage({ params }: { params: Promise<{ 
   const { data: shipmentsData } = await supabase
     .from("order_shipments")
     .select(
-      "id, shipment_number, tracking_number, status, fulfillment_type, ships_to_customer, receiver_name, receiver_phone, receiver_address_line1, receiver_barangay, receiver_city, receiver_province, receiver_postal_code, courier_id, shipping_cost, shipping_fee_charged, shipped_at, delivered_at, note, couriers(name), shipment_items(order_item_id, quantity_shipped, order_items(item_name_snapshot, sku_snapshot)), shipment_packaging_items(variant_id, quantity_used, item_variants(option1_value, sku, items(name)))"
+      "id, shipment_number, tracking_number, status, fulfillment_type, ships_to_customer, receiver_name, receiver_phone, receiver_address_line1, receiver_barangay, receiver_city, receiver_province, receiver_postal_code, courier_id, shipping_cost, shipping_fee_charged, courier_payment_type_id, shipped_at, delivered_at, note, couriers(name), shipment_items(order_item_id, quantity_shipped, order_items(item_name_snapshot, sku_snapshot)), shipment_packaging_items(variant_id, quantity_used, item_variants(option1_value, sku, items(name)))"
     )
     .eq("order_id", order.id)
     .order("created_at", { ascending: false });
 
   const { data: courierData } = await supabase
     .from("couriers")
+    .select("id, name")
+    .eq("is_active", true)
+    .order("name");
+
+  const { data: paymentTypesData } = await supabase
+    .from("payment_types")
     .select("id, name")
     .eq("is_active", true)
     .order("name");
@@ -111,6 +117,7 @@ export default async function ShippingOrderPage({ params }: { params: Promise<{ 
         trackingNumber: s.tracking_number,
         shippingCost: s.shipping_cost != null ? Number(s.shipping_cost) : null,
         shippingFeeCharged: s.shipping_fee_charged != null ? Number(s.shipping_fee_charged) : null,
+        courierPaymentTypeId: s.courier_payment_type_id,
         shippedAt: s.shipped_at,
         deliveredAt: s.delivered_at,
         note: s.note,
@@ -150,6 +157,7 @@ export default async function ShippingOrderPage({ params }: { params: Promise<{ 
       )
     ),
     courierOptions: (courierData ?? []).map((c) => ({ id: c.id, name: c.name })),
+    paymentTypeOptions: (paymentTypesData ?? []).map((pt) => ({ id: pt.id, name: pt.name })),
   };
 
   return (

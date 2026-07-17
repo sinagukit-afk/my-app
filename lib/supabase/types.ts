@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -2239,6 +2239,7 @@ export type Database = {
       order_shipments: {
         Row: {
           courier_id: string | null
+          courier_payment_type_id: string | null
           created_at: string
           created_by: string | null
           delivered_at: string | null
@@ -2264,6 +2265,7 @@ export type Database = {
         }
         Insert: {
           courier_id?: string | null
+          courier_payment_type_id?: string | null
           created_at?: string
           created_by?: string | null
           delivered_at?: string | null
@@ -2289,6 +2291,7 @@ export type Database = {
         }
         Update: {
           courier_id?: string | null
+          courier_payment_type_id?: string | null
           created_at?: string
           created_by?: string | null
           delivered_at?: string | null
@@ -2318,6 +2321,13 @@ export type Database = {
             columns: ["courier_id"]
             isOneToOne: false
             referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_shipments_courier_payment_type_id_fkey"
+            columns: ["courier_payment_type_id"]
+            isOneToOne: false
+            referencedRelation: "payment_types"
             referencedColumns: ["id"]
           },
           {
@@ -4542,6 +4552,7 @@ export type Database = {
       create_shipment: {
         Args: {
           p_courier_id?: string
+          p_courier_payment_type_id?: string
           p_fulfillment_type?: string
           p_items?: Json
           p_note?: string
@@ -4561,6 +4572,7 @@ export type Database = {
         }
         Returns: {
           courier_id: string | null
+          courier_payment_type_id: string | null
           created_at: string
           created_by: string | null
           delivered_at: string | null
@@ -4896,6 +4908,7 @@ export type Database = {
         Args: { p_shipment_id: string }
         Returns: {
           courier_id: string | null
+          courier_payment_type_id: string | null
           created_at: string
           created_by: string | null
           delivered_at: string | null
@@ -4930,6 +4943,7 @@ export type Database = {
         Args: { p_shipment_id: string }
         Returns: {
           courier_id: string | null
+          courier_payment_type_id: string | null
           created_at: string
           created_by: string | null
           delivered_at: string | null
@@ -4964,6 +4978,7 @@ export type Database = {
         Args: { p_shipment_id: string }
         Returns: {
           courier_id: string | null
+          courier_payment_type_id: string | null
           created_at: string
           created_by: string | null
           delivered_at: string | null
@@ -5491,6 +5506,7 @@ export type Database = {
       update_shipment: {
         Args: {
           p_courier_id?: string
+          p_courier_payment_type_id?: string
           p_fulfillment_type?: string
           p_items?: Json
           p_note?: string
@@ -5510,6 +5526,7 @@ export type Database = {
         }
         Returns: {
           courier_id: string | null
+          courier_payment_type_id: string | null
           created_at: string
           created_by: string | null
           delivered_at: string | null

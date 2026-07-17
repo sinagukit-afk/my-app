@@ -6,10 +6,10 @@ function firstOf<T>(value: T | T[] | null | undefined): T | null {
   return value ?? null;
 }
 
-function paymentStatus(totalPaid: number, totalMoney: number): OrderRow["paymentStatus"] {
+function paymentStatus(totalPaid: number, totalDue: number): OrderRow["paymentStatus"] {
   if (totalPaid <= 0) return "Unpaid";
-  if (totalPaid < totalMoney) return "Partially Paid";
-  if (totalPaid > totalMoney) return "Overpaid";
+  if (totalPaid < totalDue) return "Partially Paid";
+  if (totalPaid > totalDue) return "Overpaid";
   return "Paid";
 }
 
@@ -22,7 +22,7 @@ export default async function PaymentOrdersPage({ searchParams }: { searchParams
   let query = supabase
     .from("orders")
     .select(
-      "id, order_number, status, total_money, created_at, customers(name), order_payments(amount)"
+      "id, order_number, status, total_money, created_at, customers(name), order_payments(amount), order_shipments(shipping_fee_charged, status)"
     )
     .neq("status", "cancelled");
 
@@ -34,6 +34,10 @@ export default async function PaymentOrdersPage({ searchParams }: { searchParams
   const rows: OrderRow[] = (data ?? []).map((o) => {
     const customer = firstOf(o.customers);
     const totalMoney = Number(o.total_money);
+    const shippingFeeTotal = (o.order_shipments ?? [])
+      .filter((s) => s.status === "shipped" || s.status === "delivered")
+      .reduce((sum, s) => sum + Number(s.shipping_fee_charged ?? 0), 0);
+    const totalDue = totalMoney + shippingFeeTotal;
     const totalPaid = (o.order_payments ?? []).reduce((sum, p) => sum + Number(p.amount), 0);
     return {
       orderNumber: o.order_number,
@@ -41,9 +45,10 @@ export default async function PaymentOrdersPage({ searchParams }: { searchParams
       status: o.status,
       orderDate: o.created_at.slice(0, 10),
       totalMoney,
+      shippingFeeTotal,
       totalPaid,
-      remainingBalance: totalMoney - totalPaid,
-      paymentStatus: paymentStatus(totalPaid, totalMoney),
+      remainingBalance: totalDue - totalPaid,
+      paymentStatus: paymentStatus(totalPaid, totalDue),
     };
   });
 

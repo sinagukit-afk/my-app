@@ -25,7 +25,7 @@ export default async function SalesMappingPage() {
       <div>
         <PageHeader
           title="Sales Mapping"
-          description="GL accounts used when Accounting auto-posts sale-side events (tips, write-offs)."
+          description="GL accounts used when Accounting auto-posts sale-side events (tips, write-offs, customer shipping fees)."
         />
         <Card className="max-w-lg">
           <CardContent className="p-4 text-sm text-(--color-text-muted)">
@@ -65,7 +65,7 @@ export default async function SalesMappingPage() {
     <div className="space-y-6">
       <PageHeader
         title="Sales Mapping"
-        description="GL accounts used when Accounting auto-posts sale-side events (tips, write-offs)."
+        description="GL accounts used when Accounting auto-posts sale-side events (tips, write-offs, customer shipping fees)."
       />
       <Card>
         <CardContent className="p-4">

@@ -35,6 +35,8 @@ export type OrderPaymentsData = {
   id: string;
   orderNumber: string;
   totalMoney: number;
+  shippingFeeTotal: number;
+  allShipmentsDispatched: boolean;
   payments: OrderPaymentRow[];
   paymentTypeOptions: { id: string; name: string }[];
   canAddPayment: boolean;
@@ -79,11 +81,21 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
   const [closeError, setCloseError] = useState<string | null>(null);
 
   const totalPaid = useMemo(() => data.payments.reduce((sum, p) => sum + p.amount, 0), [data.payments]);
-  const remainingBalance = Math.max(0, data.totalMoney - totalPaid);
-  const change = Math.max(0, totalPaid - data.totalMoney);
-  const payStatus = paymentStatus(totalPaid, data.totalMoney);
+  const totalDue = data.totalMoney + data.shippingFeeTotal;
+  const remainingBalance = Math.max(0, totalDue - totalPaid);
+  const change = Math.max(0, totalPaid - totalDue);
+  const payStatus = paymentStatus(totalPaid, totalDue);
   const noteRequired = payStatus === "Partially Paid";
-  const canClose = data.canClosePayment && !data.isClosed && payStatus !== "Unpaid";
+  const canClose =
+    data.canClosePayment && !data.isClosed && payStatus !== "Unpaid" && data.allShipmentsDispatched;
+
+  const enteredAmount = Number(paymentAmount);
+  const amountLabel = (() => {
+    const diff = remainingBalance - (enteredAmount > 0 ? enteredAmount : 0);
+    if (diff > 0) return `Amount (Remaining ${peso(diff)})`;
+    if (diff < 0) return `Amount (Overpaid ${peso(Math.abs(diff))})`;
+    return "Amount (Fully Paid)";
+  })();
 
   function handleAddPayment() {
     setPaymentError(null);
@@ -174,6 +186,16 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
           ))}
           <div className="space-y-1 border-t border-(--color-border) pt-3 text-sm">
             <div className="flex justify-between text-(--color-text-muted)">
+              <span>Merchandise Total</span>
+              <span>{peso(data.totalMoney)}</span>
+            </div>
+            {data.shippingFeeTotal > 0 && (
+              <div className="flex justify-between text-(--color-text-muted)">
+                <span>Shipping Fee</span>
+                <span>{peso(data.shippingFeeTotal)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-(--color-text-muted)">
               <span>Total Paid</span>
               <span>{peso(totalPaid)}</span>
             </div>
@@ -192,6 +214,12 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
               <Badge variant={PAYMENT_STATUS_VARIANT[payStatus]}>{payStatus}</Badge>
             </div>
           </div>
+          {!data.isClosed && !data.allShipmentsDispatched && (
+            <p className="text-xs text-(--color-text-muted)">
+              Close Payment is unavailable until every shipment on this order has been dispatched (Shipped or Picked
+              Up) — the final shipping fee isn&apos;t known until then.
+            </p>
+          )}
           {canClose && (
             <div className="flex justify-end pt-1">
               <Button variant="secondary" onClick={() => setCloseOpen(true)}>
@@ -217,7 +245,8 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
           <div className="space-y-3">
             <DatePicker label="Payment Date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
             <CurrencyInput
-              label="Amount"
+              id="payment-amount"
+              label={amountLabel}
               value={paymentAmount}
               onChange={(e) => setPaymentAmount(e.target.value)}
             />

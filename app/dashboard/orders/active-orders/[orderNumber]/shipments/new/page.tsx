@@ -49,6 +49,12 @@ export default async function NewShipmentPage({ params }: { params: Promise<{ or
     .eq("is_active", true)
     .order("name");
 
+  const { data: paymentTypesData } = await supabase
+    .from("payment_types")
+    .select("id, name")
+    .eq("is_active", true)
+    .order("name");
+
   const { data: packagingCategoryData } = await supabase
     .from("categories")
     .select("items(id, name, item_variants(id, sku, option1_value))")
@@ -103,6 +109,7 @@ export default async function NewShipmentPage({ params }: { params: Promise<{ or
       shippableItems={shippableItems.filter((si) => si.remainingQty > 0)}
       packagingOptions={packagingOptions}
       courierOptions={(courierData ?? []).map((c) => ({ id: c.id, name: c.name }))}
+      paymentTypeOptions={(paymentTypesData ?? []).map((pt) => ({ id: pt.id, name: pt.name }))}
       customer={shipmentCustomer}
     />
   );
