@@ -54,7 +54,8 @@ export default async function IncomingPaymentDetailPage({ params }: { params: Pa
     ? [variant.option1_value, variant.option2_value].filter(Boolean).join(" / ") || null
     : null;
 
-  const totalPayable = Number(item.total_price) + Number(item.shipping_fee) - Number(item.discount_amount);
+  const shippingFee = Number(item.shipping_fee);
+  const totalPayable = Number(item.total_price) + shippingFee - Number(item.discount_amount);
 
   const detail: IncomingPaymentDetailData = {
     id: item.id,
@@ -63,6 +64,7 @@ export default async function IncomingPaymentDetailPage({ params }: { params: Pa
     variant_label: variantLabel,
     quantity: Number(item.quantity),
     unit_price: Number(item.unit_price),
+    shipping_fee: shippingFee,
     total_payable: totalPayable,
     payment_status: item.payment_status as IncomingPaymentDetailData["payment_status"],
     date_received: item.date_received,

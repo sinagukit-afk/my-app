@@ -25,7 +25,7 @@ export default async function PurchaseMappingPage() {
       <div>
         <PageHeader
           title="Purchase Mapping"
-          description="GL accounts used when Accounting auto-posts purchase-side events (credit card payable, interest)."
+          description="GL accounts used when Accounting auto-posts purchase-side events (credit card payable, interest, shipping-in)."
         />
         <Card className="max-w-lg">
           <CardContent className="p-4 text-sm text-(--color-text-muted)">
@@ -65,7 +65,7 @@ export default async function PurchaseMappingPage() {
     <div className="space-y-6">
       <PageHeader
         title="Purchase Mapping"
-        description="GL accounts used when Accounting auto-posts purchase-side events (credit card payable, interest)."
+        description="GL accounts used when Accounting auto-posts purchase-side events (credit card payable, interest, shipping-in)."
       />
       <Card>
         <CardContent className="p-4">

@@ -55,25 +55,58 @@ export default async function SupplierPaymentsPage({ searchParams }: { searchPar
   if (from) assetQuery = assetQuery.gte("purchased_date", from);
   if (to) assetQuery = assetQuery.lte("purchased_date", to);
 
-  let incomingQuery = supabase
+  let manualIncomingQuery = supabase
     .from("incoming_items")
     .select(
-      "id, reference, total_price, shipping_fee, discount_amount, date_received, payment_status, purchase_order_id, supplier, suppliers(name)"
-    );
-  if (from) incomingQuery = incomingQuery.gte("date_received", from);
-  if (to) incomingQuery = incomingQuery.lte("date_received", to);
+      "id, reference, total_price, shipping_fee, discount_amount, date_received, payment_status, supplier, suppliers(name)"
+    )
+    .is("purchase_order_id", null);
+  if (from) manualIncomingQuery = manualIncomingQuery.gte("date_received", from);
+  if (to) manualIncomingQuery = manualIncomingQuery.lte("date_received", to);
+
+  let poIncomingQuery = supabase
+    .from("incoming_items")
+    .select("purchase_order_id, total_price, shipping_fee, discount_amount, date_received")
+    .not("purchase_order_id", "is", null);
+  if (from) poIncomingQuery = poIncomingQuery.gte("date_received", from);
+  if (to) poIncomingQuery = poIncomingQuery.lte("date_received", to);
 
   const [
     { data: expenses, error: expensesError },
     { data: assets, error: assetsError },
-    { data: incoming, error: incomingError },
+    { data: manualIncoming, error: manualIncomingError },
+    { data: poIncoming, error: poIncomingError },
     { data: paymentsData },
   ] = await Promise.all([
     expenseQuery.order("expense_date", { ascending: false }),
     assetQuery.order("purchased_date", { ascending: false }),
-    incomingQuery.order("date_received", { ascending: false }),
+    manualIncomingQuery.order("date_received", { ascending: false }),
+    poIncomingQuery,
     supabase.from("payable_payments").select("payable_type, payable_id, amount"),
   ]);
+
+  // Inventory POs are one payable per PO, not per receiving batch — group every
+  // receiving line by purchase_order_id and sum what's actually been received so far.
+  const poGroups = new Map<string, { total: number; latestDate: string }>();
+  for (const row of poIncoming ?? []) {
+    const poId = row.purchase_order_id as string;
+    const lineTotal = Number(row.total_price) + Number(row.shipping_fee) - Number(row.discount_amount);
+    const g = poGroups.get(poId);
+    if (g) {
+      g.total += lineTotal;
+      if (row.date_received > g.latestDate) g.latestDate = row.date_received;
+    } else {
+      poGroups.set(poId, { total: lineTotal, latestDate: row.date_received });
+    }
+  }
+
+  const poIds = [...poGroups.keys()];
+  const { data: pos, error: posError } = poIds.length
+    ? await supabase
+        .from("purchase_orders")
+        .select("id, reference, payment_status, suppliers(name)")
+        .in("id", poIds)
+    : { data: [], error: null };
 
   const paidByKey = new Map<string, number>();
   for (const p of paymentsData ?? []) {
@@ -125,13 +158,13 @@ export default async function SupplierPaymentsPage({ searchParams }: { searchPar
     };
   });
 
-  const incomingRows: SupplierPayableRow[] = (incoming ?? []).map((i) => {
+  const manualIncomingRows: SupplierPayableRow[] = (manualIncoming ?? []).map((i) => {
     const supplier = firstOf(i.suppliers);
     const total = Number(i.total_price) + Number(i.shipping_fee) - Number(i.discount_amount);
     const { paid, remaining } = paidAndRemaining(i.payment_status, total, paidByKey.get(`inventory:${i.id}`) ?? 0);
     return {
       key: `inventory:${i.id}`,
-      type: i.purchase_order_id ? "inventory_po" : "manual_incoming",
+      type: "manual_incoming",
       reference: i.reference,
       supplier_name: supplier?.name ?? i.supplier ?? null,
       date: i.date_received,
@@ -143,9 +176,33 @@ export default async function SupplierPaymentsPage({ searchParams }: { searchPar
     };
   });
 
-  const rows = [...expenseRows, ...assetRows, ...incomingRows].sort((a, b) => (a.date < b.date ? 1 : -1));
+  const poRows: SupplierPayableRow[] = (pos ?? []).map((po) => {
+    const supplier = firstOf(po.suppliers);
+    const group = poGroups.get(po.id)!;
+    const { paid, remaining } = paidAndRemaining(
+      po.payment_status,
+      group.total,
+      paidByKey.get(`purchase_order:${po.id}`) ?? 0
+    );
+    return {
+      key: `purchase_order:${po.id}`,
+      type: "inventory_po",
+      reference: po.reference,
+      supplier_name: supplier?.name ?? null,
+      date: group.latestDate,
+      total: group.total,
+      paid,
+      remaining,
+      payment_status: po.payment_status as SupplierPayableRow["payment_status"],
+      detail_href: `/dashboard/finance/supplier-payments/inventory-po/${po.reference}`,
+    };
+  });
 
-  const error = expensesError || assetsError || incomingError;
+  const rows = [...expenseRows, ...assetRows, ...manualIncomingRows, ...poRows].sort((a, b) =>
+    a.date < b.date ? 1 : -1
+  );
+
+  const error = expensesError || assetsError || manualIncomingError || poIncomingError || posError;
 
   return (
     <div className="space-y-6">

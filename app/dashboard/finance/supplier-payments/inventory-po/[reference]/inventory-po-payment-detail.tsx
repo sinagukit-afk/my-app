@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DataTable, type Column } from "@/components/ui/data-table";
 import {
   Dialog,
   DialogContent,
@@ -20,50 +21,58 @@ import { Select } from "@/components/ui/select";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TextArea } from "@/components/ui/textarea";
-import { logInventoryPayment } from "../../actions";
+import { logInventoryPOPayment } from "../../actions";
 import { formatDate } from "@/lib/utils/format-date";
-import { formatQty } from "@/lib/utils/format";
+import { formatQty, formatCurrency } from "@/lib/utils/format";
 
-export type IncomingPaymentDetailData = {
+export type InventoryPOPaymentDetailData = {
   id: string;
   reference: string;
-  item_name_snapshot: string;
+  payment_status: "unpaid" | "partial" | "paid";
+  order_date: string;
+  supplier_name: string | null;
+  total_payable: number;
+};
+
+export type ReceivedLineRow = {
+  id: string;
+  reference: string;
+  item_name: string;
   variant_label: string | null;
   quantity: number;
   unit_price: number;
+  total_price: number;
   shipping_fee: number;
-  total_payable: number;
-  payment_status: "unpaid" | "partial" | "paid";
+  discount_amount: number;
   date_received: string;
-  supplier_name: string | null;
-  purchase_order_reference: string | null;
 };
 
 export type PaymentRow = { id: string; amount: number; paid_date: string; notes: string | null; payment_type_name: string | null };
 
 type Option = { id: string; name: string };
 
-const STATUS_VARIANT: Record<IncomingPaymentDetailData["payment_status"], "danger" | "warning" | "success"> = {
+const STATUS_VARIANT: Record<InventoryPOPaymentDetailData["payment_status"], "danger" | "warning" | "success"> = {
   unpaid: "danger",
   partial: "warning",
   paid: "success",
 };
 
 type Props = {
-  item: IncomingPaymentDetailData;
+  po: InventoryPOPaymentDetailData;
+  lines: ReceivedLineRow[];
   payments: PaymentRow[];
   remainingBalance: number;
   paymentTypes: Option[];
   canPay: boolean;
 };
 
-export function IncomingPaymentDetail({ item, payments, remainingBalance, paymentTypes, canPay }: Props) {
+export function InventoryPOPaymentDetail({ po, lines, payments, remainingBalance, paymentTypes, canPay }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [payOpen, setPayOpen] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
 
-  const canShowPay = canPay && item.payment_status !== "paid";
+  const canShowPay = canPay && po.payment_status !== "paid";
 
   function handlePaySubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -74,7 +83,7 @@ export function IncomingPaymentDetail({ item, payments, remainingBalance, paymen
     const paidDate = formData.get("paid_date") as string;
     const notes = (formData.get("notes") as string) || null;
     startTransition(async () => {
-      const res = await logInventoryPayment(item.id, paymentTypeId, amount, paidDate, notes);
+      const res = await logInventoryPOPayment(po.id, po.reference, paymentTypeId, amount, paidDate, notes);
       if (res.success) {
         setPayOpen(false);
         router.refresh();
@@ -83,6 +92,26 @@ export function IncomingPaymentDetail({ item, payments, remainingBalance, paymen
       }
     });
   }
+
+  const totalShipping = lines.reduce((s, l) => s + l.shipping_fee, 0);
+
+  const columns: Column<ReceivedLineRow>[] = [
+    {
+      key: "item_name",
+      header: "Item",
+      render: (value, row) => (
+        <div>
+          <p className="font-medium text-(--color-text)">{String(value)}</p>
+          {row.variant_label && <p className="text-xs text-(--color-text-muted)">{row.variant_label}</p>}
+        </div>
+      ),
+    },
+    { key: "reference", header: "Receiving No." },
+    { key: "date_received", header: "Date", render: (value) => formatDate(value as string) },
+    { key: "quantity", header: "Qty", render: (value) => formatQty(value as number) },
+    { key: "unit_price", header: "Unit Price", render: (value) => formatCurrency(value as number) },
+    { key: "total_price", header: "Line Total", render: (value) => formatCurrency(value as number) },
+  ];
 
   return (
     <div className="space-y-6">
@@ -93,35 +122,33 @@ export function IncomingPaymentDetail({ item, payments, remainingBalance, paymen
       </div>
 
       <PageHeader
-        title={item.reference}
-        description={item.variant_label ? `${item.item_name_snapshot} — ${item.variant_label}` : item.item_name_snapshot}
+        title={po.reference}
+        description={po.supplier_name ?? undefined}
         actions={canShowPay ? <Button onClick={() => setPayOpen(true)}>Log Payment</Button> : undefined}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm text-(--color-text-muted)">Quantity</CardTitle>
+            <CardTitle className="text-sm text-(--color-text-muted)">Supplier</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-(--color-text)">
-            {formatQty(item.quantity)} @ ₱{item.unit_price.toFixed(2)}
-          </CardContent>
+          <CardContent className="text-sm text-(--color-text)">{po.supplier_name ?? "—"}</CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm text-(--color-text-muted)">Supplier</CardTitle>
+            <CardTitle className="text-sm text-(--color-text-muted)">Order Date</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-(--color-text)">{item.supplier_name ?? "—"}</CardContent>
+          <CardContent className="text-sm text-(--color-text)">{formatDate(po.order_date)}</CardContent>
         </Card>
         <Card>
           <CardHeader>
             <CardTitle className="text-sm text-(--color-text-muted)">Total</CardTitle>
           </CardHeader>
           <CardContent className="text-lg font-semibold text-(--color-text)">
-            ₱{item.total_payable.toFixed(2)}
-            {item.shipping_fee > 0 && (
+            {formatCurrency(po.total_payable)}
+            {totalShipping > 0 && (
               <p className="text-xs font-normal text-(--color-text-muted)">
-                incl. ₱{item.shipping_fee.toFixed(2)} shipping
+                incl. {formatCurrency(totalShipping)} shipping
               </p>
             )}
           </CardContent>
@@ -131,11 +158,11 @@ export function IncomingPaymentDetail({ item, payments, remainingBalance, paymen
             <CardTitle className="text-sm text-(--color-text-muted)">Payment Status</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center gap-2">
-            <Badge variant={STATUS_VARIANT[item.payment_status]}>
-              {item.payment_status.charAt(0).toUpperCase() + item.payment_status.slice(1)}
+            <Badge variant={STATUS_VARIANT[po.payment_status]}>
+              {po.payment_status.charAt(0).toUpperCase() + po.payment_status.slice(1)}
             </Badge>
-            {item.payment_status !== "paid" && (
-              <span className="text-xs text-(--color-text-muted)">₱{remainingBalance.toFixed(2)} remaining</span>
+            {po.payment_status !== "paid" && (
+              <span className="text-xs text-(--color-text-muted)">{formatCurrency(remainingBalance)} remaining</span>
             )}
           </CardContent>
         </Card>
@@ -143,22 +170,27 @@ export function IncomingPaymentDetail({ item, payments, remainingBalance, paymen
 
       <Card>
         <CardContent className="p-4 text-sm text-(--color-text-muted)">
-          Date Received: {formatDate(item.date_received)} · Source:{" "}
-          {item.purchase_order_reference ? (
-            <>
-              Inventory PO{" "}
-              <Link
-                href={`/dashboard/purchasing/inventory-po/${item.purchase_order_reference}`}
-                className="text-(--color-primary) hover:underline"
-              >
-                {item.purchase_order_reference}
-              </Link>
-            </>
-          ) : (
-            "Manual Incoming"
-          )}
+          Source:{" "}
+          <Link
+            href={`/dashboard/purchasing/inventory-po/${po.reference}`}
+            className="text-(--color-primary) hover:underline"
+          >
+            {po.reference}
+          </Link>{" "}
+          · owed reflects what&apos;s been received so far — grows as more of the order arrives.
         </CardContent>
       </Card>
+
+      <div className="space-y-4">
+        <h2 className="text-sm font-semibold text-(--color-text)">Received Items</h2>
+        <DataTable
+          columns={columns}
+          data={lines}
+          searchable={false}
+          emptyMessage="Nothing received yet"
+          emptyDescription="Receiving lines for this PO will appear here as they come in."
+        />
+      </div>
 
       <Card>
         <CardHeader>
@@ -172,7 +204,7 @@ export function IncomingPaymentDetail({ item, payments, remainingBalance, paymen
                 <p className="text-(--color-text)">{formatDate(p.paid_date)} · {p.payment_type_name ?? "—"}</p>
                 {p.notes && <p className="text-xs text-(--color-text-muted)">{p.notes}</p>}
               </div>
-              <p className="font-medium text-(--color-text)">₱{p.amount.toFixed(2)}</p>
+              <p className="font-medium text-(--color-text)">{formatCurrency(p.amount)}</p>
             </div>
           ))}
         </CardContent>
@@ -184,7 +216,7 @@ export function IncomingPaymentDetail({ item, payments, remainingBalance, paymen
             <form onSubmit={handlePaySubmit} className="space-y-4">
               <DialogHeader>
                 <DialogTitle>Log Payment</DialogTitle>
-                <DialogDescription>₱{remainingBalance.toFixed(2)} remaining on this receipt.</DialogDescription>
+                <DialogDescription>{formatCurrency(remainingBalance)} remaining on this order.</DialogDescription>
               </DialogHeader>
 
               <Select
