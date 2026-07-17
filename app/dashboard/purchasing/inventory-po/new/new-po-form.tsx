@@ -19,6 +19,7 @@ import { useAiFilledKeys } from "@/components/ai-autofill/use-ai-filled-keys";
 import { inventoryPurchaseSchema } from "@/lib/ai-autofill/schemas";
 import { toIsoDate } from "@/lib/ai-autofill/normalize-date";
 import type { DropdownOptionsByField, ExtractionResult } from "@/lib/ai-autofill/types";
+import { formatCurrency, roundMoney } from "@/lib/utils/format";
 
 export type VariantOption = {
   id: string;
@@ -34,29 +35,44 @@ type ItemRow = {
   rowId: string;
   variantId: string;
   quantity: string;
-  unitCost: string;
-  discount: string;
+  lineCost: string;
 };
 
 function emptyRow(): ItemRow {
-  return { rowId: randomId(), variantId: "", quantity: "1", unitCost: "", discount: "0" };
+  return { rowId: randomId(), variantId: "", quantity: "1", lineCost: "" };
+}
+
+type RowDerived = {
+  defaultCost: number | null;
+  unitCost: number | null;
+  discount: number | null;
+};
+
+/** Line Cost is the manual input (what was actually paid for the whole line); cost per item and discount fall out of it. */
+function deriveRow(row: ItemRow, variantOptions: VariantOption[]): RowDerived {
+  const variant = variantOptions.find((v) => v.id === row.variantId);
+  const defaultCost = variant?.cost ?? null;
+  const qty = Number(row.quantity) || 0;
+  const hasLineCost = row.lineCost !== "" && !Number.isNaN(Number(row.lineCost));
+  if (!hasLineCost) return { defaultCost, unitCost: null, discount: null };
+
+  const lineCost = Number(row.lineCost);
+  const unitCost = qty > 0 ? lineCost / qty : null;
+  const discount = defaultCost != null ? defaultCost * qty - lineCost : null;
+  return { defaultCost, unitCost, discount };
 }
 
 const COST_VARIANCE_THRESHOLD = 0.5;
 
-/** Warns when a row's unit cost is more than 50% below or above the item's registered cost — a sanity check, not a hard rule (registered costs go stale, suppliers change prices). */
-function costVarianceWarning(row: ItemRow, variantOptions: VariantOption[]): string | null {
-  const variant = variantOptions.find((v) => v.id === row.variantId);
-  const registeredCost = variant?.cost;
-  if (!registeredCost || registeredCost <= 0) return null;
+/** Warns when a row's computed cost per item is more than 50% below or above the item's registered cost — a sanity check, not a hard rule (registered costs go stale, suppliers change prices). */
+function costVarianceWarning(defaultCost: number | null, unitCost: number | null): string | null {
+  if (!defaultCost || defaultCost <= 0) return null;
+  if (unitCost == null || unitCost <= 0) return null;
 
-  const unitCost = Number(row.unitCost);
-  if (!row.unitCost || Number.isNaN(unitCost)) return null;
-
-  const ratio = unitCost / registeredCost;
+  const ratio = unitCost / defaultCost;
   if (ratio >= 1 - COST_VARIANCE_THRESHOLD && ratio <= 1 + COST_VARIANCE_THRESHOLD) return null;
 
-  return `Unit cost (₱${unitCost.toFixed(2)}) is more than 50% ${ratio < 1 ? "below" : "above"} the registered cost (₱${registeredCost.toFixed(2)}) — double-check before submitting.`;
+  return `Cost per item (₱${unitCost.toFixed(2)}) is more than 50% ${ratio < 1 ? "below" : "above"} the registered cost (₱${defaultCost.toFixed(2)}) — double-check before submitting.`;
 }
 
 type Props = {
@@ -98,7 +114,12 @@ export function NewPurchaseOrderForm({ suppliers, variantOptions }: Props) {
 
   function handleVariantChange(rowId: string, variantId: string) {
     const variant = variantOptions.find((v) => v.id === variantId);
-    updateRow(rowId, { variantId, unitCost: variant?.cost != null ? String(variant.cost) : "" });
+    const currentRow = rows.find((r) => r.rowId === rowId);
+    const qty = Number(currentRow?.quantity) || 1;
+    updateRow(rowId, {
+      variantId,
+      lineCost: variant?.cost != null ? String(roundMoney(variant.cost * qty)) : "",
+    });
   }
 
   const dropdownOptions: DropdownOptionsByField = useMemo(
@@ -123,13 +144,15 @@ export function NewPurchaseOrderForm({ suppliers, variantOptions }: Props) {
       const newRows: ItemRow[] = result.items.map((item) => {
         const variantId = typeof item.variant_id === "string" ? item.variant_id : "";
         const variant = variantOptions.find((v) => v.id === variantId);
+        const qty = typeof item.quantity === "number" ? item.quantity : 1;
+        const unitCost = typeof item.unit_cost === "number" ? item.unit_cost : variant?.cost ?? null;
+        const discount = typeof item.discount === "number" ? item.discount : 0;
+        const lineCost = unitCost != null ? Math.max(0, roundMoney(qty * unitCost - discount)) : null;
         return {
           rowId: randomId(),
           variantId,
-          quantity: typeof item.quantity === "number" ? String(item.quantity) : "1",
-          unitCost:
-            typeof item.unit_cost === "number" ? String(item.unit_cost) : variant?.cost != null ? String(variant.cost) : "",
-          discount: typeof item.discount === "number" ? String(item.discount) : "0",
+          quantity: String(qty),
+          lineCost: lineCost != null ? String(lineCost) : "",
         };
       });
       setRows(newRows);
@@ -139,18 +162,10 @@ export function NewPurchaseOrderForm({ suppliers, variantOptions }: Props) {
     markFilled(Object.keys(header).filter((key) => header[key] !== null && header[key] !== undefined && header[key] !== ""));
   }
 
-  const rowTotals = useMemo(
-    () =>
-      rows.map((r) => {
-        const qty = Number(r.quantity) || 0;
-        const cost = Number(r.unitCost) || 0;
-        const discount = Number(r.discount) || 0;
-        return Math.max(0, qty * cost - discount);
-      }),
+  const subtotal = useMemo(
+    () => rows.reduce((sum, r) => sum + Math.max(0, Number(r.lineCost) || 0), 0),
     [rows]
   );
-
-  const subtotal = rowTotals.reduce((sum, t) => sum + t, 0);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -161,12 +176,14 @@ export function NewPurchaseOrderForm({ suppliers, variantOptions }: Props) {
       .filter((r) => r.variantId && Number(r.quantity) > 0)
       .map((r) => {
         const variant = variantOptions.find((v) => v.id === r.variantId);
+        const derived = deriveRow(r, variantOptions);
         return {
           variant_id: r.variantId,
           item_name_snapshot: variant?.label ?? "",
           quantity_ordered: Number(r.quantity) || 0,
-          unit_cost: Number(r.unitCost) || 0,
-          discount_amount: Number(r.discount) || 0,
+          unit_cost: roundMoney(derived.unitCost ?? 0),
+          discount_amount: roundMoney(derived.discount ?? 0),
+          line_total: roundMoney(Number(r.lineCost) || 0),
         };
       });
 
@@ -175,9 +192,11 @@ export function NewPurchaseOrderForm({ suppliers, variantOptions }: Props) {
       return;
     }
 
-    const flaggedCount = rows.filter(
-      (r) => r.variantId && Number(r.quantity) > 0 && costVarianceWarning(r, variantOptions)
-    ).length;
+    const flaggedCount = rows.filter((r) => {
+      if (!r.variantId || Number(r.quantity) <= 0) return false;
+      const derived = deriveRow(r, variantOptions);
+      return costVarianceWarning(derived.defaultCost, derived.unitCost);
+    }).length;
     setCostWarningNotice(
       flaggedCount > 0
         ? `${flaggedCount} item${flaggedCount > 1 ? "s" : ""} above have a unit cost more than 50% off their registered cost — the purchase order will still be created, but double-check those before relying on it.`
@@ -265,57 +284,65 @@ export function NewPurchaseOrderForm({ suppliers, variantOptions }: Props) {
       <Card>
         <CardHeader>
           <CardTitle>Line Items</CardTitle>
-          <CardDescription>Add each item, quantity, unit cost, and any per-item discount.</CardDescription>
+          <CardDescription>
+            Add each item, quantity, and the total line cost — cost per item and discount are calculated automatically.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {rows.map((row, i) => {
-            const warning = costVarianceWarning(row, variantOptions);
+            const derived = deriveRow(row, variantOptions);
+            const warning = costVarianceWarning(derived.defaultCost, derived.unitCost);
             return (
               <div
                 key={row.rowId}
                 className={cn(
-                  "grid grid-cols-1 gap-3 border-b border-(--color-border) pb-4 last:border-0 sm:grid-cols-[2fr_1fr_1fr_1fr_auto] sm:items-end",
+                  "space-y-2 border-b border-(--color-border) pb-4 last:border-0",
                   aiRowIds.has(row.rowId) && "rounded-md ring-2 ring-(--color-info) ring-offset-1 ring-offset-(--color-surface)"
                 )}
               >
-                <Select
-                  label={i === 0 ? "Item" : undefined}
-                  value={row.variantId}
-                  onChange={(e) => handleVariantChange(row.rowId, e.target.value)}
-                  placeholder="Select an item…"
-                  options={variantOptions.map((v) => ({
-                    value: v.id,
-                    label: v.sku ? `${v.label} (${v.sku})` : v.label,
-                  }))}
-                />
-                <NumberInput
-                  label={i === 0 ? "Quantity" : undefined}
-                  min={0.01}
-                  step="any"
-                  decimals={3}
-                  value={row.quantity}
-                  onChange={(e) => updateRow(row.rowId, { quantity: e.target.value })}
-                />
-                <CurrencyInput
-                  label={i === 0 ? "Unit Cost" : undefined}
-                  value={row.unitCost}
-                  onChange={(e) => updateRow(row.rowId, { unitCost: e.target.value })}
-                />
-                <CurrencyInput
-                  label={i === 0 ? "Discount" : undefined}
-                  value={row.discount}
-                  onChange={(e) => updateRow(row.rowId, { discount: e.target.value })}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="text-(--color-danger)"
-                  disabled={rows.length === 1}
-                  onClick={() => removeRow(row.rowId)}
-                >
-                  Remove
-                </Button>
-                {warning && <p className="text-xs text-(--color-danger) sm:col-span-5">{warning}</p>}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[2fr_1fr_1fr_auto] sm:items-end">
+                  <Select
+                    label={i === 0 ? "Item" : undefined}
+                    value={row.variantId}
+                    onChange={(e) => handleVariantChange(row.rowId, e.target.value)}
+                    placeholder="Select an item…"
+                    options={variantOptions.map((v) => ({
+                      value: v.id,
+                      label: v.sku ? `${v.label} (${v.sku})` : v.label,
+                    }))}
+                  />
+                  <NumberInput
+                    label={i === 0 ? "Quantity" : undefined}
+                    min={0.01}
+                    step="any"
+                    decimals={3}
+                    value={row.quantity}
+                    onChange={(e) => updateRow(row.rowId, { quantity: e.target.value })}
+                  />
+                  <CurrencyInput
+                    label={i === 0 ? "Line Cost" : undefined}
+                    value={row.lineCost}
+                    onChange={(e) => updateRow(row.rowId, { lineCost: e.target.value })}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="text-(--color-danger)"
+                    disabled={rows.length === 1}
+                    onClick={() => removeRow(row.rowId)}
+                  >
+                    Remove
+                  </Button>
+                </div>
+                <p className="text-xs text-(--color-text-muted)">
+                  Default cost: {derived.defaultCost != null ? formatCurrency(derived.defaultCost) : "—"}
+                  {" · "}Cost per item: {derived.unitCost != null ? formatCurrency(derived.unitCost) : "—"}
+                  {" · "}Discount:{" "}
+                  {derived.discount != null
+                    ? `${formatCurrency(derived.discount)}${derived.discount < 0 ? " (markup)" : ""}`
+                    : "—"}
+                </p>
+                {warning && <p className="text-xs text-(--color-danger)">{warning}</p>}
               </div>
             );
           })}
@@ -325,7 +352,7 @@ export function NewPurchaseOrderForm({ suppliers, variantOptions }: Props) {
         </CardContent>
         <CardFooter className="flex-col items-end gap-1 text-sm text-(--color-text-muted)">
           <p>
-            Subtotal: <span className="font-medium text-(--color-text)">₱{subtotal.toFixed(2)}</span>
+            Subtotal: <span className="font-medium text-(--color-text)">{formatCurrency(subtotal)}</span>
           </p>
         </CardFooter>
       </Card>

@@ -18,6 +18,7 @@ export type NewItemInput = {
   quantity_ordered: number
   unit_cost: number
   discount_amount: number
+  line_total: number
 }
 
 export async function createPurchaseOrderWithItems(formData: FormData): Promise<CreateResult> {
@@ -62,7 +63,7 @@ export async function createPurchaseOrderWithItems(formData: FormData): Promise<
       quantity_ordered: item.quantity_ordered,
       unit_cost: item.unit_cost,
       discount_amount: item.discount_amount,
-      line_total: item.quantity_ordered * item.unit_cost - item.discount_amount,
+      line_total: item.line_total,
     }))
   )
 
@@ -179,6 +180,7 @@ export async function addPurchaseOrderItem(
   const quantity_ordered = Number(formData.get('quantity_ordered'))
   const unit_cost = Number(formData.get('unit_cost') ?? 0) || 0
   const discount_amount = Number(formData.get('discount_amount') ?? 0) || 0
+  const line_total = Number(formData.get('line_total') ?? 0) || 0
 
   if (!variant_id) return { success: false, error: 'Select an item.' }
   if (!quantity_ordered || quantity_ordered <= 0) {
@@ -193,7 +195,7 @@ export async function addPurchaseOrderItem(
     quantity_ordered,
     unit_cost,
     discount_amount,
-    line_total: quantity_ordered * unit_cost - discount_amount,
+    line_total,
   })
 
   if (error) return { success: false, error: error.message }
