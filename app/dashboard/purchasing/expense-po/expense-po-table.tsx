@@ -29,7 +29,6 @@ const STATUS_VARIANT: Record<string, "neutral" | "success" | "warning" | "danger
   sent: "default",
   partial: "warning",
   received: "success",
-  closed: "success",
   cancelled: "danger",
 };
 

@@ -141,7 +141,7 @@ export default async function DashboardLayout({
       .from("purchase_orders")
       .select("id", { count: "exact", head: true })
       .eq("po_type", "inventory")
-      .in("status", ["partial", "received", "closed"])
+      .in("status", ["partial", "received"])
       .in("payment_status", ["unpaid", "partial"]),
     supabase
       .from("prepaid_expense_schedules")

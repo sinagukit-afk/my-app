@@ -112,8 +112,7 @@ const NEXT_STATUS: Record<string, string[]> = {
   draft: ['sent', 'cancelled'],
   sent: ['cancelled'],
   partial: [],
-  received: ['closed'],
-  closed: [],
+  received: [],
   cancelled: [],
 }
 

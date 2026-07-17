@@ -64,7 +64,6 @@ const STATUS_VARIANT: Record<string, "neutral" | "success" | "warning" | "danger
   sent: "default",
   partial: "warning",
   received: "success",
-  closed: "success",
   cancelled: "danger",
 };
 
@@ -75,8 +74,7 @@ const NEXT_STATUS: Record<string, { status: string; label: string }[]> = {
   ],
   sent: [{ status: "cancelled", label: "Cancel" }],
   partial: [],
-  received: [{ status: "closed", label: "Close" }],
-  closed: [],
+  received: [],
   cancelled: [],
 };
 
