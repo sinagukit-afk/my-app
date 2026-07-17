@@ -1,11 +1,9 @@
 # FIFO Inventory Tracking — Kickoff
 
-> **Status: design finalized 2026-07-17, all open decisions resolved with
-> Sinag — awaiting go-ahead to start FIFO-1.** Once building starts, work is
-> tracked in a new `PROGRESS-FIFO.md` (`FIFO-` prefixed tasks), same
-> convention as `PROGRESS-INVENTORY.md`'s `INV-` tasks. This file then gets
-> archived to `docs/archive/`, same treatment as
-> `Inventory-Status-Phase1-Kickoff.md`.
+> **ARCHIVED (2026-07-17).** All 7 deliverables below shipped as `FIFO-1`
+> through `FIFO-7` in a single session — see `PROGRESS-FIFO.md` for the
+> current, authoritative build log and live state. Kept here for historical
+> reference only.
 
 ## Scope, as confirmed with Sinag (2026-07-17)
 
