@@ -307,6 +307,7 @@ export type Database = {
       couriers: {
         Row: {
           contact_number: string | null
+          courier_code: string
           created_at: string
           id: string
           is_active: boolean
@@ -315,6 +316,7 @@ export type Database = {
         }
         Insert: {
           contact_number?: string | null
+          courier_code: string
           created_at?: string
           id?: string
           is_active?: boolean
@@ -323,6 +325,7 @@ export type Database = {
         }
         Update: {
           contact_number?: string | null
+          courier_code?: string
           created_at?: string
           id?: string
           is_active?: boolean
@@ -439,7 +442,7 @@ export type Database = {
           barangay: string | null
           city: string | null
           created_at: string
-          customer_code: string | null
+          customer_code: string
           deleted_at: string | null
           email: string | null
           id: string
@@ -459,7 +462,7 @@ export type Database = {
           barangay?: string | null
           city?: string | null
           created_at?: string
-          customer_code?: string | null
+          customer_code: string
           deleted_at?: string | null
           email?: string | null
           id?: string
@@ -479,7 +482,7 @@ export type Database = {
           barangay?: string | null
           city?: string | null
           created_at?: string
-          customer_code?: string | null
+          customer_code?: string
           deleted_at?: string | null
           email?: string | null
           id?: string
@@ -734,6 +737,7 @@ export type Database = {
         Row: {
           accum_depreciation_account_id: string
           asset_account_id: string
+          asset_code: string
           category_id: string | null
           cost: number
           created_at: string
@@ -753,6 +757,7 @@ export type Database = {
         Insert: {
           accum_depreciation_account_id: string
           asset_account_id: string
+          asset_code: string
           category_id?: string | null
           cost: number
           created_at?: string
@@ -772,6 +777,7 @@ export type Database = {
         Update: {
           accum_depreciation_account_id?: string
           asset_account_id?: string
+          asset_code?: string
           category_id?: string | null
           cost?: number
           created_at?: string
@@ -885,6 +891,10 @@ export type Database = {
           id: string
           item_id: string
           item_name_snapshot: string
+          lot_available_qty: number
+          lot_in_production_qty: number
+          lot_on_hold_qty: number
+          lot_reserved_qty: number
           notes: string | null
           order_id: string | null
           payment_status: string
@@ -896,6 +906,7 @@ export type Database = {
           shipping_fee: number
           source: string
           status: string
+          store_id: string | null
           supplier: string | null
           supplier_id: string | null
           total_price: number
@@ -909,6 +920,10 @@ export type Database = {
           id?: string
           item_id: string
           item_name_snapshot: string
+          lot_available_qty?: number
+          lot_in_production_qty?: number
+          lot_on_hold_qty?: number
+          lot_reserved_qty?: number
           notes?: string | null
           order_id?: string | null
           payment_status?: string
@@ -920,6 +935,7 @@ export type Database = {
           shipping_fee?: number
           source?: string
           status?: string
+          store_id?: string | null
           supplier?: string | null
           supplier_id?: string | null
           total_price: number
@@ -933,6 +949,10 @@ export type Database = {
           id?: string
           item_id?: string
           item_name_snapshot?: string
+          lot_available_qty?: number
+          lot_in_production_qty?: number
+          lot_on_hold_qty?: number
+          lot_reserved_qty?: number
           notes?: string | null
           order_id?: string | null
           payment_status?: string
@@ -944,6 +964,7 @@ export type Database = {
           shipping_fee?: number
           source?: string
           status?: string
+          store_id?: string | null
           supplier?: string | null
           supplier_id?: string | null
           total_price?: number
@@ -970,6 +991,13 @@ export type Database = {
             columns: ["purchase_order_id"]
             isOneToOne: false
             referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incoming_items_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
           {
@@ -1125,6 +1153,7 @@ export type Database = {
           counterpart_status: string | null
           created_at: string
           id: string
+          lot_id: string | null
           movement_type: string
           note: string | null
           occurred_at: string
@@ -1142,6 +1171,7 @@ export type Database = {
           counterpart_status?: string | null
           created_at?: string
           id?: string
+          lot_id?: string | null
           movement_type: string
           note?: string | null
           occurred_at?: string
@@ -1159,6 +1189,7 @@ export type Database = {
           counterpart_status?: string | null
           created_at?: string
           id?: string
+          lot_id?: string | null
           movement_type?: string
           note?: string | null
           occurred_at?: string
@@ -1173,6 +1204,13 @@ export type Database = {
           variant_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "inventory_movements_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "incoming_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "inventory_movements_source_id_fkey"
             columns: ["source_id"]
@@ -1479,6 +1517,7 @@ export type Database = {
           option3_value: string | null
           pricing_type: string
           sku: string | null
+          sku_category: string
           sync_error: string | null
           sync_status: string
           updated_at: string
@@ -1499,6 +1538,7 @@ export type Database = {
           option3_value?: string | null
           pricing_type?: string
           sku?: string | null
+          sku_category: string
           sync_error?: string | null
           sync_status?: string
           updated_at?: string
@@ -1519,6 +1559,7 @@ export type Database = {
           option3_value?: string | null
           pricing_type?: string
           sku?: string | null
+          sku_category?: string
           sync_error?: string | null
           sync_status?: string
           updated_at?: string
@@ -1640,6 +1681,7 @@ export type Database = {
           description: string
           entry_date: string
           id: string
+          journal_number: string
           source_id: string | null
           source_type: string
         }
@@ -1649,6 +1691,7 @@ export type Database = {
           description: string
           entry_date?: string
           id?: string
+          journal_number: string
           source_id?: string | null
           source_type?: string
         }
@@ -1658,6 +1701,7 @@ export type Database = {
           description?: string
           entry_date?: string
           id?: string
+          journal_number?: string
           source_id?: string | null
           source_type?: string
         }
@@ -2945,6 +2989,7 @@ export type Database = {
           id: string
           note: string | null
           order_date: string
+          payment_status: string
           po_type: string
           reference: string
           shipping_fee: number
@@ -2963,6 +3008,7 @@ export type Database = {
           id?: string
           note?: string | null
           order_date?: string
+          payment_status?: string
           po_type?: string
           reference: string
           shipping_fee?: number
@@ -2981,6 +3027,7 @@ export type Database = {
           id?: string
           note?: string | null
           order_date?: string
+          payment_status?: string
           po_type?: string
           reference?: string
           shipping_fee?: number
@@ -3424,6 +3471,7 @@ export type Database = {
           created_at: string
           customer_id: string | null
           id: string
+          internal_reference: string
           loyverse_employee_id: string | null
           loyverse_receipt_id: string | null
           note: string | null
@@ -3446,6 +3494,7 @@ export type Database = {
           created_at?: string
           customer_id?: string | null
           id?: string
+          internal_reference: string
           loyverse_employee_id?: string | null
           loyverse_receipt_id?: string | null
           note?: string | null
@@ -3468,6 +3517,7 @@ export type Database = {
           created_at?: string
           customer_id?: string | null
           id?: string
+          internal_reference?: string
           loyverse_employee_id?: string | null
           loyverse_receipt_id?: string | null
           note?: string | null
@@ -3645,6 +3695,7 @@ export type Database = {
           loyverse_store_id: string | null
           name: string
           phone: string | null
+          store_code: string
           updated_at: string
         }
         Insert: {
@@ -3656,6 +3707,7 @@ export type Database = {
           loyverse_store_id?: string | null
           name: string
           phone?: string | null
+          store_code: string
           updated_at?: string
         }
         Update: {
@@ -3667,6 +3719,7 @@ export type Database = {
           loyverse_store_id?: string | null
           name?: string
           phone?: string | null
+          store_code?: string
           updated_at?: string
         }
         Relationships: []
@@ -3682,6 +3735,7 @@ export type Database = {
           name: string
           note: string | null
           phone: string | null
+          supplier_code: string
           updated_at: string
         }
         Insert: {
@@ -3694,6 +3748,7 @@ export type Database = {
           name: string
           note?: string | null
           phone?: string | null
+          supplier_code: string
           updated_at?: string
         }
         Update: {
@@ -3706,6 +3761,7 @@ export type Database = {
           name?: string
           note?: string | null
           phone?: string | null
+          supplier_code?: string
           updated_at?: string
         }
         Relationships: []
@@ -4040,6 +4096,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      _fifo_consume_lots: {
+        Args: {
+          p_quantity: number
+          p_status: string
+          p_store_id: string
+          p_variant_id: string
+        }
+        Returns: {
+          lot_col: string
+          lot_id: string
+          qty_taken: number
+        }[]
+      }
       _record_expense_with_treatment: {
         Args: {
           p_amount: number
@@ -4187,6 +4256,7 @@ export type Database = {
           counterpart_status: string | null
           created_at: string
           id: string
+          lot_id: string | null
           movement_type: string
           note: string | null
           occurred_at: string
@@ -4215,6 +4285,7 @@ export type Database = {
           description: string
           entry_date: string
           id: string
+          journal_number: string
           source_id: string | null
           source_type: string
         }
@@ -4923,6 +4994,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      next_item_sku: { Args: { p_category: string }; Returns: string }
       override_reserved_qty: {
         Args: { p_order_id: string; p_updates: Json }
         Returns: {
@@ -4986,6 +5058,7 @@ export type Database = {
           description: string
           entry_date: string
           id: string
+          journal_number: string
           source_id: string | null
           source_type: string
         }
@@ -5143,6 +5216,7 @@ export type Database = {
           description: string
           entry_date: string
           id: string
+          journal_number: string
           source_id: string | null
           source_type: string
         }

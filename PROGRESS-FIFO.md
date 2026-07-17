@@ -125,4 +125,40 @@ Source doc: `docs/FIFO-Inventory-Tracking-Kickoff.md` — stays in place until t
 
 **All 4 deliverables from the original kickoff doc's FIFO-1..4 core are now done.** Remaining: FIFO-5 (regenerate TypeScript types), FIFO-6 (Batches UI + trace drill-in), FIFO-7 (final live verification + archive the kickoff doc).
 
-**Next:** FIFO-5 — regenerate TypeScript types (`generate_typescript_types`), so the 5 new `incoming_items`/`inventory_movements` columns and the (still `_`-prefixed, non-exposed) `_fifo_consume_lots` shape are reflected in `lib/supabase/types.ts`.
+---
+
+## FIFO-5 — Regenerate TypeScript types ✅ DONE
+
+**Status:** Complete 2026-07-17.
+
+**What was done:** ran the Supabase MCP `generate_typescript_types` tool and wrote the result to `lib/supabase/types.ts`, replacing the stale generated file. Confirmed present: `incoming_items.lot_available_qty` / `lot_reserved_qty` / `lot_in_production_qty` / `lot_on_hold_qty`, `incoming_items.store_id` (+ its FK to `stores`), `inventory_movements.lot_id` (+ its FK to `incoming_items`), and the `_fifo_consume_lots` RPC signature (`p_variant_id`/`p_store_id`/`p_status`/`p_quantity` → `{lot_id, qty_taken, lot_col}[]`).
+
+**Note on the diff:** the regenerated file also picked up several unrelated columns/RPCs that had landed in earlier migrations (D049/D050 control-number work: `courier_code`, `customer_code` going non-null, `asset_code`, `sku_category`, `journal_number`, `purchase_orders.payment_status`, `internal_reference`, `store_code`, `supplier_code`, `next_item_sku`) but were never captured by a types regen since — this file was stale from before FIFO too, not just for this feature. Left as-is rather than hand-trimmed, since it's all real live schema.
+
+**Verification:** `npx tsc --noEmit` across the project — zero errors, confirming no app code was relying on the old (incorrect) generated shapes.
+
+---
+
+## FIFO-6 — Batches UI + trace drill-in ✅ DONE
+
+**Status:** Complete 2026-07-17.
+
+**What was built:**
+- `app/dashboard/inventory/monitoring/batch-utils.tsx` (new, no `"use client"` — mirrors `movement-utils.tsx`'s split): `BatchRow` type, `BATCH_SELECT` (single string literal per the `erp-app` skill's Supabase select-string gotcha), `mapBatchRow()` computing `shipped_qty = quantity - (lot_available_qty + lot_reserved_qty + lot_in_production_qty + lot_on_hold_qty)` server-side (not in the column `render`, so the Shipped column sorts on the real number, not a UUID `key` hack), and `batchColumns()` — Batch/Received Date/Qty Received/Available/Reserved/In Production/On Hold/Shipped, badge-colored to match the existing QtyTile convention (success/info/default/warning).
+- `app/dashboard/inventory/monitoring/batches-table.tsx` (new, `"use client"`): `BatchesTable` renders the lots via `DataTable`; clicking a row opens `BatchTraceDialog` (`Dialog`/`DialogContent`, `max-w-3xl`) showing every `inventory_movements` row for that lot via the existing `movementColumns()`, grouped client-side from a single `movements` array via `useMemo` (no extra fetch on click) — same controlled-dialog-by-selected-row shape as `activity-logs-table.tsx`'s `LogDetailDialog`.
+- `movement-utils.tsx` extended: `lot_id` added to `MOVEMENT_SELECT`/`MovementRow`/`mapMovementRow` — additive, existing consumers (`MovementsTable`) unaffected since nothing renders it there.
+- `[sku]/page.tsx`: two new queries added to the existing `Promise.all` — `incoming_items` for this variant+store (`date_received ASC, created_at ASC`, all lots, no limit) mapped via `mapBatchRow`, and `inventory_movements` filtered `lot_id IS NOT NULL` for this variant+store (`occurred_at ASC`, no limit) mapped via `mapMovementRow` and handed to `BatchesTable` for client-side grouping. Renders `<BatchesTable>` between the qty tiles and the existing `<MovementsTable>`.
+
+**Design calls made, not in the kickoff doc's UI section (which only specified column layout), surfaced here rather than decided silently:**
+- **Trace drill-in is a Dialog, not a route.** The doc didn't specify page vs. modal. Went with a Dialog (matching `LogDetailDialog`'s established pattern for "click a row, see the detail of that one row" in this app) rather than a new `[sku]/batches/[lotId]` route — a batch's movement history is a drill-in of the current page's data, not a distinct navigable resource, and this avoids a fourth server round-trip on click.
+- **Batches list shows every lot ever received, oldest-first**, including fully-consumed ones — matches "open any receiving record and see... versus already shipped" from the kickoff doc's Objective section.
+- **Known caveat, not a bug:** the 3 pre-FIFO-3 legacy lots on the test variant used below (`SIM-0013`) all render `Shipped = full quantity` (e.g. `SRI26-0629-0002: Shipped 20`), because their `lot_*_qty` columns were left at `DEFAULT 0` per Decision B and never backfilled. This makes them *look* fully shipped even though the truth is "unknown — folded into untracked stock," per Decision A. This is the literal, doc-specified formula (kickoff doc line 341) working as designed, not something FIFO-6 papered over — flagging in case Sinag wants a visual "—" or asterisk distinguishing legacy zero-lots from a real fully-depleted batch in a later pass.
+
+**Verification (live browser, `Itm-Keychain Leather, Round` / `SIM-0013`, admin test account):**
+- Baseline confirmed unchanged from FIFO-3/4's own test variant: `in_stock=365, available_qty=65, reserved_qty=0`, 3 pre-existing legacy `incoming_items` rows (all `lot_available_qty=0`, correctly rendering as fully "Shipped" per the caveat above).
+- Ran two real `adjust_stock()` calls (`+10`, `+5`) creating two new real lots (`SRI26-0717-0039`, `SRI26-0717-0040`), then one `adjust_stock(-70)` spanning untracked (65) + 5 of the first new lot — exercising the actual FIFO-4 code path, not a manual fixture.
+- Browser-confirmed: Batches table showed all 5 rows in correct oldest-first order with correct Available/Shipped math (`5`/`5` on the partially-consumed lot, `5`/`0` on the untouched one). Clicked the partially-consumed lot's row → trace dialog opened showing **exactly** its 2 movements (the `+10` receipt and the `-5` consumption slice), correctly excluding the unrelated `-65` untracked slice and every other movement on the page — confirms `lot_id`-based grouping is correct, not just date-adjacent.
+- `npx tsc --noEmit` and `npx eslint app/dashboard/inventory/monitoring` both clean.
+- Cleanup: deleted (in FK order) the 3 test `journal_entry_drafts`/`journal_entry_draft_lines`, 3 `business_events`, 4 `inventory_movements`, 2 `incoming_items`, and reset `inventory_levels` to the exact pre-test baseline — re-verified live in the browser afterward (`Available 65`, 3 legacy batches, 4 movements, matching the pre-test screenshot exactly).
+
+**Next:** FIFO-7 — final live verification per the kickoff doc's verification plan (multi-lot shipment spanning two batches through a real order, cancel/release lot-shift check, adjustment-creates-a-lot check), then write up `PROGRESS-FIFO.md`'s completion and archive `docs/FIFO-Inventory-Tracking-Kickoff.md` to `docs/archive/`.

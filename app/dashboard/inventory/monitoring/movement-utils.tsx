@@ -21,10 +21,11 @@ export type MovementRow = {
   item_name: string;
   variant_label: string | null;
   store_name: string;
+  lot_id: string | null;
 };
 
 export const MOVEMENT_SELECT =
-  `id, movement_type, status, quantity_change, quantity_before, quantity_after, counterpart_status, note, occurred_at,
+  `id, movement_type, status, quantity_change, quantity_before, quantity_after, counterpart_status, note, occurred_at, lot_id,
    item_variants(sku, option1_value, items(name)), stores(name)`;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -45,6 +46,7 @@ export function mapMovementRow(m: any): MovementRow {
     item_name: item?.name ?? "Unknown item",
     variant_label: variant?.option1_value ?? variant?.sku ?? null,
     store_name: store?.name ?? "—",
+    lot_id: m.lot_id ?? null,
   };
 }
 

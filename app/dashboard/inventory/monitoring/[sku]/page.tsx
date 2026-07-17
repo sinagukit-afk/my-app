@@ -7,6 +7,8 @@ import { getOnHand, getProjectedStock } from "@/lib/inventory/calculations";
 import { MOVEMENT_SELECT, mapMovementRow } from "../movement-utils";
 import { MovementsTable } from "../movements-table";
 import { QtyTile } from "../qty-tile";
+import { BATCH_SELECT, mapBatchRow } from "../batch-utils";
+import { BatchesTable } from "../batches-table";
 
 function firstOf<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
@@ -66,7 +68,12 @@ export default async function InventoryItemDetailPage({
   const category = item ? firstOf(item.categories) : null;
   const storeRow = firstOf(level.stores);
 
-  const [{ data: poItemsData }, { data: movementsData, error: movementsError }] = await Promise.all([
+  const [
+    { data: poItemsData },
+    { data: movementsData, error: movementsError },
+    { data: batchesData, error: batchesError },
+    { data: lotMovementsData },
+  ] = await Promise.all([
     supabase
       .from("purchase_order_items")
       .select("quantity_ordered, quantity_received, purchase_orders!inner(status)")
@@ -80,6 +87,22 @@ export default async function InventoryItemDetailPage({
       .eq("store_id", level.store_id)
       .order("occurred_at", { ascending: false })
       .limit(50),
+
+    supabase
+      .from("incoming_items")
+      .select(BATCH_SELECT)
+      .eq("variant_id", variant.id)
+      .eq("store_id", level.store_id)
+      .order("date_received", { ascending: true })
+      .order("created_at", { ascending: true }),
+
+    supabase
+      .from("inventory_movements")
+      .select(MOVEMENT_SELECT)
+      .eq("variant_id", variant.id)
+      .eq("store_id", level.store_id)
+      .not("lot_id", "is", null)
+      .order("occurred_at", { ascending: true }),
   ]);
 
   const incoming_qty = (poItemsData ?? []).reduce((sum, line) => {
@@ -96,6 +119,8 @@ export default async function InventoryItemDetailPage({
   };
   const itemName = variant.option1_value ? `${item?.name ?? "Unknown item"} — ${variant.option1_value}` : item?.name ?? "Unknown item";
   const movements = (movementsData ?? []).map(mapMovementRow);
+  const batches = (batchesData ?? []).map(mapBatchRow);
+  const lotMovements = (lotMovementsData ?? []).map(mapMovementRow);
 
   return (
     <div className="space-y-6">
@@ -118,6 +143,14 @@ export default async function InventoryItemDetailPage({
         </Card>
       )}
 
+      {batchesError && (
+        <Card>
+          <CardContent className="p-4 text-sm text-(--color-danger)">
+            Failed to load batches: {batchesError.message}
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7">
         <QtyTile label="Available" value={formatQty(quantities.available_qty)} variant="success" />
         <QtyTile label="Reserved" value={formatQty(quantities.reserved_qty)} variant="info" />
@@ -127,6 +160,8 @@ export default async function InventoryItemDetailPage({
         <QtyTile label="On Hand" value={formatQty(getOnHand(quantities))} />
         <QtyTile label="Projected" value={formatQty(getProjectedStock(quantities))} />
       </div>
+
+      <BatchesTable data={batches} movements={lotMovements} />
 
       <MovementsTable
         data={movements}
