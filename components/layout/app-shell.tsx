@@ -20,6 +20,8 @@ type NavCountKey =
   | "ordersProduction"
   | "ordersShipping"
   | "ordersPayment"
+  | "supplierPayment"
+  | "expenseScheduleDue"
   | "accountingReview";
 
 type NavLeaf = {
@@ -110,9 +112,9 @@ const NAV: NavEntry[] = [
       { kind: "item", label: "Income", href: "/dashboard/finance/income", icon: CurrencyIcon },
       { kind: "item", label: "Expenses", href: "/dashboard/finance/expenses", icon: CurrencyIcon },
       { kind: "item", label: "Fixed Assets", href: "/dashboard/finance/fixed-assets", icon: CurrencyIcon },
-      { kind: "item", label: "Expense Schedule", href: "/dashboard/finance/expense-schedule", icon: CurrencyIcon },
+      { kind: "item", label: "Expense Schedule", href: "/dashboard/finance/expense-schedule", icon: CurrencyIcon, countKey: "expenseScheduleDue" },
       { kind: "item", label: "Customer Payment", href: "/dashboard/finance/payments", icon: CurrencyIcon, countKey: "ordersPayment" },
-      { kind: "item", label: "Supplier Payment", href: "/dashboard/finance/supplier-payments", icon: CurrencyIcon },
+      { kind: "item", label: "Supplier Payment", href: "/dashboard/finance/supplier-payments", icon: CurrencyIcon, countKey: "supplierPayment" },
       { kind: "item", label: "Cash Flow", href: "/dashboard/finance/cash-flow", icon: CurrencyIcon },
       { kind: "item", label: "Profit & Loss", href: "/dashboard/finance/profit-loss", icon: CurrencyIcon },
     ],

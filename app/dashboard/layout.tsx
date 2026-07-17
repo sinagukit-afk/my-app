@@ -40,6 +40,13 @@ export default async function DashboardLayout({
     { count: ordersReadyForShippingCount },
     { data: paymentOrders },
     { count: accountingReviewCount },
+    { count: expensePayableCount },
+    { count: assetPayableCount },
+    { count: manualIncomingPayableCount },
+    { count: inventoryPoPayableCount },
+    { count: prepaidDueCount },
+    { data: dueDepreciationAssets },
+    { data: depreciationEntries },
   ] = await Promise.all([
     supabase
       .from("purchase_orders")
@@ -110,6 +117,37 @@ export default async function DashboardLayout({
       .from("journal_entry_drafts")
       .select("id", { count: "exact", head: true })
       .eq("status", "pending_review"),
+    supabase
+      .from("opex_expenses")
+      .select("id", { count: "exact", head: true })
+      .is("deleted_at", null)
+      .in("payment_status", ["unpaid", "partial"]),
+    supabase
+      .from("fixed_assets")
+      .select("id", { count: "exact", head: true })
+      .in("payment_status", ["unpaid", "partial"]),
+    supabase
+      .from("incoming_items")
+      .select("id", { count: "exact", head: true })
+      .is("purchase_order_id", null)
+      .in("payment_status", ["unpaid", "partial"]),
+    supabase
+      .from("purchase_orders")
+      .select("id", { count: "exact", head: true })
+      .eq("po_type", "inventory")
+      .in("status", ["partial", "received", "closed"])
+      .in("payment_status", ["unpaid", "partial"]),
+    supabase
+      .from("prepaid_expense_schedules")
+      .select("id", { count: "exact", head: true })
+      .eq("schedule_status", "active")
+      .lte("next_posting_date", today),
+    supabase
+      .from("fixed_assets")
+      .select("id, cost, salvage_value, purchased_date")
+      .eq("schedule_status", "active")
+      .is("disposed_at", null),
+    supabase.from("depreciation_entries").select("fixed_asset_id, amount, period_month"),
   ]);
 
   const ordersShippingCount = (shipmentsNotDeliveredCount ?? 0) + (ordersReadyForShippingCount ?? 0);
@@ -118,6 +156,36 @@ export default async function DashboardLayout({
     const totalPaid = (o.order_payments ?? []).reduce((sum, p) => sum + Number(p.amount), 0);
     return totalPaid !== Number(o.total_money);
   }).length;
+
+  const supplierPaymentCount =
+    (expensePayableCount ?? 0) +
+    (assetPayableCount ?? 0) +
+    (manualIncomingPayableCount ?? 0) +
+    (inventoryPoPayableCount ?? 0);
+
+  // Mirrors the "next posting date" derivation on the Expense Schedule page: an
+  // asset with no depreciation posted yet is due starting the month it was
+  // purchased; otherwise it's due the month after its last posted entry.
+  const accumByAsset = new Map<string, number>();
+  const lastPeriodByAsset = new Map<string, string>();
+  for (const e of depreciationEntries ?? []) {
+    accumByAsset.set(e.fixed_asset_id, (accumByAsset.get(e.fixed_asset_id) ?? 0) + Number(e.amount));
+    const prev = lastPeriodByAsset.get(e.fixed_asset_id);
+    if (!prev || e.period_month > prev) lastPeriodByAsset.set(e.fixed_asset_id, e.period_month);
+  }
+  function nextMonthAfter(dateStr: string): string {
+    const d = new Date(dateStr);
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString().slice(0, 10);
+  }
+  const dueDepreciationCount = (dueDepreciationAssets ?? []).filter((a) => {
+    const remaining = Number(a.cost) - Number(a.salvage_value ?? 0) - (accumByAsset.get(a.id) ?? 0);
+    if (remaining <= 0) return false;
+    const lastPeriod = lastPeriodByAsset.get(a.id);
+    const nextPosting = lastPeriod ? nextMonthAfter(lastPeriod) : a.purchased_date.slice(0, 8) + "01";
+    return nextPosting <= today;
+  }).length;
+
+  const expenseScheduleDueCount = (prepaidDueCount ?? 0) + dueDepreciationCount;
 
   return (
     <AppShell
@@ -137,6 +205,8 @@ export default async function DashboardLayout({
         ordersProduction: ordersProductionCount ?? 0,
         ordersShipping: ordersShippingCount ?? 0,
         ordersPayment: ordersPaymentCount,
+        supplierPayment: supplierPaymentCount,
+        expenseScheduleDue: expenseScheduleDueCount,
         accountingReview: accountingReviewCount ?? 0,
       }}
     >
