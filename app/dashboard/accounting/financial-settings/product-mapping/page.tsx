@@ -48,7 +48,7 @@ export default async function ProductMappingPage() {
       .select("item_id, revenue_account_id, inventory_account_id, expense_account_id"),
     supabase
       .from("accounts")
-      .select("id, account_number, name, category")
+      .select("id, account_number, name, category, is_postable")
       .eq("is_active", true)
       .order("account_number"),
   ]);

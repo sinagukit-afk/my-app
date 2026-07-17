@@ -4,9 +4,10 @@ import { useMemo, useState, useTransition } from "react";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { accountOptionLabel, PARENT_ACCOUNT_WARNING } from "@/lib/accounting/account-options";
 import { savePaymentTypeAccountMappings, type PaymentMappingInput } from "./actions";
 
-export type AccountOption = { id: string; account_number: string; name: string };
+export type AccountOption = { id: string; account_number: string; name: string; is_postable: boolean };
 export type BankAccountOption = { id: string; name: string; bank: string };
 
 export type PaymentMappingRow = {
@@ -31,13 +32,18 @@ export function PaymentMethodsTable({ rows: initialRows, accounts, bankAccounts,
   });
 
   const accountOptions = useMemo(
-    () => accounts.map((a) => ({ value: a.id, label: `${a.account_number} — ${a.name}` })),
+    () => accounts.map((a) => ({ value: a.id, label: accountOptionLabel(a) })),
     [accounts]
   );
   const bankAccountOptions = useMemo(
     () => bankAccounts.map((b) => ({ value: b.id, label: `${b.bank} — ${b.name}` })),
     [bankAccounts]
   );
+
+  const accountsById = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts]);
+  function isParentAccount(accountId: string): boolean {
+    return accountId ? accountsById.get(accountId)?.is_postable === false : false;
+  }
 
   function updateRow(payment_type_id: string, patch: Partial<PaymentMappingRow>) {
     setRows((prev) => prev.map((r) => (r.payment_type_id === payment_type_id ? { ...r, ...patch } : r)));
@@ -55,6 +61,7 @@ export function PaymentMethodsTable({ rows: initialRows, accounts, bankAccounts,
           placeholder="Not mapped"
           options={accountOptions}
           disabled={!canEdit}
+          error={isParentAccount(row.account_id) ? PARENT_ACCOUNT_WARNING : undefined}
           className="min-w-[220px]"
         />
       ),
@@ -76,6 +83,7 @@ export function PaymentMethodsTable({ rows: initialRows, accounts, bankAccounts,
   ];
 
   const mappedCount = rows.filter((r) => r.account_id).length;
+  const hasParentSelection = rows.some((r) => isParentAccount(r.account_id));
 
   function handleSave() {
     setSaveState({ type: "idle" });
@@ -114,9 +122,12 @@ export function PaymentMethodsTable({ rows: initialRows, accounts, bankAccounts,
         </p>
         {canEdit && (
           <div className="flex items-center gap-3">
+            {hasParentSelection && (
+              <span className="text-sm text-(--color-danger)">Fix header-account selections before saving.</span>
+            )}
             {saveState.type === "success" && <span className="text-sm text-(--color-success)">{saveState.message}</span>}
             {saveState.type === "error" && <span className="text-sm text-(--color-danger)">{saveState.message}</span>}
-            <Button type="button" onClick={handleSave} disabled={isPending}>
+            <Button type="button" onClick={handleSave} disabled={isPending || hasParentSelection}>
               {isPending ? "Saving…" : "Save All Mappings"}
             </Button>
           </div>

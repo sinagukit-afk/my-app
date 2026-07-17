@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { accountOptionLabel, PARENT_ACCOUNT_WARNING } from "@/lib/accounting/account-options";
 import { saveItemAccountMappings, type MappingInput } from "./actions";
 
 export type AccountOption = {
@@ -11,6 +12,7 @@ export type AccountOption = {
   account_number: string;
   name: string;
   category: string;
+  is_postable: boolean;
 };
 
 export type MappingRow = {
@@ -40,23 +42,28 @@ export function ProductMappingTable({ rows: initialRows, accounts, canEdit }: Pr
     () =>
       accounts
         .filter((a) => a.category === "revenue")
-        .map((a) => ({ value: a.id, label: `${a.account_number} — ${a.name}` })),
+        .map((a) => ({ value: a.id, label: accountOptionLabel(a) })),
     [accounts]
   );
   const inventoryOptions = useMemo(
     () =>
       accounts
         .filter((a) => a.category === "asset")
-        .map((a) => ({ value: a.id, label: `${a.account_number} — ${a.name}` })),
+        .map((a) => ({ value: a.id, label: accountOptionLabel(a) })),
     [accounts]
   );
   const expenseOptions = useMemo(
     () =>
       accounts
         .filter((a) => a.category === "expense")
-        .map((a) => ({ value: a.id, label: `${a.account_number} — ${a.name}` })),
+        .map((a) => ({ value: a.id, label: accountOptionLabel(a) })),
     [accounts]
   );
+
+  const accountsById = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts]);
+  function isParentAccount(accountId: string): boolean {
+    return accountId ? accountsById.get(accountId)?.is_postable === false : false;
+  }
 
   function updateRow(item_id: string, patch: Partial<MappingRow>) {
     setRows((prev) => prev.map((r) => (r.item_id === item_id ? { ...r, ...patch } : r)));
@@ -76,6 +83,7 @@ export function ProductMappingTable({ rows: initialRows, accounts, canEdit }: Pr
           placeholder="Not mapped"
           options={revenueOptions}
           disabled={!canEdit}
+          error={isParentAccount(row.revenue_account_id) ? PARENT_ACCOUNT_WARNING : undefined}
           className="min-w-[220px]"
         />
       ),
@@ -90,6 +98,7 @@ export function ProductMappingTable({ rows: initialRows, accounts, canEdit }: Pr
           placeholder="Not mapped"
           options={inventoryOptions}
           disabled={!canEdit}
+          error={isParentAccount(row.inventory_account_id) ? PARENT_ACCOUNT_WARNING : undefined}
           className="min-w-[220px]"
         />
       ),
@@ -104,6 +113,7 @@ export function ProductMappingTable({ rows: initialRows, accounts, canEdit }: Pr
           placeholder="Not mapped"
           options={expenseOptions}
           disabled={!canEdit}
+          error={isParentAccount(row.expense_account_id) ? PARENT_ACCOUNT_WARNING : undefined}
           className="min-w-[220px]"
         />
       ),
@@ -113,6 +123,9 @@ export function ProductMappingTable({ rows: initialRows, accounts, canEdit }: Pr
   const mappedCount = rows.filter(
     (r) => r.revenue_account_id || r.inventory_account_id || r.expense_account_id
   ).length;
+  const hasParentSelection = rows.some(
+    (r) => isParentAccount(r.revenue_account_id) || isParentAccount(r.inventory_account_id) || isParentAccount(r.expense_account_id)
+  );
 
   function handleSave() {
     setSaveState({ type: "idle" });
@@ -139,9 +152,12 @@ export function ProductMappingTable({ rows: initialRows, accounts, canEdit }: Pr
         </p>
         {canEdit && (
           <div className="flex items-center gap-3">
+            {hasParentSelection && (
+              <span className="text-sm text-(--color-danger)">Fix header-account selections before saving.</span>
+            )}
             {saveState.type === "success" && <span className="text-sm text-(--color-success)">{saveState.message}</span>}
             {saveState.type === "error" && <span className="text-sm text-(--color-danger)">{saveState.message}</span>}
-            <Button type="button" onClick={handleSave} disabled={isPending}>
+            <Button type="button" onClick={handleSave} disabled={isPending || hasParentSelection}>
               {isPending ? "Saving…" : "Save All Mappings"}
             </Button>
           </div>

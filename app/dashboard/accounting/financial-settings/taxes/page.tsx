@@ -45,9 +45,8 @@ export default async function TaxesPage() {
       .in("mapping_key", TAX_MAPPING_KEYS as unknown as string[]),
     supabase
       .from("accounts")
-      .select("id, account_number, name, category")
+      .select("id, account_number, name, category, is_postable")
       .eq("is_active", true)
-      .eq("is_postable", true)
       .order("account_number"),
     supabase.from("tax_rates").select("id, name, rate_percent, is_active").order("name"),
   ]);

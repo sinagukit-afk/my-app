@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { findNonPostableAccounts } from '@/lib/accounting/assert-postable-accounts'
 
 const LIST_PATH = '/dashboard/accounting/financial-settings/payment-methods'
 
@@ -26,6 +27,9 @@ export async function savePaymentTypeAccountMappings(rows: PaymentMappingInput[]
   } = await supabase.auth.getUser()
 
   if (!user) return { success: false, error: 'Not authenticated.' }
+
+  const postableError = await findNonPostableAccounts(supabase, rows.map((r) => r.account_id))
+  if (postableError) return { success: false, error: postableError }
 
   // account_id is required by the schema — rows without one aren't sent, same
   // "skip rather than guess" convention as the rest of this workstream's mapping pages.

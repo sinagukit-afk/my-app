@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { accountOptionLabel, PARENT_ACCOUNT_WARNING } from "@/lib/accounting/account-options";
 
-export type AccountOption = { id: string; account_number: string; name: string; category: string };
+export type AccountOption = { id: string; account_number: string; name: string; category: string; is_postable: boolean };
 
 export type SystemMappingRow = {
   mapping_key: string;
@@ -31,6 +32,12 @@ export function SystemMappingTable({ rows: initialRows, accounts, canEdit, onSav
     type: "idle",
   });
 
+  const accountsById = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts]);
+
+  function isParentAccount(accountId: string): boolean {
+    return accountId ? accountsById.get(accountId)?.is_postable === false : false;
+  }
+
   function updateRow(mapping_key: string, account_id: string) {
     setRows((prev) => prev.map((r) => (r.mapping_key === mapping_key ? { ...r, account_id } : r)));
   }
@@ -38,7 +45,7 @@ export function SystemMappingTable({ rows: initialRows, accounts, canEdit, onSav
   function optionsFor(category: string) {
     return accounts
       .filter((a) => a.category === category)
-      .map((a) => ({ value: a.id, label: `${a.account_number} — ${a.name}` }));
+      .map((a) => ({ value: a.id, label: accountOptionLabel(a) }));
   }
 
   const columns: Column<SystemMappingRow>[] = [
@@ -53,6 +60,7 @@ export function SystemMappingTable({ rows: initialRows, accounts, canEdit, onSav
           placeholder="Not mapped"
           options={optionsFor(row.account_category)}
           disabled={!canEdit}
+          error={isParentAccount(row.account_id) ? PARENT_ACCOUNT_WARNING : undefined}
           className="min-w-[260px]"
         />
       ),
@@ -60,6 +68,7 @@ export function SystemMappingTable({ rows: initialRows, accounts, canEdit, onSav
   ];
 
   const mappedCount = rows.filter((r) => r.account_id).length;
+  const hasParentSelection = rows.some((r) => isParentAccount(r.account_id));
 
   function handleSave() {
     setSaveState({ type: "idle" });
@@ -92,11 +101,14 @@ export function SystemMappingTable({ rows: initialRows, accounts, canEdit, onSav
         </p>
         {canEdit && (
           <div className="flex items-center gap-3">
+            {hasParentSelection && (
+              <span className="text-sm text-(--color-danger)">Fix header-account selections before saving.</span>
+            )}
             {saveState.type === "success" && (
               <span className="text-sm text-(--color-success)">{saveState.message}</span>
             )}
             {saveState.type === "error" && <span className="text-sm text-(--color-danger)">{saveState.message}</span>}
-            <Button type="button" onClick={handleSave} disabled={isPending}>
+            <Button type="button" onClick={handleSave} disabled={isPending || hasParentSelection}>
               {isPending ? "Saving…" : "Save Mappings"}
             </Button>
           </div>

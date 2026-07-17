@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { findNonPostableAccounts } from '@/lib/accounting/assert-postable-accounts'
 
 export type ActionResult = { success: true } | { success: false; error: string }
 
@@ -35,6 +36,10 @@ export async function createBankAccount(formData: FormData): Promise<ActionResul
   if (validationError) return { success: false, error: validationError }
 
   const supabase = await createClient()
+
+  const postableError = await findNonPostableAccounts(supabase, [fields.gl_account_id])
+  if (postableError) return { success: false, error: postableError }
+
   const { error } = await supabase.from('bank_accounts').insert(fields)
 
   if (error) return { success: false, error: friendlyError(error) }
@@ -49,6 +54,10 @@ export async function updateBankAccount(id: string, formData: FormData): Promise
   if (validationError) return { success: false, error: validationError }
 
   const supabase = await createClient()
+
+  const postableError = await findNonPostableAccounts(supabase, [fields.gl_account_id])
+  if (postableError) return { success: false, error: postableError }
+
   const { error } = await supabase.from('bank_accounts').update(fields).eq('id', id)
 
   if (error) return { success: false, error: friendlyError(error) }

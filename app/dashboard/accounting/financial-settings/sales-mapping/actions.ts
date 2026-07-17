@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { findNonPostableAccounts } from '@/lib/accounting/assert-postable-accounts'
 
 const LIST_PATH = '/dashboard/accounting/financial-settings/sales-mapping'
 
@@ -21,6 +22,9 @@ export async function saveSalesMappings(rows: MappingInput[]): Promise<SaveResul
   } = await supabase.auth.getUser()
 
   if (!user) return { success: false, error: 'Not authenticated.' }
+
+  const postableError = await findNonPostableAccounts(supabase, rows.map((r) => r.account_id))
+  if (postableError) return { success: false, error: postableError }
 
   const results = await Promise.all(
     rows.map((r) =>

@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { findNonPostableAccounts } from '@/lib/accounting/assert-postable-accounts'
 
 const LIST_PATH = '/dashboard/accounting/financial-settings/expense-categories'
 
@@ -23,6 +24,12 @@ export type ExpenseCategoryMapping = {
 
 export async function saveExpenseCategoryMappings(rows: ExpenseCategoryMapping[]): Promise<SaveResult> {
   const supabase = await createClient()
+
+  const postableError = await findNonPostableAccounts(
+    supabase,
+    rows.flatMap((r) => [r.default_expense_account_id, r.default_prepaid_account_id])
+  )
+  if (postableError) return { success: false, error: postableError }
 
   for (const row of rows) {
     const { error } = await supabase
@@ -73,6 +80,12 @@ export type AssetCategoryMapping = {
 
 export async function saveAssetCategoryMappings(rows: AssetCategoryMapping[]): Promise<SaveResult> {
   const supabase = await createClient()
+
+  const postableError = await findNonPostableAccounts(
+    supabase,
+    rows.flatMap((r) => [r.default_asset_account_id, r.default_accum_depreciation_account_id, r.default_depreciation_expense_account_id])
+  )
+  if (postableError) return { success: false, error: postableError }
 
   for (const row of rows) {
     const { error } = await supabase

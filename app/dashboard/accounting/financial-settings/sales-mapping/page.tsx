@@ -44,9 +44,8 @@ export default async function SalesMappingPage() {
       .in("mapping_key", SALES_MAPPING_KEYS as unknown as string[]),
     supabase
       .from("accounts")
-      .select("id, account_number, name, category")
+      .select("id, account_number, name, category, is_postable")
       .eq("is_active", true)
-      .eq("is_postable", true)
       .order("account_number"),
   ]);
 

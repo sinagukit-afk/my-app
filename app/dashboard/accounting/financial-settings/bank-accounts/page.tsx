@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { accountOptionLabel } from "@/lib/accounting/account-options";
 import { BankAccountsTable, type BankAccountRow } from "./bank-accounts-table";
 
 export default async function BankAccountsPage() {
@@ -42,10 +43,9 @@ export default async function BankAccountsPage() {
       .order("name"),
     supabase
       .from("accounts")
-      .select("id, account_number, name")
+      .select("id, account_number, name, is_postable")
       .eq("category", "asset")
       .eq("is_active", true)
-      .eq("is_postable", true)
       .order("account_number"),
   ]);
 
@@ -65,7 +65,8 @@ export default async function BankAccountsPage() {
 
   const glAccountOptions = (glAccounts ?? []).map((a) => ({
     value: a.id,
-    label: `${a.account_number} — ${a.name}`,
+    label: accountOptionLabel(a),
+    is_postable: a.is_postable,
   }));
 
   return (

@@ -50,7 +50,11 @@ export default async function CategoryMappingPage() {
       )
       .eq("is_active", true)
       .order("name"),
-    supabase.from("accounts").select("id, account_number, name, category").eq("is_active", true).order("account_number"),
+    supabase
+      .from("accounts")
+      .select("id, account_number, name, category, is_postable")
+      .eq("is_active", true)
+      .order("account_number"),
   ]);
 
   const accountOptions: AccountOption[] = accounts ?? [];

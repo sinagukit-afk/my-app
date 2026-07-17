@@ -41,10 +41,9 @@ export default async function PaymentMethodsPage() {
       supabase.from("payment_type_accounting_mappings").select("payment_type_id, account_id, bank_account_id"),
       supabase
         .from("accounts")
-        .select("id, account_number, name")
+        .select("id, account_number, name, is_postable")
         .eq("category", "asset")
         .eq("is_active", true)
-        .eq("is_postable", true)
         .order("account_number"),
       supabase.from("bank_accounts").select("id, name, bank").eq("is_active", true).order("name"),
     ]);

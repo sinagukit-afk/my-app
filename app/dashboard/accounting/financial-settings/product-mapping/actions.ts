@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { findNonPostableAccounts } from '@/lib/accounting/assert-postable-accounts'
 
 const LIST_PATH = '/dashboard/accounting/financial-settings/product-mapping'
 
@@ -26,6 +27,12 @@ export async function saveItemAccountMappings(rows: MappingInput[]): Promise<Sav
   } = await supabase.auth.getUser()
 
   if (!user) return { success: false, error: 'Not authenticated.' }
+
+  const postableError = await findNonPostableAccounts(
+    supabase,
+    rows.flatMap((r) => [r.revenue_account_id, r.inventory_account_id, r.expense_account_id])
+  )
+  if (postableError) return { success: false, error: postableError }
 
   const payload = rows.map((r) => ({
     item_id: r.item_id,
@@ -57,6 +64,12 @@ export async function saveCategoryDefaultMappings(rows: CategoryDefaultInput[]):
   } = await supabase.auth.getUser()
 
   if (!user) return { success: false, error: 'Not authenticated.' }
+
+  const postableError = await findNonPostableAccounts(
+    supabase,
+    rows.flatMap((r) => [r.default_revenue_account_id, r.default_inventory_account_id, r.default_expense_account_id])
+  )
+  if (postableError) return { success: false, error: postableError }
 
   const results = await Promise.all(
     rows.map((r) =>

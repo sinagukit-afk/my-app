@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { accountOptionLabel, PARENT_ACCOUNT_WARNING } from "@/lib/accounting/account-options";
 import { saveCategoryDefaultMappings, type CategoryDefaultInput } from "./actions";
 import type { AccountOption } from "./product-mapping-table";
 
@@ -32,23 +33,28 @@ export function CategoryDefaultsTable({ rows: initialRows, accounts, canEdit }: 
     () =>
       accounts
         .filter((a) => a.category === "revenue")
-        .map((a) => ({ value: a.id, label: `${a.account_number} — ${a.name}` })),
+        .map((a) => ({ value: a.id, label: accountOptionLabel(a) })),
     [accounts]
   );
   const inventoryOptions = useMemo(
     () =>
       accounts
         .filter((a) => a.category === "asset")
-        .map((a) => ({ value: a.id, label: `${a.account_number} — ${a.name}` })),
+        .map((a) => ({ value: a.id, label: accountOptionLabel(a) })),
     [accounts]
   );
   const expenseOptions = useMemo(
     () =>
       accounts
         .filter((a) => a.category === "expense")
-        .map((a) => ({ value: a.id, label: `${a.account_number} — ${a.name}` })),
+        .map((a) => ({ value: a.id, label: accountOptionLabel(a) })),
     [accounts]
   );
+
+  const accountsById = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts]);
+  function isParentAccount(accountId: string): boolean {
+    return accountId ? accountsById.get(accountId)?.is_postable === false : false;
+  }
 
   function updateRow(category_id: string, patch: Partial<CategoryDefaultRow>) {
     setRows((prev) => prev.map((r) => (r.category_id === category_id ? { ...r, ...patch } : r)));
@@ -66,6 +72,7 @@ export function CategoryDefaultsTable({ rows: initialRows, accounts, canEdit }: 
           placeholder="None"
           options={revenueOptions}
           disabled={!canEdit}
+          error={isParentAccount(row.default_revenue_account_id) ? PARENT_ACCOUNT_WARNING : undefined}
           className="min-w-[220px]"
         />
       ),
@@ -80,6 +87,7 @@ export function CategoryDefaultsTable({ rows: initialRows, accounts, canEdit }: 
           placeholder="None"
           options={inventoryOptions}
           disabled={!canEdit}
+          error={isParentAccount(row.default_inventory_account_id) ? PARENT_ACCOUNT_WARNING : undefined}
           className="min-w-[220px]"
         />
       ),
@@ -94,11 +102,19 @@ export function CategoryDefaultsTable({ rows: initialRows, accounts, canEdit }: 
           placeholder="None"
           options={expenseOptions}
           disabled={!canEdit}
+          error={isParentAccount(row.default_expense_account_id) ? PARENT_ACCOUNT_WARNING : undefined}
           className="min-w-[220px]"
         />
       ),
     },
   ];
+
+  const hasParentSelection = rows.some(
+    (r) =>
+      isParentAccount(r.default_revenue_account_id) ||
+      isParentAccount(r.default_inventory_account_id) ||
+      isParentAccount(r.default_expense_account_id)
+  );
 
   function handleSave() {
     setSaveState({ type: "idle" });
@@ -125,9 +141,12 @@ export function CategoryDefaultsTable({ rows: initialRows, accounts, canEdit }: 
         </p>
         {canEdit && (
           <div className="flex items-center gap-3">
+            {hasParentSelection && (
+              <span className="text-sm text-(--color-danger)">Fix header-account selections before saving.</span>
+            )}
             {saveState.type === "success" && <span className="text-sm text-(--color-success)">{saveState.message}</span>}
             {saveState.type === "error" && <span className="text-sm text-(--color-danger)">{saveState.message}</span>}
-            <Button type="button" onClick={handleSave} disabled={isPending}>
+            <Button type="button" onClick={handleSave} disabled={isPending || hasParentSelection}>
               {isPending ? "Saving…" : "Save Category Defaults"}
             </Button>
           </div>

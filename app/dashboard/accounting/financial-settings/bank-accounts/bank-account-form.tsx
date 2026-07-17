@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   Dialog,
   DialogContent,
@@ -14,9 +14,10 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { createBankAccount, updateBankAccount, type ActionResult } from "./actions";
+import { PARENT_ACCOUNT_WARNING } from "@/lib/accounting/account-options";
 import type { BankAccountRow } from "./bank-accounts-table";
 
-type GlAccountOption = { value: string; label: string };
+type GlAccountOption = { value: string; label: string; is_postable: boolean };
 
 type Props = {
   open: boolean;
@@ -29,7 +30,15 @@ type Props = {
 export function BankAccountForm({ open, onOpenChange, bankAccount, glAccountOptions, onSaved }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [glAccountId, setGlAccountId] = useState(bankAccount?.gl_account_id ?? "");
   const isEdit = Boolean(bankAccount);
+
+  useEffect(() => {
+    if (open) setGlAccountId(bankAccount?.gl_account_id ?? "");
+  }, [open, bankAccount]);
+
+  const glAccountsByValue = useMemo(() => new Map(glAccountOptions.map((o) => [o.value, o])), [glAccountOptions]);
+  const isParentAccount = glAccountId ? glAccountsByValue.get(glAccountId)?.is_postable === false : false;
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -98,7 +107,9 @@ export function BankAccountForm({ open, onOpenChange, bankAccount, glAccountOpti
             name="gl_account_id"
             placeholder="Select an account…"
             options={glAccountOptions}
-            defaultValue={bankAccount?.gl_account_id ?? ""}
+            value={glAccountId}
+            onChange={(e) => setGlAccountId(e.target.value)}
+            error={isParentAccount ? PARENT_ACCOUNT_WARNING : undefined}
             required
           />
           <p className="-mt-2 text-xs text-(--color-text-muted)">
@@ -121,7 +132,7 @@ export function BankAccountForm({ open, onOpenChange, bankAccount, glAccountOpti
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={isPending || isParentAccount}>
               {isPending ? "Saving…" : isEdit ? "Save Changes" : "Add Bank Account"}
             </Button>
           </DialogFooter>

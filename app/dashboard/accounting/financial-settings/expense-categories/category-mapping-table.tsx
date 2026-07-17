@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { accountOptionLabel, PARENT_ACCOUNT_WARNING } from "@/lib/accounting/account-options";
 import {
   saveExpenseCategoryMappings,
   saveAssetCategoryMappings,
@@ -17,7 +18,7 @@ import {
   type AssetCategoryMapping,
 } from "./actions";
 
-export type AccountOption = { id: string; account_number: string; name: string; category: string };
+export type AccountOption = { id: string; account_number: string; name: string; category: string; is_postable: boolean };
 
 export type ExpenseCategoryRow = {
   id: string;
@@ -103,13 +104,18 @@ export function CategoryMappingTable({
   }
 
   const expenseAccountOptions = useMemo(
-    () => accounts.filter((a) => a.category === "expense").map((a) => ({ value: a.id, label: `${a.account_number} — ${a.name}` })),
+    () => accounts.filter((a) => a.category === "expense").map((a) => ({ value: a.id, label: accountOptionLabel(a) })),
     [accounts]
   );
   const assetAccountOptions = useMemo(
-    () => accounts.filter((a) => a.category === "asset").map((a) => ({ value: a.id, label: `${a.account_number} — ${a.name}` })),
+    () => accounts.filter((a) => a.category === "asset").map((a) => ({ value: a.id, label: accountOptionLabel(a) })),
     [accounts]
   );
+
+  const accountsById = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts]);
+  function isParentAccount(accountId: string): boolean {
+    return accountId ? accountsById.get(accountId)?.is_postable === false : false;
+  }
 
   function updateExpenseRow(id: string, patch: Partial<ExpenseCategoryRow>) {
     setExpenseRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
@@ -181,6 +187,7 @@ export function CategoryMappingTable({
           placeholder="Not mapped"
           options={expenseAccountOptions}
           disabled={!canEdit}
+          error={isParentAccount(row.default_expense_account_id) ? PARENT_ACCOUNT_WARNING : undefined}
           className="min-w-[240px]"
         />
       ),
@@ -196,6 +203,7 @@ export function CategoryMappingTable({
             placeholder="Not mapped"
             options={assetAccountOptions}
             disabled={!canEdit}
+            error={isParentAccount(row.default_prepaid_account_id) ? PARENT_ACCOUNT_WARNING : undefined}
             className="min-w-[220px]"
           />
         ) : (
@@ -249,6 +257,7 @@ export function CategoryMappingTable({
           placeholder="Not mapped"
           options={assetAccountOptions}
           disabled={!canEdit}
+          error={isParentAccount(row.default_asset_account_id) ? PARENT_ACCOUNT_WARNING : undefined}
           className="min-w-[220px]"
         />
       ),
@@ -263,6 +272,7 @@ export function CategoryMappingTable({
           placeholder="Not mapped"
           options={assetAccountOptions}
           disabled={!canEdit}
+          error={isParentAccount(row.default_accum_depreciation_account_id) ? PARENT_ACCOUNT_WARNING : undefined}
           className="min-w-[220px]"
         />
       ),
@@ -277,6 +287,7 @@ export function CategoryMappingTable({
           placeholder="Not mapped"
           options={expenseAccountOptions}
           disabled={!canEdit}
+          error={isParentAccount(row.default_depreciation_expense_account_id) ? PARENT_ACCOUNT_WARNING : undefined}
           className="min-w-[220px]"
         />
       ),
@@ -295,6 +306,16 @@ export function CategoryMappingTable({
       ),
     },
   ];
+
+  const hasParentInExpenseRows = expenseRows.some(
+    (r) => isParentAccount(r.default_expense_account_id) || isParentAccount(r.default_prepaid_account_id)
+  );
+  const hasParentInAssetRows = assetRows.some(
+    (r) =>
+      isParentAccount(r.default_asset_account_id) ||
+      isParentAccount(r.default_accum_depreciation_account_id) ||
+      isParentAccount(r.default_depreciation_expense_account_id)
+  );
 
   return (
     <div className="space-y-6">
@@ -318,9 +339,12 @@ export function CategoryMappingTable({
                 </Button>
               </div>
               <div className="flex items-center gap-3">
+                {hasParentInExpenseRows && (
+                  <span className="text-sm text-(--color-danger)">Fix header-account selections before saving.</span>
+                )}
                 {expenseSave.type === "success" && <span className="text-sm text-(--color-success)">{expenseSave.message}</span>}
                 {expenseSave.type === "error" && <span className="text-sm text-(--color-danger)">{expenseSave.message}</span>}
-                <Button type="button" onClick={handleSaveExpenses} disabled={isPending}>
+                <Button type="button" onClick={handleSaveExpenses} disabled={isPending || hasParentInExpenseRows}>
                   {isPending ? "Saving…" : "Save Expense Mappings"}
                 </Button>
               </div>
@@ -350,9 +374,12 @@ export function CategoryMappingTable({
                 </Button>
               </div>
               <div className="flex items-center gap-3">
+                {hasParentInAssetRows && (
+                  <span className="text-sm text-(--color-danger)">Fix header-account selections before saving.</span>
+                )}
                 {assetSave.type === "success" && <span className="text-sm text-(--color-success)">{assetSave.message}</span>}
                 {assetSave.type === "error" && <span className="text-sm text-(--color-danger)">{assetSave.message}</span>}
-                <Button type="button" onClick={handleSaveAssets} disabled={isPending}>
+                <Button type="button" onClick={handleSaveAssets} disabled={isPending || hasParentInAssetRows}>
                   {isPending ? "Saving…" : "Save Asset Mappings"}
                 </Button>
               </div>

@@ -30,7 +30,7 @@ export type BankAccountRow = {
   is_active: boolean;
 };
 
-type GlAccountOption = { value: string; label: string };
+type GlAccountOption = { value: string; label: string; is_postable: boolean };
 
 type Props = {
   data: BankAccountRow[];
