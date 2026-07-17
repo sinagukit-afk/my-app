@@ -23,7 +23,7 @@ export default async function NewManualIncomingPage() {
 
     supabase
       .from("items")
-      .select("id, name, description, ai_match_keywords, item_variants(id, sku, option1_value)")
+      .select("id, name, description, ai_match_keywords, item_variants(id, sku, option1_value, cost)")
       .is("deleted_at", null)
       .is("item_variants.deleted_at", null)
       .order("name"),
@@ -37,6 +37,7 @@ export default async function NewManualIncomingPage() {
       itemName: item.name,
       label: v.option1_value ? `${item.name} — ${v.option1_value}` : item.name,
       sku: v.sku,
+      cost: v.cost,
       keywords,
     }));
   });

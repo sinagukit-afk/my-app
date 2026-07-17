@@ -11,6 +11,8 @@ export type NewIncomingItemInput = {
   item_name_snapshot: string
   quantity: number
   unit_price: number
+  discount_amount: number
+  line_total: number
 }
 
 export async function createManualIncomingWithItems(formData: FormData): Promise<ActionResult> {
@@ -25,6 +27,7 @@ export async function createManualIncomingWithItems(formData: FormData): Promise
   const supplier_id = (formData.get('supplier_id') as string)?.trim() || null
   const date_received = (formData.get('date_received') as string)?.trim()
   const notes = (formData.get('notes') as string)?.trim() || null
+  const shipping_fee = Number(formData.get('shipping_fee') ?? 0) || 0
 
   if (!date_received) return { success: false, error: 'Date received is required.' }
 
@@ -35,7 +38,7 @@ export async function createManualIncomingWithItems(formData: FormData): Promise
     return { success: false, error: 'Invalid line item data.' }
   }
 
-  const validItems = items.filter((i) => i.item_id && i.quantity > 0 && i.unit_price >= 0)
+  const validItems = items.filter((i) => i.item_id && i.quantity > 0 && i.line_total >= 0)
   if (validItems.length === 0) {
     return { success: false, error: 'Add at least one line item with a quantity greater than zero.' }
   }
@@ -52,13 +55,13 @@ export async function createManualIncomingWithItems(formData: FormData): Promise
   }
 
   const { error } = await supabase.from('incoming_items').insert(
-    validItems.map((item) => ({
+    validItems.map((item, index) => ({
       item_id: item.item_id,
       variant_id: item.variant_id,
       item_name_snapshot: item.item_name_snapshot,
       quantity: item.quantity,
       unit_price: item.unit_price,
-      total_price: item.quantity * item.unit_price,
+      total_price: item.line_total,
       date_received,
       supplier_id,
       supplier: supplierText,
@@ -67,8 +70,8 @@ export async function createManualIncomingWithItems(formData: FormData): Promise
       received_by_email: user.email ?? null,
       notes,
       purchase_order_id: null,
-      shipping_fee: 0,
-      discount_amount: 0,
+      shipping_fee: index === 0 ? shipping_fee : 0,
+      discount_amount: item.discount_amount,
     }))
   )
 

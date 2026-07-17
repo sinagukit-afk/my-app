@@ -18,6 +18,7 @@ export const manualIncomingSchema: DocumentSchema = {
   headerFields: [
     { key: "supplier_id", label: "Supplier", type: "dropdown", localHints: ["Sold By", "Supplier", "Vendor", "From"], required: true },
     { key: "date_received", label: "Date Received", type: "date", localHints: ["Date", "Date Received"], required: true },
+    { key: "shipping_fee", label: "Shipping Fee", type: "currency", localHints: ["Shipping", "Freight", "Delivery Fee"] },
     { key: "note", label: "Notes", type: "string" },
   ],
   lineItemFields: [
@@ -30,5 +31,6 @@ export const manualIncomingSchema: DocumentSchema = {
       localHints: ["Unit Price", "Rate", "Unit Cost"],
       totalDividedBy: "quantity",
     },
+    { key: "discount", label: "Discount", type: "currency", localHints: ["Discount"] },
   ],
 };
