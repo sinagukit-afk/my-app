@@ -75,9 +75,9 @@ const PAYMENT_STATUS_VARIANT: Record<PurchaseOrderDetailData["payment_status"], 
 const NEXT_STATUS: Record<string, { status: string; label: string }[]> = {
   draft: [
     { status: "sent", label: "Mark as Sent" },
-    { status: "cancelled", label: "Cancel" },
+    { status: "cancelled", label: "Cancel Order" },
   ],
-  sent: [{ status: "cancelled", label: "Cancel" }],
+  sent: [{ status: "cancelled", label: "Cancel Order" }],
   partial: [],
   received: [],
   cancelled: [],
@@ -131,6 +131,19 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
       const res = await setPurchaseOrderStatus(po.id, po.reference, statusTarget.status);
       if (res.success) {
         setStatusTarget(null);
+        refresh();
+      } else {
+        setStatusError(res.error);
+      }
+    });
+  }
+
+  /** Benign, non-destructive transitions (draft → sent) run directly — no confirm dialog. */
+  function runStatusChange(target: { status: string; label: string }) {
+    setStatusError(null);
+    startTransition(async () => {
+      const res = await setPurchaseOrderStatus(po.id, po.reference, target.status);
+      if (res.success) {
         refresh();
       } else {
         setStatusError(res.error);
@@ -240,11 +253,15 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
                 variant="secondary"
                 disabled={isPending}
                 onClick={() => {
-                  setStatusTarget(t);
-                  setStatusError(null);
+                  if (t.status === "sent") {
+                    runStatusChange(t);
+                  } else {
+                    setStatusTarget(t);
+                    setStatusError(null);
+                  }
                 }}
               >
-                {t.label}
+                {isPending && t.status === "sent" ? "Updating…" : t.label}
               </Button>
             ))}
             {(po.status === "sent" || po.status === "partial") && (
@@ -267,6 +284,10 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
           </div>
         }
       />
+
+      {statusError && !statusTarget && (
+        <p className="text-sm text-(--color-danger)">{statusError}</p>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>

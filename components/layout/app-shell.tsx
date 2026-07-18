@@ -324,12 +324,42 @@ function BreadcrumbHomeIcon({ className }: { className?: string }) {
   );
 }
 
+/** Slugs whose display name can't be derived by simple title-casing. */
+const CRUMB_LABELS: Record<string, string> = {
+  "inventory-po": "Inventory PO",
+  "expense-po": "Expense PO",
+  "asset-po": "Asset PO",
+  "supplier-payments": "Supplier Payment",
+  "profit-loss": "Profit & Loss",
+  "items-for-review": "Items for Review",
+};
+
+/** Intermediate route segments with no page.tsx behind them — rendered as text, never links. */
+const NON_ROUTABLE_PATHS = new Set([
+  "/dashboard/purchasing",
+  "/dashboard/management",
+  "/dashboard/accounting/financial-settings",
+  "/dashboard/finance/supplier-payments/incoming",
+  "/dashboard/finance/supplier-payments/inventory-po",
+]);
+
+function crumbLabel(seg: string): string {
+  const mapped = CRUMB_LABELS[seg];
+  if (mapped) return mapped;
+  // Identifiers (references, order numbers, UUIDs) contain digits or uppercase — show verbatim.
+  if (/[0-9A-Z]/.test(seg)) return seg;
+  return seg
+    .split("-")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
 function Breadcrumb({ pathname }: { pathname: string }) {
   const segments = pathname.split("/").filter(Boolean);
-  const crumbs = segments.map((seg, i) => ({
-    label: seg.charAt(0).toUpperCase() + seg.slice(1),
-    href: "/" + segments.slice(0, i + 1).join("/"),
-  }));
+  const crumbs = segments.map((seg, i) => {
+    const href = "/" + segments.slice(0, i + 1).join("/");
+    return { label: crumbLabel(seg), href, routable: !NON_ROUTABLE_PATHS.has(href) };
+  });
 
   return (
     <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-(--color-text-muted)">
@@ -341,10 +371,12 @@ function Breadcrumb({ pathname }: { pathname: string }) {
           <span className="text-(--color-border-strong)">/</span>
           {i === crumbs.length - 1 ? (
             <span className="text-(--color-text) font-medium">{crumb.label}</span>
-          ) : (
+          ) : crumb.routable ? (
             <Link href={crumb.href} className="hover:text-(--color-text) transition-colors">
               {crumb.label}
             </Link>
+          ) : (
+            <span>{crumb.label}</span>
           )}
         </React.Fragment>
       ))}

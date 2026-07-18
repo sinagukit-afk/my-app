@@ -129,6 +129,7 @@ export function PurchaseOrdersTable({ data, canWrite, from, to }: Props) {
       <DataTable
         columns={columns}
         data={filteredData}
+        exportFilename="purchase-orders"
         searchPlaceholder="Search purchase orders…"
         emptyMessage="No purchase orders found"
         emptyDescription="Create your first purchase order to get started."

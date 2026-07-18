@@ -10,7 +10,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { NumberInput } from "@/components/ui/number-input";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Button } from "@/components/ui/button";
@@ -100,17 +100,18 @@ export function ItemForm({ open, onOpenChange, purchaseOrderId, reference, varia
             <DialogDescription>Add an item to this purchase order.</DialogDescription>
           </DialogHeader>
 
-          <Select
+          <Combobox
             label="Item"
             name="variant_id"
             value={variantId}
-            onChange={(e) => handleVariantChange(e.target.value)}
+            onValueChange={handleVariantChange}
             placeholder="Select an item…"
+            searchPlaceholder="Search by name or SKU…"
             options={variantOptions.map((v) => ({
               value: v.id,
               label: v.sku ? `${v.label} (${v.sku})` : v.label,
+              keywords: v.sku ?? undefined,
             }))}
-            required
             autoFocus
           />
 

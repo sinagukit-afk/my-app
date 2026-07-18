@@ -100,6 +100,7 @@ export function SupplierPaymentTable({ data, from, to }: Props) {
       header: "Type",
       sortable: true,
       render: (value) => <Badge variant="neutral">{TYPE_LABEL[value as SupplierPayableType]}</Badge>,
+      exportValue: (value) => TYPE_LABEL[value as SupplierPayableType],
     },
     {
       key: "supplier_name",
@@ -195,6 +196,7 @@ export function SupplierPaymentTable({ data, from, to }: Props) {
       <DataTable
         columns={columns}
         data={filteredData}
+        exportFilename="supplier-payables"
         searchPlaceholder="Search supplier payables…"
         emptyMessage="No supplier payables to display"
         emptyDescription="Inventory receipts, expense/asset POs, and manual incoming logs will appear here."

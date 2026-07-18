@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { TextArea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -121,6 +122,16 @@ export function NewPurchaseOrderForm({ suppliers, variantOptions }: Props) {
       lineCost: variant?.cost != null ? String(roundMoney(variant.cost * qty)) : "",
     });
   }
+
+  const itemOptions = useMemo(
+    () =>
+      variantOptions.map((v) => ({
+        value: v.id,
+        label: v.sku ? `${v.label} (${v.sku})` : v.label,
+        keywords: [v.sku, v.keywords].filter(Boolean).join(" "),
+      })),
+    [variantOptions]
+  );
 
   const dropdownOptions: DropdownOptionsByField = useMemo(
     () => ({
@@ -301,15 +312,13 @@ export function NewPurchaseOrderForm({ suppliers, variantOptions }: Props) {
                 )}
               >
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-[2fr_1fr_1fr_auto] sm:items-end">
-                  <Select
+                  <Combobox
                     label={i === 0 ? "Item" : undefined}
                     value={row.variantId}
-                    onChange={(e) => handleVariantChange(row.rowId, e.target.value)}
+                    onValueChange={(next) => handleVariantChange(row.rowId, next)}
                     placeholder="Select an item…"
-                    options={variantOptions.map((v) => ({
-                      value: v.id,
-                      label: v.sku ? `${v.label} (${v.sku})` : v.label,
-                    }))}
+                    searchPlaceholder="Search by name or SKU…"
+                    options={itemOptions}
                   />
                   <NumberInput
                     label={i === 0 ? "Quantity" : undefined}
