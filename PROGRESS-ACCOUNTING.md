@@ -2347,3 +2347,43 @@ All 8 Supplier Payment phases (SP-1..SP-8) are now **done**. No git commit
 (standing project rule — stopped for manual review).
 
 ---
+
+### 2026-07-18 — Supplier-payment void + payable/journal fixes (purchasing UX audit spillover)
+
+Accounting-side changes shipped as part of the purchasing/AP UX audit (full item list in
+PROGRESS-PURCHASING.md PUR-3; commits `e78c815` + `4d1cadd`). Five migrations, all applied
+via Supabase MCP:
+
+- `fix_log_payable_payment_discount_and_overpayment` — the RPC's paid/partial threshold
+  still computed `total_price + shipping_fee - discount_amount` for `inventory` /
+  `purchase_order` payables (the 5th call site missed by `31b06cb`, which only fixed the
+  4 display-side files): paying (UI-owed − discount) silently flipped a PO to `paid` while
+  the list page trusted the status and showed remaining ₱0. Now owed = `total_price +
+  shipping_fee`, matching the UI and the AP credit in `generate_draft_journal_entries`.
+  Same migration adds an overpayment guard (rejects `p_amount >` remaining, all four
+  payable types; payable + paid-so-far resolved *before* the insert).
+- `void_payable_payment` — new admin-only, reason-required soft-void RPC
+  (`payable_payments.voided_at/voided_by/void_reason`). Journal unwind by stage:
+  unprocessed `business_event` → marked processed (never drafts); `pending_review` draft
+  → rejected with the reason; `posted` draft → `reverse_journal_entry()` on its entry
+  (skipped if already reversed). Recomputes `payment_status` (can return to `unpaid`) and
+  emits a **pre-processed** `payment_voided` audit event so the generator never consumes
+  it. Verified at all three stages via role-impersonated rolled-back SQL, incl. a full
+  log → generate → approve → void → reversal-entry round trip.
+- `log_payable_payment_exclude_voided` — paid-so-far sums skip voided rows, so a voided
+  payment frees the balance for re-logging.
+- `business_events_allow_payment_voided` — event_type CHECK extended for the audit event.
+- `journal_entries_source_type_allow_newer_event_types` — **pre-existing bug found during
+  void testing:** the `source_type` CHECK was never extended for `inventory_payment`,
+  `purchase_order_payment`, `inventory_scrap`, `shipment_shipping_cost`, so
+  `approve_and_post_journal_entry_draft()` 500'd on all four; 7 real drafts (4
+  inventory_payment, 3 purchase_order_payment) were stuck in `pending_review`. They are
+  now approvable but were deliberately left pending for manual review.
+
+Also confirmed (not a code change): a payable payment logged with **no payment method**
+produces no journal draft at all — `generate_draft_journal_entries` skips payment events
+whose payment type has no `payment_type_accounting_mappings` row (`v_skip := true`). The
+audit made Payment Method required in both Log Payment dialogs, closing that gap going
+forward; historical method-less payments (if any) never reached the journal.
+
+---

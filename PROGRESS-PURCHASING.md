@@ -327,3 +327,70 @@ approach as PUR-2.1's test PO. `npx tsc --noEmit` and `npm run build` both clean
 `costVarianceWarning()` — Manual Incoming has no "registered cost" comparison surfaced
 elsewhere in this flow and it wasn't asked for; add it later only if it turns out to be
 wanted here too.
+
+## PUR-3 — Purchasing/AP UX audit: all 14 items implemented ✅ DONE
+
+**Commits `e78c815` (items 1–10) + `4d1cadd` (items 11–14), 2026-07-18.** A structured
+ERP-UX audit of the Inventory PO → Receiving → Supplier Payment flow (code review +
+live browser walkthrough at desktop/mobile widths) produced 14 approved improvements,
+all shipped and live-verified the same day:
+
+1. **`log_payable_payment` discount mismatch fixed** — the RPC's paid/partial threshold
+   still subtracted `discount_amount` for `inventory`/`purchase_order` payables after
+   commit `31b06cb` fixed the display side; an underpaid PO could silently show as fully
+   paid. Migration `fix_log_payable_payment_discount_and_overpayment`; SQL-verified that
+   paying (owed − discount) now leaves `partial`.
+2. **Overpayment guard** — same migration rejects payments above the remaining balance
+   (all four payable types, payable + paid-so-far resolved *before* the insert); both
+   Log Payment dialogs also check client-side first.
+3. **PO ↔ payment cross-link** — PO detail's Status card shows a Payment badge once
+   receipts exist, plus a "View payments →" link (admin/manager) to the AP detail page.
+4. **Payment Method required** in both Log Payment dialogs. Follow-up finding: a payment
+   logged with no method generates *no journal draft at all* (`generate_draft_journal_entries`
+   skips events whose payment type has no account mapping), so this is data-integrity, not
+   cosmetics.
+5. **PO list filters** — `DateRangeFilter` (server-side `?from/&to` on `order_date`) +
+   status dropdown incl. "Open (Draft/Sent/Partial)".
+6. **AP summary cards** — Outstanding Balance / Unpaid / Partially Paid above the
+   Supplier Payment list (headline ignores the status filter by design); status filter
+   now defaults to "Open (Unpaid + Partial)". Headline SQL-cross-checked to the peso.
+7. **Supplier dropdown filter** on the AP list; summary cards respect it ("what do we
+   owe supplier X" in one pick).
+8. **Void payments** — soft-void via `void_payable_payment(p_payment_id, p_reason)`
+   (admin-only, reason required) + `voided_at/voided_by/void_reason` columns. Unwinds the
+   journal at whichever stage the payment reached: unprocessed event → consumed;
+   `pending_review` draft → rejected; posted → `reverse_journal_entry()`. Emits a
+   pre-processed `payment_voided` audit event; all payment readers exclude voided rows;
+   Payment History shows a Voided badge + reason + per-row Void dialog. Verified at all
+   three journal stages via rolled-back SQL plus a real UI round-trip.
+9. **`formatCurrency` sweep** — PO list/detail + both payment detail pages; no inline
+   `₱…toFixed(2)` left in the flow.
+10. **DataTable accessibility** — sortable headers are real `<button>`s with `aria-sort`;
+    new `rowHref` prop renders the first cell as a real `Link` (PO list + AP list), with a
+    tabIndex/Enter fallback for tables that only pass `onRowClick`.
+11. **Breadcrumbs** — friendly labels (`CRUMB_LABELS` + `crumbLabel()` in
+    `app-shell.tsx`; identifiers pass verbatim) and de-linked page-less intermediates
+    (`/dashboard/purchasing`, `/dashboard/management`, `financial-settings`,
+    `supplier-payments/{incoming,inventory-po}` all 404'd before).
+12. **Export to Excel** enabled on the PO list + AP list (AP Type column exports its
+    friendly label).
+13. **Searchable item picker** — new `components/ui/combobox.tsx` (type-to-filter incl.
+    SKU/alias keywords, arrow/Enter/Escape keys, hidden-input `name` support for FormData
+    forms, `React.useId` for SSR-stable ids) replaces the native item `<select>` in the
+    New PO form and the Add Line Item dialog. Gotcha: deriving a DOM id from
+    `randomId()` row state caused a hydration mismatch — fixed by `useId`, don't key DOM
+    ids off client-random state.
+14. **Draft → Sent without confirm** — benign transition runs directly (inline error
+    surface); Cancel keeps its dialog and is relabeled "Cancel Order" (previously both
+    dialog buttons read "Cancel").
+
+**Pre-existing bug found and fixed along the way:** `journal_entries_source_type_check`
+was never extended for `inventory_payment` / `purchase_order_payment` / `inventory_scrap`
+/ `shipment_shipping_cost` — approving any such draft 500'd, and 7 real drafts were stuck
+in `pending_review`. Fixed via migration `journal_entries_source_type_allow_newer_event_types`
+(the 7 drafts left pending for manual review). See PROGRESS-ACCOUNTING.md session log
+2026-07-18 for the accounting-side detail.
+
+**Verification residue (test env):** a voided ₱100 BDO payment on `SPO26-0717-0005`
+(demo of the void flow) and cancelled test PO `SPO26-0718-0009` (created through the new
+combobox, marked sent without a dialog, cancelled through the confirm path).
