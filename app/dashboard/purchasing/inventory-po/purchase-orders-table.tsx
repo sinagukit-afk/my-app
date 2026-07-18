@@ -1,12 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
+import { FilterBar } from "@/components/business/filter-bar";
+import { DateRangeFilter } from "@/components/business/date-range-filter";
 import { formatDate } from "@/lib/utils/format-date";
+import { formatCurrency } from "@/lib/utils/format";
 
 export type PurchaseOrderRow = {
   id: string;
@@ -22,6 +26,8 @@ export type PurchaseOrderRow = {
 type Props = {
   data: PurchaseOrderRow[];
   canWrite: boolean;
+  from: string;
+  to: string;
 };
 
 const STATUS_VARIANT: Record<string, "neutral" | "success" | "warning" | "danger" | "default"> = {
@@ -32,8 +38,27 @@ const STATUS_VARIANT: Record<string, "neutral" | "success" | "warning" | "danger
   cancelled: "danger",
 };
 
-export function PurchaseOrdersTable({ data, canWrite }: Props) {
+const STATUS_FILTER_OPTIONS = [
+  { label: "All Statuses", value: "" },
+  { label: "Open (Draft/Sent/Partial)", value: "open" },
+  { label: "Draft", value: "draft" },
+  { label: "Sent", value: "sent" },
+  { label: "Partial", value: "partial" },
+  { label: "Received", value: "received" },
+  { label: "Cancelled", value: "cancelled" },
+];
+
+const OPEN_STATUSES = new Set(["draft", "sent", "partial"]);
+
+export function PurchaseOrdersTable({ data, canWrite, from, to }: Props) {
   const router = useRouter();
+  const [statusFilter, setStatusFilter] = useState("");
+
+  const filteredData = data.filter((row) => {
+    if (!statusFilter) return true;
+    if (statusFilter === "open") return OPEN_STATUSES.has(row.status);
+    return row.status === statusFilter;
+  });
 
   const columns: Column<PurchaseOrderRow>[] = [
     {
@@ -73,7 +98,7 @@ export function PurchaseOrdersTable({ data, canWrite }: Props) {
       key: "total",
       header: "Total",
       sortable: true,
-      render: (value) => `₱${Number(value).toFixed(2)}`,
+      render: (value) => formatCurrency(value as number),
     },
   ];
 
@@ -91,13 +116,24 @@ export function PurchaseOrdersTable({ data, canWrite }: Props) {
         }
       />
 
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <DateRangeFilter from={from} to={to} />
+        <FilterBar
+          aria-label="Filter by status"
+          options={STATUS_FILTER_OPTIONS}
+          value={statusFilter}
+          onChange={setStatusFilter}
+        />
+      </div>
+
       <DataTable
         columns={columns}
-        data={data}
+        data={filteredData}
         searchPlaceholder="Search purchase orders…"
         emptyMessage="No purchase orders found"
         emptyDescription="Create your first purchase order to get started."
         onRowClick={(row) => router.push(`/dashboard/purchasing/inventory-po/${row.reference}`)}
+        rowHref={(row) => `/dashboard/purchasing/inventory-po/${row.reference}`}
       />
     </div>
   );

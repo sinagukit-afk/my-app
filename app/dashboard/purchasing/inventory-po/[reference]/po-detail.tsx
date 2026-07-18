@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { TextArea } from "@/components/ui/textarea";
 import { formatDate } from "@/lib/utils/format-date";
-import { formatQty } from "@/lib/utils/format";
+import { formatQty, formatCurrency } from "@/lib/utils/format";
 import { Select } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -35,6 +35,7 @@ export type PurchaseOrderDetailData = {
   id: string;
   reference: string;
   status: string;
+  payment_status: "unpaid" | "partial" | "paid";
   order_date: string;
   expected_date: string | null;
   subtotal: number;
@@ -63,6 +64,12 @@ const STATUS_VARIANT: Record<string, "neutral" | "success" | "warning" | "danger
   partial: "warning",
   received: "success",
   cancelled: "danger",
+};
+
+const PAYMENT_STATUS_VARIANT: Record<PurchaseOrderDetailData["payment_status"], "danger" | "warning" | "success"> = {
+  unpaid: "danger",
+  partial: "warning",
+  paid: "success",
 };
 
 const NEXT_STATUS: Record<string, { status: string; label: string }[]> = {
@@ -177,17 +184,17 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
     {
       key: "unit_cost",
       header: "Unit Cost",
-      render: (value) => `₱${Number(value).toFixed(2)}`,
+      render: (value) => formatCurrency(value as number),
     },
     {
       key: "discount_amount",
       header: "Discount",
-      render: (value) => `₱${Number(value).toFixed(2)}`,
+      render: (value) => formatCurrency(value as number),
     },
     {
       key: "line_total",
       header: "Line Total",
-      render: (value) => `₱${Number(value).toFixed(2)}`,
+      render: (value) => formatCurrency(value as number),
     },
     {
       key: "id",
@@ -266,8 +273,26 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
           <CardHeader>
             <CardTitle className="text-sm text-(--color-text-muted)">Status</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-2">
             <Badge variant={STATUS_VARIANT[po.status] ?? "neutral"}>{po.status}</Badge>
+            {(po.status === "partial" || po.status === "received") && (
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-(--color-text-muted)">Payment:</span>
+                  <Badge variant={PAYMENT_STATUS_VARIANT[po.payment_status]}>
+                    {po.payment_status.charAt(0).toUpperCase() + po.payment_status.slice(1)}
+                  </Badge>
+                </div>
+                {canDelete && (
+                  <Link
+                    href={`/dashboard/finance/supplier-payments/inventory-po/${po.reference}`}
+                    className="block text-xs text-(--color-primary) hover:underline"
+                  >
+                    View payments →
+                  </Link>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -283,8 +308,8 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
             <CardTitle className="text-sm text-(--color-text-muted)">Subtotal / Fees</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-(--color-text)">
-            ₱{Number(po.subtotal).toFixed(2)} net (₱{Number(po.discount_amount).toFixed(2)} item discounts) + ₱
-            {Number(po.shipping_fee).toFixed(2)} shipping
+            {formatCurrency(po.subtotal)} net ({formatCurrency(po.discount_amount)} item discounts) +{" "}
+            {formatCurrency(po.shipping_fee)} shipping
           </CardContent>
         </Card>
         <Card>
@@ -292,7 +317,7 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
             <CardTitle className="text-sm text-(--color-text-muted)">Total</CardTitle>
           </CardHeader>
           <CardContent className="text-lg font-semibold text-(--color-text)">
-            ₱{Number(po.total).toFixed(2)}
+            {formatCurrency(po.total)}
           </CardContent>
         </Card>
       </div>

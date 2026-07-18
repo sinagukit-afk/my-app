@@ -65,3 +65,24 @@ export async function logInventoryPOPayment(
   revalidatePath('/dashboard/purchasing/receiving')
   return { success: true }
 }
+
+export async function voidSupplierPayment(
+  paymentId: string,
+  reason: string,
+  detailPath: string
+): Promise<ActionResult> {
+  if (!reason.trim()) return { success: false, error: 'A reason is required to void a payment.' }
+
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('void_payable_payment', {
+    p_payment_id: paymentId,
+    p_reason: reason,
+  })
+
+  if (error) return { success: false, error: friendlyError(error) }
+
+  revalidatePath(detailPath)
+  revalidatePath(LIST_PATH)
+  revalidatePath('/dashboard/purchasing/receiving')
+  return { success: true }
+}

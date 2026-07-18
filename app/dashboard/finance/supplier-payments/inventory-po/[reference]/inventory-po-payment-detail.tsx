@@ -21,7 +21,7 @@ import { Select } from "@/components/ui/select";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TextArea } from "@/components/ui/textarea";
-import { logInventoryPOPayment } from "../../actions";
+import { logInventoryPOPayment, voidSupplierPayment } from "../../actions";
 import { formatDate } from "@/lib/utils/format-date";
 import { formatQty, formatCurrency } from "@/lib/utils/format";
 
@@ -47,7 +47,15 @@ export type ReceivedLineRow = {
   date_received: string;
 };
 
-export type PaymentRow = { id: string; amount: number; paid_date: string; notes: string | null; payment_type_name: string | null };
+export type PaymentRow = {
+  id: string;
+  amount: number;
+  paid_date: string;
+  notes: string | null;
+  payment_type_name: string | null;
+  voided_at: string | null;
+  void_reason: string | null;
+};
 
 type Option = { id: string; name: string };
 
@@ -64,15 +72,38 @@ type Props = {
   remainingBalance: number;
   paymentTypes: Option[];
   canPay: boolean;
+  canVoid: boolean;
 };
 
-export function InventoryPOPaymentDetail({ po, lines, payments, remainingBalance, paymentTypes, canPay }: Props) {
+export function InventoryPOPaymentDetail({ po, lines, payments, remainingBalance, paymentTypes, canPay, canVoid }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [payOpen, setPayOpen] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+  const [voidTarget, setVoidTarget] = useState<PaymentRow | null>(null);
+  const [voidError, setVoidError] = useState<string | null>(null);
 
   const canShowPay = canPay && po.payment_status !== "paid";
+
+  function handleVoidSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!voidTarget) return;
+    setVoidError(null);
+    const reason = (new FormData(e.currentTarget).get("reason") as string) ?? "";
+    startTransition(async () => {
+      const res = await voidSupplierPayment(
+        voidTarget.id,
+        reason,
+        `/dashboard/finance/supplier-payments/inventory-po/${po.reference}`
+      );
+      if (res.success) {
+        setVoidTarget(null);
+        router.refresh();
+      } else {
+        setVoidError(res.error);
+      }
+    });
+  }
 
   function handlePaySubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -82,6 +113,10 @@ export function InventoryPOPaymentDetail({ po, lines, payments, remainingBalance
     const amount = Number(formData.get("amount"));
     const paidDate = formData.get("paid_date") as string;
     const notes = (formData.get("notes") as string) || null;
+    if (amount > remainingBalance) {
+      setPayError(`Payment can't exceed the remaining balance of ${formatCurrency(remainingBalance)}.`);
+      return;
+    }
     startTransition(async () => {
       const res = await logInventoryPOPayment(po.id, po.reference, paymentTypeId, amount, paidDate, notes);
       if (res.success) {
@@ -199,12 +234,35 @@ export function InventoryPOPaymentDetail({ po, lines, payments, remainingBalance
         <CardContent className="space-y-2">
           {payments.length === 0 && <p className="text-sm text-(--color-text-muted)">No payments logged yet.</p>}
           {payments.map((p) => (
-            <div key={p.id} className="flex items-center justify-between border-b border-(--color-border) py-2 text-sm last:border-0">
+            <div key={p.id} className="flex items-center justify-between gap-3 border-b border-(--color-border) py-2 text-sm last:border-0">
               <div>
-                <p className="text-(--color-text)">{formatDate(p.paid_date)} · {p.payment_type_name ?? "—"}</p>
+                <p className="text-(--color-text)">
+                  {formatDate(p.paid_date)} · {p.payment_type_name ?? "—"}
+                  {p.voided_at && <Badge variant="danger" className="ml-2">Voided</Badge>}
+                </p>
                 {p.notes && <p className="text-xs text-(--color-text-muted)">{p.notes}</p>}
+                {p.voided_at && p.void_reason && (
+                  <p className="text-xs text-(--color-text-muted)">Void reason: {p.void_reason}</p>
+                )}
               </div>
-              <p className="font-medium text-(--color-text)">{formatCurrency(p.amount)}</p>
+              <div className="flex items-center gap-2">
+                <p className={p.voided_at ? "font-medium text-(--color-text-muted) line-through" : "font-medium text-(--color-text)"}>
+                  {formatCurrency(p.amount)}
+                </p>
+                {canVoid && !p.voided_at && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-(--color-danger)"
+                    onClick={() => {
+                      setVoidTarget(p);
+                      setVoidError(null);
+                    }}
+                  >
+                    Void
+                  </Button>
+                )}
+              </div>
             </div>
           ))}
         </CardContent>
@@ -224,6 +282,7 @@ export function InventoryPOPaymentDetail({ po, lines, payments, remainingBalance
                 name="payment_type_id"
                 placeholder="Select…"
                 options={paymentTypes.map((p) => ({ value: p.id, label: p.name }))}
+                required
               />
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <CurrencyInput label="Amount" name="amount" defaultValue={remainingBalance} required />
@@ -238,6 +297,44 @@ export function InventoryPOPaymentDetail({ po, lines, payments, remainingBalance
                   <Button type="button" variant="secondary" disabled={isPending}>Cancel</Button>
                 </DialogClose>
                 <Button type="submit" disabled={isPending}>{isPending ? "Saving…" : "Log Payment"}</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {canVoid && (
+        <Dialog
+          open={!!voidTarget}
+          onOpenChange={(next) => {
+            if (!next) {
+              setVoidTarget(null);
+              setVoidError(null);
+            }
+          }}
+        >
+          <DialogContent>
+            <form onSubmit={handleVoidSubmit} className="space-y-4">
+              <DialogHeader>
+                <DialogTitle>Void Payment</DialogTitle>
+                <DialogDescription>
+                  Void the {voidTarget ? formatCurrency(voidTarget.amount) : ""} payment logged on{" "}
+                  {voidTarget ? formatDate(voidTarget.paid_date) : ""}? It will stop counting toward this
+                  payable, and any posted journal entry is reversed automatically.
+                </DialogDescription>
+              </DialogHeader>
+
+              <TextArea label="Reason" name="reason" rows={2} required />
+
+              {voidError && <p className="text-sm text-(--color-danger)">{voidError}</p>}
+
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button type="button" variant="secondary" disabled={isPending}>Cancel</Button>
+                </DialogClose>
+                <Button type="submit" variant="danger" disabled={isPending}>
+                  {isPending ? "Voiding…" : "Void Payment"}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>

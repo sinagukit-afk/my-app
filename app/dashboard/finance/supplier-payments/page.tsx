@@ -82,7 +82,7 @@ export default async function SupplierPaymentsPage({ searchParams }: { searchPar
     assetQuery.order("purchased_date", { ascending: false }),
     manualIncomingQuery.order("date_received", { ascending: false }),
     poIncomingQuery,
-    supabase.from("payable_payments").select("payable_type, payable_id, amount"),
+    supabase.from("payable_payments").select("payable_type, payable_id, amount").is("voided_at", null),
   ]);
 
   // Inventory POs are one payable per PO, not per receiving batch — group every

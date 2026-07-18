@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,12 @@ export interface DataTableProps<T extends Record<string, unknown>> {
   searchPlaceholder?: string;
   className?: string;
   onRowClick?: (row: T) => void;
+  /**
+   * When set, the first column's cell renders as a real link to this href — keyboard
+   * and screen-reader users can reach the row's detail page (row onClick alone can't
+   * be focused). Pair it with onRowClick so mouse users can still click anywhere.
+   */
+  rowHref?: (row: T) => string;
   /** Base filename (no extension) for the "Export to Excel" button. Omit to hide the button. */
   exportFilename?: string;
 }
@@ -77,6 +84,7 @@ function DataTable<T extends Record<string, unknown>>({
   searchPlaceholder = "Search…",
   className,
   onRowClick,
+  rowHref,
   exportFilename,
 }: DataTableProps<T>) {
   const [search, setSearch] = React.useState("");
@@ -225,17 +233,33 @@ function DataTable<T extends Record<string, unknown>>({
                   <th
                     key={col.key}
                     scope="col"
+                    aria-sort={
+                      col.sortable && sortKey === col.key && sortDir
+                        ? sortDir === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : undefined
+                    }
                     className={cn(
                       "px-4 py-3 text-left text-xs font-semibold text-(--color-text-muted) uppercase tracking-wider whitespace-nowrap",
-                      col.sortable && "cursor-pointer select-none hover:text-(--color-text) transition-colors",
                       col.className
                     )}
-                    onClick={col.sortable ? () => handleSort(col.key) : undefined}
                   >
-                    <span className="inline-flex items-center gap-1.5">
-                      {col.header}
-                      {col.sortable && <SortIcon col={col.key} />}
-                    </span>
+                    {col.sortable ? (
+                      <button
+                        type="button"
+                        onClick={() => handleSort(col.key)}
+                        className={cn(
+                          "inline-flex cursor-pointer select-none items-center gap-1.5 uppercase tracking-wider transition-colors hover:text-(--color-text)",
+                          "rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary)"
+                        )}
+                      >
+                        {col.header}
+                        <SortIcon col={col.key} />
+                      </button>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5">{col.header}</span>
+                    )}
                   </th>
                 ))}
               </tr>
@@ -262,18 +286,40 @@ function DataTable<T extends Record<string, unknown>>({
                   <tr
                     key={ri}
                     onClick={onRowClick ? () => onRowClick(row) : undefined}
+                    tabIndex={onRowClick && !rowHref ? 0 : undefined}
+                    onKeyDown={
+                      onRowClick && !rowHref
+                        ? (e) => {
+                            if (e.key === "Enter") onRowClick(row);
+                          }
+                        : undefined
+                    }
                     className={cn(
                       "border-b border-(--color-border) last:border-0 hover:bg-(--color-bg) transition-colors",
-                      onRowClick && "cursor-pointer touch-manipulation"
+                      onRowClick && "cursor-pointer touch-manipulation",
+                      "focus-visible:outline-none focus-visible:bg-(--color-bg)"
                     )}
                   >
-                    {columns.map((col) => (
-                      <td key={col.key} className={cn("px-4 py-3 text-(--color-text)", col.className)}>
-                        {col.render
-                          ? col.render(row[col.key], row)
-                          : String(row[col.key] ?? "")}
-                      </td>
-                    ))}
+                    {columns.map((col, ci) => {
+                      const content = col.render
+                        ? col.render(row[col.key], row)
+                        : String(row[col.key] ?? "");
+                      return (
+                        <td key={col.key} className={cn("px-4 py-3 text-(--color-text)", col.className)}>
+                          {ci === 0 && rowHref ? (
+                            <Link
+                              href={rowHref(row)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="rounded-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary)"
+                            >
+                              {content}
+                            </Link>
+                          ) : (
+                            content
+                          )}
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))
               )}
@@ -311,9 +357,21 @@ function DataTable<T extends Record<string, unknown>>({
                     )}
                   >
                     <div className="text-(--color-text)">
-                      {primary.render
-                        ? primary.render(row[primary.key], row)
-                        : String(row[primary.key] ?? "")}
+                      {rowHref ? (
+                        <Link
+                          href={rowHref(row)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary)"
+                        >
+                          {primary.render
+                            ? primary.render(row[primary.key], row)
+                            : String(row[primary.key] ?? "")}
+                        </Link>
+                      ) : primary.render ? (
+                        primary.render(row[primary.key], row)
+                      ) : (
+                        String(row[primary.key] ?? "")
+                      )}
                     </div>
                     {labeled.map((col) => (
                       <div key={col.key} className="flex items-start justify-between gap-3 text-sm">

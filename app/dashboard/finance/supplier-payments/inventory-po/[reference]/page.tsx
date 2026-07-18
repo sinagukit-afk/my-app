@@ -28,6 +28,7 @@ export default async function InventoryPOPaymentDetailPage({ params }: { params:
 
   const role = profile?.role ?? "";
   const canPay = ["admin", "manager"].includes(role);
+  const canVoid = role === "admin";
 
   const { data: po, error } = await supabase
     .from("purchase_orders")
@@ -49,7 +50,7 @@ export default async function InventoryPOPaymentDetailPage({ params }: { params:
       .order("date_received", { ascending: true }),
     supabase
       .from("payable_payments")
-      .select("id, amount, paid_date, notes, payment_types(name)")
+      .select("id, amount, paid_date, notes, voided_at, void_reason, payment_types(name)")
       .eq("payable_type", "purchase_order")
       .eq("payable_id", po.id)
       .order("paid_date", { ascending: false }),
@@ -90,7 +91,9 @@ export default async function InventoryPOPaymentDetailPage({ params }: { params:
     total_payable: totalPayable,
   };
 
-  const paidSoFar = (paymentsData ?? []).reduce((s, p) => s + Number(p.amount), 0);
+  const paidSoFar = (paymentsData ?? [])
+    .filter((p) => !p.voided_at)
+    .reduce((s, p) => s + Number(p.amount), 0);
 
   const payments: PaymentRow[] = (paymentsData ?? []).map((p) => {
     const pt = firstOf(p.payment_types);
@@ -100,6 +103,8 @@ export default async function InventoryPOPaymentDetailPage({ params }: { params:
       paid_date: p.paid_date,
       notes: p.notes,
       payment_type_name: pt?.name ?? null,
+      voided_at: p.voided_at,
+      void_reason: p.void_reason,
     };
   });
 
@@ -111,6 +116,7 @@ export default async function InventoryPOPaymentDetailPage({ params }: { params:
       remainingBalance={Math.max(0, totalPayable - paidSoFar)}
       paymentTypes={paymentTypes ?? []}
       canPay={canPay}
+      canVoid={canVoid}
     />
   );
 }

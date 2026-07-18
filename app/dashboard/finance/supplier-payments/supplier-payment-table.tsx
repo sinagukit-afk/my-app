@@ -4,10 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { FilterBar } from "@/components/business/filter-bar";
 import { DateRangeFilter } from "@/components/business/date-range-filter";
 import { formatDate } from "@/lib/utils/format-date";
+import { formatCurrency } from "@/lib/utils/format";
 
 export type SupplierPayableType = "inventory_po" | "manual_incoming" | "expense_po" | "direct_expense" | "asset_po";
 
@@ -48,15 +50,12 @@ const TYPE_FILTER_OPTIONS = [
 ];
 
 const PAYMENT_STATUS_FILTER_OPTIONS = [
+  { label: "Open (Unpaid + Partial)", value: "open" },
   { label: "All Statuses", value: "" },
   { label: "Unpaid", value: "unpaid" },
   { label: "Partial", value: "partial" },
   { label: "Paid", value: "paid" },
 ];
-
-function peso(n: number) {
-  return `₱${n.toFixed(2)}`;
-}
 
 type Props = {
   data: SupplierPayableRow[];
@@ -67,11 +66,32 @@ type Props = {
 export function SupplierPaymentTable({ data, from, to }: Props) {
   const router = useRouter();
   const [typeFilter, setTypeFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [supplierFilter, setSupplierFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("open");
 
-  const filteredData = data
+  const supplierOptions = [
+    { label: "All Suppliers", value: "" },
+    ...[...new Set(data.map((row) => row.supplier_name).filter((n): n is string => !!n))]
+      .sort((a, b) => a.localeCompare(b))
+      .map((name) => ({ label: name, value: name })),
+  ];
+
+  const typeFiltered = data
     .filter((row) => !typeFilter || row.type === typeFilter)
-    .filter((row) => !statusFilter || row.payment_status === statusFilter);
+    .filter((row) => !supplierFilter || row.supplier_name === supplierFilter);
+
+  const filteredData = typeFiltered.filter((row) => {
+    if (!statusFilter) return true;
+    if (statusFilter === "open") return row.payment_status !== "paid";
+    return row.payment_status === statusFilter;
+  });
+
+  // Headline numbers ignore the status filter on purpose — "what do we owe" shouldn't
+  // change when the user peeks at paid history.
+  const openRows = typeFiltered.filter((row) => row.payment_status !== "paid");
+  const outstanding = openRows.reduce((sum, row) => sum + row.remaining, 0);
+  const unpaidCount = openRows.filter((row) => row.payment_status === "unpaid").length;
+  const partialCount = openRows.length - unpaidCount;
 
   const columns: Column<SupplierPayableRow>[] = [
     { key: "reference", header: "Reference", sortable: true },
@@ -93,9 +113,9 @@ export function SupplierPaymentTable({ data, from, to }: Props) {
       sortable: true,
       render: (value) => formatDate(value as string),
     },
-    { key: "total", header: "Total", sortable: true, render: (value) => peso(value as number) },
-    { key: "paid", header: "Paid", sortable: true, render: (value) => peso(value as number) },
-    { key: "remaining", header: "Remaining", sortable: true, render: (value) => peso(value as number) },
+    { key: "total", header: "Total", sortable: true, render: (value) => formatCurrency(value as number) },
+    { key: "paid", header: "Paid", sortable: true, render: (value) => formatCurrency(value as number) },
+    { key: "remaining", header: "Remaining", sortable: true, render: (value) => formatCurrency(value as number) },
     {
       key: "payment_status",
       header: "Payment Status",
@@ -115,9 +135,48 @@ export function SupplierPaymentTable({ data, from, to }: Props) {
         description="Inventory PO, Expense PO, Asset PO, and Manual Incoming payables. Click a row to record or review payments."
       />
 
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm text-(--color-text-muted)">Outstanding Balance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-lg font-semibold text-(--color-text)">{formatCurrency(outstanding)}</p>
+            <p className="text-xs text-(--color-text-muted)">
+              {openRows.length} open payable{openRows.length !== 1 ? "s" : ""}
+              {from || to ? " in the selected date range" : ""}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm text-(--color-text-muted)">Unpaid</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-lg font-semibold text-(--color-text)">{unpaidCount}</p>
+            <p className="text-xs text-(--color-text-muted)">no payment logged yet</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm text-(--color-text-muted)">Partially Paid</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-lg font-semibold text-(--color-text)">{partialCount}</p>
+            <p className="text-xs text-(--color-text-muted)">balance still owed</p>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="flex flex-wrap items-end justify-between gap-3">
         <DateRangeFilter from={from} to={to} />
         <div className="flex flex-wrap items-center gap-2">
+          <FilterBar
+            aria-label="Filter by supplier"
+            options={supplierOptions}
+            value={supplierFilter}
+            onChange={setSupplierFilter}
+          />
           <FilterBar
             aria-label="Filter by type"
             options={TYPE_FILTER_OPTIONS}
@@ -140,6 +199,7 @@ export function SupplierPaymentTable({ data, from, to }: Props) {
         emptyMessage="No supplier payables to display"
         emptyDescription="Inventory receipts, expense/asset POs, and manual incoming logs will appear here."
         onRowClick={(row) => router.push(row.detail_href)}
+        rowHref={(row) => row.detail_href}
       />
     </div>
   );
