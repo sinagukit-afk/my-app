@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { TextArea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -74,7 +75,7 @@ function costVarianceWarning(defaultCost: number | null, unitCost: number | null
   const ratio = unitCost / defaultCost;
   if (ratio >= 1 - COST_VARIANCE_THRESHOLD && ratio <= 1 + COST_VARIANCE_THRESHOLD) return null;
 
-  return `Cost per item (₱${unitCost.toFixed(2)}) is more than 50% ${ratio < 1 ? "below" : "above"} the registered cost (₱${defaultCost.toFixed(2)}) — double-check before submitting.`;
+  return `Cost per item (${formatCurrency(unitCost)}) is more than 50% ${ratio < 1 ? "below" : "above"} the registered cost (${formatCurrency(defaultCost)}) — double-check before submitting.`;
 }
 
 type Props = {
@@ -132,6 +133,16 @@ export function NewManualIncomingForm({ suppliers, variantOptions }: Props) {
     [suppliers, variantOptions]
   );
 
+  const itemOptions = useMemo(
+    () =>
+      variantOptions.map((v) => ({
+        value: v.id,
+        label: v.sku ? `${v.label} (${v.sku})` : v.label,
+        keywords: [v.sku, v.keywords].filter(Boolean).join(" "),
+      })),
+    [variantOptions]
+  );
+
   function handleExtracted(result: ExtractionResult) {
     const header = result.header;
     if (typeof header.supplier_id === "string") setSupplierId(header.supplier_id);
@@ -168,6 +179,16 @@ export function NewManualIncomingForm({ suppliers, variantOptions }: Props) {
     () => rows.reduce((sum, r) => sum + Math.max(0, Number(r.lineCost) || 0), 0),
     [rows]
   );
+
+  /** Flags rows whose item is also picked on another row, so accidental splits get caught before submit. */
+  const duplicateVariantIds = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const r of rows) {
+      if (!r.variantId) continue;
+      counts.set(r.variantId, (counts.get(r.variantId) ?? 0) + 1);
+    }
+    return new Set([...counts.entries()].filter(([, count]) => count > 1).map(([id]) => id));
+  }, [rows]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -219,8 +240,15 @@ export function NewManualIncomingForm({ suppliers, variantOptions }: Props) {
     });
   }
 
+  function handleFormKeyDown(e: React.KeyboardEvent<HTMLFormElement>) {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      e.currentTarget.requestSubmit();
+    }
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6">
       <PageHeader
         title="Log Manual Incoming"
         description="Record inventory receipts not tied to a purchase order. Each item gets its own receiving number and is marked Received automatically."
@@ -236,9 +264,9 @@ export function NewManualIncomingForm({ suppliers, variantOptions }: Props) {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <AiFieldHighlight active={aiFilledKeys.has("supplier_id")}>
               <Select
-                label="Supplier"
+                label="Supplier (optional)"
                 name="supplier_id"
-                placeholder="— None —"
+                placeholder="Select a supplier…"
                 value={supplierId}
                 onChange={(e) => {
                   setSupplierId(e.target.value);
@@ -306,15 +334,13 @@ export function NewManualIncomingForm({ suppliers, variantOptions }: Props) {
                 )}
               >
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-[2fr_1fr_1fr_auto] sm:items-end">
-                  <Select
+                  <Combobox
                     label={i === 0 ? "Item" : undefined}
                     value={row.variantId}
-                    onChange={(e) => handleVariantChange(row.rowId, e.target.value)}
+                    onValueChange={(next) => handleVariantChange(row.rowId, next)}
                     placeholder="Select an item…"
-                    options={variantOptions.map((v) => ({
-                      value: v.id,
-                      label: v.sku ? `${v.label} (${v.sku})` : v.label,
-                    }))}
+                    searchPlaceholder="Search by name or SKU…"
+                    options={itemOptions}
                   />
                   <NumberInput
                     label={i === 0 ? "Quantity" : undefined}
@@ -348,6 +374,11 @@ export function NewManualIncomingForm({ suppliers, variantOptions }: Props) {
                     : "—"}
                 </p>
                 {warning && <p className="text-xs text-(--color-danger)">{warning}</p>}
+                {row.variantId && duplicateVariantIds.has(row.variantId) && (
+                  <p className="text-xs text-(--color-warning)">
+                    This item is also selected on another row — consider combining them into one line.
+                  </p>
+                )}
               </div>
             );
           })}
@@ -358,6 +389,15 @@ export function NewManualIncomingForm({ suppliers, variantOptions }: Props) {
         <CardFooter className="flex-col items-end gap-1 text-sm text-(--color-text-muted)">
           <p>
             Subtotal: <span className="font-medium text-(--color-text)">{formatCurrency(subtotal)}</span>
+          </p>
+          <p>
+            Shipping Fee: <span className="font-medium text-(--color-text)">{formatCurrency(Number(shippingFee) || 0)}</span>
+          </p>
+          <p>
+            Total Payable:{" "}
+            <span className="font-semibold text-(--color-text)">
+              {formatCurrency(subtotal + (Number(shippingFee) || 0))}
+            </span>
           </p>
         </CardFooter>
       </Card>

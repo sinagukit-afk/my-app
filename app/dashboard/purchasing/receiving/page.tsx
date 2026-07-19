@@ -9,7 +9,12 @@ function firstOf<T>(value: T | T[] | null | undefined): T | null {
   return value ?? null;
 }
 
-export default async function ReceivingPage() {
+const LOG_ROW_LIMIT = 500;
+
+type SearchParams = Promise<{ from?: string; to?: string }>;
+
+export default async function ReceivingPage({ searchParams }: { searchParams: SearchParams }) {
+  const { from = "", to = "" } = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -23,6 +28,14 @@ export default async function ReceivingPage() {
   const role = profile?.role ?? "";
   const canWrite = ["admin", "manager", "encoder"].includes(role);
 
+  let logQuery = supabase
+    .from("incoming_items")
+    .select(
+      "id, reference, date_received, item_name_snapshot, variant_id, quantity, unit_price, total_price, shipping_fee, supplier_id, supplier, notes, received_by_email, payment_status, item_variants(option1_value, option2_value), suppliers(name), purchase_orders(reference)"
+    );
+  if (from) logQuery = logQuery.gte("date_received", from);
+  if (to) logQuery = logQuery.lte("date_received", to);
+
   const [{ data: poData, error: poError }, { data: logData, error: logError }] = await Promise.all([
     supabase
       .from("purchase_orders")
@@ -33,13 +46,12 @@ export default async function ReceivingPage() {
       .in("status", ["sent", "partial"])
       .order("expected_date", { ascending: true, nullsFirst: false }),
 
-    supabase
-      .from("incoming_items")
-      .select(
-        "id, reference, status, date_received, item_name_snapshot, variant_id, quantity, unit_price, total_price, shipping_fee, supplier_id, supplier, notes, received_by_email, payment_status, item_variants(option1_value, option2_value), suppliers(name), purchase_orders(reference)"
-      )
+    logQuery
       .order("date_received", { ascending: false })
-      .order("created_at", { ascending: false }),
+      .order("created_at", { ascending: false })
+      // Append-only log across the company's whole history — window it so an unfiltered
+      // load can't pull in years of rows; narrow with the date range for anything older.
+      .limit(LOG_ROW_LIMIT),
   ]);
 
   const openPOs: ReceivablePO[] = (poData ?? []).map((po) => {
@@ -70,7 +82,6 @@ export default async function ReceivingPage() {
     return {
       id: row.id,
       reference: row.reference,
-      status: row.status,
       date_received: row.date_received,
       item_name_snapshot: row.item_name_snapshot,
       variant_label: variantLabel,
@@ -108,7 +119,7 @@ export default async function ReceivingPage() {
 
       <div className="space-y-3">
         <h2 className="text-lg font-semibold text-(--color-text)">Receiving Log</h2>
-        <ReceivingLogTable data={receivingLog} />
+        <ReceivingLogTable data={receivingLog} from={from} to={to} />
       </div>
     </div>
   );

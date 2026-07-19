@@ -34,7 +34,12 @@ export async function createExpensePurchaseOrder(formData: FormData): Promise<Cr
     return { success: false, error: 'Invalid line item data.' }
   }
 
-  const validItems = items.filter((i) => i.expense_category_id && i.description && i.quantity_ordered > 0)
+  const validItems = items
+    .filter((i) => i.expense_category_id && i.description && i.quantity_ordered > 0)
+    .map((i) => {
+      const gross = i.quantity_ordered * i.unit_cost
+      return { ...i, discount_amount: Math.min(Math.max(i.discount_amount ?? 0, 0), Math.max(gross, 0)) }
+    })
   if (validItems.length === 0) {
     return { success: false, error: 'Add at least one line item with a category, description, and quantity greater than zero.' }
   }
@@ -172,13 +177,16 @@ export async function addExpensePurchaseOrderItem(
   const description = (formData.get('description') as string)?.trim()
   const quantity_ordered = Number(formData.get('quantity_ordered'))
   const unit_cost = Number(formData.get('unit_cost') ?? 0) || 0
-  const discount_amount = Number(formData.get('discount_amount') ?? 0) || 0
+  const rawDiscount = Number(formData.get('discount_amount') ?? 0) || 0
 
   if (!expense_category_id) return { success: false, error: 'Select an expense category.' }
   if (!description) return { success: false, error: 'Enter a description.' }
   if (!quantity_ordered || quantity_ordered <= 0) {
     return { success: false, error: 'Enter a quantity greater than zero.' }
   }
+
+  const gross = quantity_ordered * unit_cost
+  const discount_amount = Math.min(Math.max(rawDiscount, 0), Math.max(gross, 0))
 
   const supabase = await createClient()
   const { error } = await supabase.from('purchase_order_items').insert({
@@ -188,7 +196,7 @@ export async function addExpensePurchaseOrderItem(
     quantity_ordered,
     unit_cost,
     discount_amount,
-    line_total: quantity_ordered * unit_cost - discount_amount,
+    line_total: gross - discount_amount,
   })
 
   if (error) return { success: false, error: error.message }

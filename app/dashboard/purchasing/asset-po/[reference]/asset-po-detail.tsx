@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { TextArea } from "@/components/ui/textarea";
 import { formatDate } from "@/lib/utils/format-date";
-import { formatQty } from "@/lib/utils/format";
+import { formatQty, formatCurrency } from "@/lib/utils/format";
 import { Select } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -72,9 +72,9 @@ const STATUS_VARIANT: Record<string, "neutral" | "success" | "warning" | "danger
 const NEXT_STATUS: Record<string, { status: string; label: string }[]> = {
   draft: [
     { status: "sent", label: "Approve & Send" },
-    { status: "cancelled", label: "Cancel" },
+    { status: "cancelled", label: "Cancel Order" },
   ],
-  sent: [{ status: "cancelled", label: "Cancel" }],
+  sent: [{ status: "cancelled", label: "Cancel Order" }],
   partial: [],
   received: [],
   cancelled: [],
@@ -141,6 +141,19 @@ export function AssetPODetail({ po, items, suppliers, categories, canWrite, canD
     });
   }
 
+  /** Benign, non-destructive transitions (draft → sent) run directly — no confirm dialog. */
+  function runStatusChange(target: { status: string; label: string }) {
+    setStatusError(null);
+    startTransition(async () => {
+      const res = await setAssetPurchaseOrderStatus(po.id, po.reference, target.status);
+      if (res.success) {
+        refresh();
+      } else {
+        setStatusError(res.error);
+      }
+    });
+  }
+
   function confirmRemoveItem() {
     if (!removeTarget) return;
     setRemoveError(null);
@@ -171,13 +184,27 @@ export function AssetPODetail({ po, items, suppliers, categories, canWrite, canD
 
   function confirmReceive() {
     setReceiveError(null);
+
+    const missingUsefulLife = receivableItems.filter((item) => {
+      const row = receiveRows[item.id];
+      if (!(Number(row?.quantity) > 0)) return false;
+      return !(Number(row?.usefulLife) > 0);
+    });
+
+    if (missingUsefulLife.length > 0) {
+      setReceiveError(
+        `Enter a useful life (months) for: ${missingUsefulLife.map((i) => i.description).join(", ")}.`
+      );
+      return;
+    }
+
     const lines: ReceiveLine[] = receivableItems
       .map((item) => {
         const row = receiveRows[item.id];
         return {
           po_item_id: item.id,
           quantity: Number(row?.quantity) || 0,
-          useful_life_months: row?.usefulLife ? Number(row.usefulLife) : undefined,
+          useful_life_months: Number(row?.usefulLife) || undefined,
           salvage_value: row?.salvage ? Number(row.salvage) : undefined,
         };
       })
@@ -230,9 +257,9 @@ export function AssetPODetail({ po, items, suppliers, categories, canWrite, canD
     },
     { key: "quantity_ordered", header: "Ordered", render: (value) => formatQty(value as number) },
     { key: "quantity_received", header: "Received", render: (value) => formatQty(value as number) },
-    { key: "unit_cost", header: "Unit Cost", render: (value) => `₱${Number(value).toFixed(2)}` },
-    { key: "discount_amount", header: "Discount", render: (value) => `₱${Number(value).toFixed(2)}` },
-    { key: "line_total", header: "Line Total", render: (value) => `₱${Number(value).toFixed(2)}` },
+    { key: "unit_cost", header: "Unit Cost", render: (value) => formatCurrency(value as number) },
+    { key: "discount_amount", header: "Discount", render: (value) => formatCurrency(value as number) },
+    { key: "line_total", header: "Line Total", render: (value) => formatCurrency(value as number) },
     {
       key: "id",
       header: "Actions",
@@ -277,11 +304,15 @@ export function AssetPODetail({ po, items, suppliers, categories, canWrite, canD
                 variant="secondary"
                 disabled={isPending}
                 onClick={() => {
-                  setStatusTarget(t);
-                  setStatusError(null);
+                  if (t.status === "sent") {
+                    runStatusChange(t);
+                  } else {
+                    setStatusTarget(t);
+                    setStatusError(null);
+                  }
                 }}
               >
-                {t.label}
+                {isPending && t.status === "sent" ? "Updating…" : t.label}
               </Button>
             ))}
             {canShowReceive && <Button onClick={openReceiveDialog}>Receive</Button>}
@@ -300,6 +331,10 @@ export function AssetPODetail({ po, items, suppliers, categories, canWrite, canD
           </div>
         }
       />
+
+      {statusError && !statusTarget && (
+        <p className="text-sm text-(--color-danger)">{statusError}</p>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -323,7 +358,7 @@ export function AssetPODetail({ po, items, suppliers, categories, canWrite, canD
             <CardTitle className="text-sm text-(--color-text-muted)">Subtotal / Fees</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-(--color-text)">
-            ₱{Number(po.subtotal).toFixed(2)} net + ₱{Number(po.shipping_fee).toFixed(2)} shipping
+            {formatCurrency(po.subtotal)} net + {formatCurrency(po.shipping_fee)} shipping
           </CardContent>
         </Card>
         <Card>
@@ -331,7 +366,7 @@ export function AssetPODetail({ po, items, suppliers, categories, canWrite, canD
             <CardTitle className="text-sm text-(--color-text-muted)">Total</CardTitle>
           </CardHeader>
           <CardContent className="text-lg font-semibold text-(--color-text)">
-            ₱{Number(po.total).toFixed(2)}
+            {formatCurrency(po.total)}
           </CardContent>
         </Card>
       </div>
@@ -351,6 +386,7 @@ export function AssetPODetail({ po, items, suppliers, categories, canWrite, canD
           columns={columns}
           data={items}
           searchable={false}
+          stickyHeader
           emptyMessage="No line items yet"
           emptyDescription="Add items to this purchase order."
         />

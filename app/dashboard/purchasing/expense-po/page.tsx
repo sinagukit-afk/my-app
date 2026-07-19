@@ -2,7 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { ExpensePOTable, type ExpensePORow } from "./expense-po-table";
 
-export default async function ExpensePurchaseOrdersPage() {
+type SearchParams = Promise<{ from?: string; to?: string }>;
+
+export default async function ExpensePurchaseOrdersPage({ searchParams }: { searchParams: SearchParams }) {
+  const { from = "", to = "" } = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -16,13 +19,16 @@ export default async function ExpensePurchaseOrdersPage() {
   const role = profile?.role ?? "";
   const canWrite = ["admin", "manager"].includes(role);
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("purchase_orders")
     .select(
       "id, reference, status, order_date, expected_date, total, suppliers(name), purchase_order_items(id)"
     )
-    .eq("po_type", "expense")
-    .order("created_at", { ascending: false });
+    .eq("po_type", "expense");
+  if (from) query = query.gte("order_date", from);
+  if (to) query = query.lte("order_date", to);
+
+  const { data, error } = await query.order("created_at", { ascending: false });
 
   const rows: ExpensePORow[] = (data ?? []).map((po) => {
     const supplier = Array.isArray(po.suppliers) ? po.suppliers[0] : po.suppliers;
@@ -48,7 +54,7 @@ export default async function ExpensePurchaseOrdersPage() {
         </Card>
       )}
 
-      <ExpensePOTable data={rows} canWrite={canWrite} />
+      <ExpensePOTable data={rows} canWrite={canWrite} from={from} to={to} />
     </div>
   );
 }

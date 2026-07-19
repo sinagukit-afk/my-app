@@ -1,12 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
+import { FilterBar } from "@/components/business/filter-bar";
+import { DateRangeFilter } from "@/components/business/date-range-filter";
 import { formatDate } from "@/lib/utils/format-date";
+import { formatCurrency } from "@/lib/utils/format";
 
 export type ExpensePORow = {
   id: string;
@@ -22,6 +26,8 @@ export type ExpensePORow = {
 type Props = {
   data: ExpensePORow[];
   canWrite: boolean;
+  from: string;
+  to: string;
 };
 
 const STATUS_VARIANT: Record<string, "neutral" | "success" | "warning" | "danger" | "default"> = {
@@ -32,8 +38,27 @@ const STATUS_VARIANT: Record<string, "neutral" | "success" | "warning" | "danger
   cancelled: "danger",
 };
 
-export function ExpensePOTable({ data, canWrite }: Props) {
+const STATUS_FILTER_OPTIONS = [
+  { label: "All Statuses", value: "" },
+  { label: "Open (Draft/Sent/Partial)", value: "open" },
+  { label: "Draft", value: "draft" },
+  { label: "Sent", value: "sent" },
+  { label: "Partial", value: "partial" },
+  { label: "Received", value: "received" },
+  { label: "Cancelled", value: "cancelled" },
+];
+
+const OPEN_STATUSES = new Set(["draft", "sent", "partial"]);
+
+export function ExpensePOTable({ data, canWrite, from, to }: Props) {
   const router = useRouter();
+  const [statusFilter, setStatusFilter] = useState("");
+
+  const filteredData = data.filter((row) => {
+    if (!statusFilter) return true;
+    if (statusFilter === "open") return OPEN_STATUSES.has(row.status);
+    return row.status === statusFilter;
+  });
 
   const columns: Column<ExpensePORow>[] = [
     { key: "reference", header: "Reference", sortable: true },
@@ -55,7 +80,7 @@ export function ExpensePOTable({ data, canWrite }: Props) {
       key: "total",
       header: "Total",
       sortable: true,
-      render: (value) => `₱${Number(value).toFixed(2)}`,
+      render: (value) => formatCurrency(value as number),
     },
   ];
 
@@ -73,13 +98,25 @@ export function ExpensePOTable({ data, canWrite }: Props) {
         }
       />
 
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <DateRangeFilter from={from} to={to} />
+        <FilterBar
+          aria-label="Filter by status"
+          options={STATUS_FILTER_OPTIONS}
+          value={statusFilter}
+          onChange={setStatusFilter}
+        />
+      </div>
+
       <DataTable
         columns={columns}
-        data={data}
+        data={filteredData}
+        exportFilename="expense-purchase-orders"
         searchPlaceholder="Search expense purchase orders…"
         emptyMessage="No expense purchase orders found"
         emptyDescription="Create your first expense PO to get started."
         onRowClick={(row) => router.push(`/dashboard/purchasing/expense-po/${row.reference}`)}
+        rowHref={(row) => `/dashboard/purchasing/expense-po/${row.reference}`}
       />
     </div>
   );

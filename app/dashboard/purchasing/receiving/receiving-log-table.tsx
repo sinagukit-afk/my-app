@@ -1,14 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
+import { FilterBar } from "@/components/business/filter-bar";
+import { DateRangeFilter } from "@/components/business/date-range-filter";
 import { formatDate } from "@/lib/utils/format-date";
 import { formatQty, formatCurrency } from "@/lib/utils/format";
 
 export type ReceivingLogRow = {
   id: string;
   reference: string;
-  status: string;
   date_received: string;
   item_name_snapshot: string;
   variant_label: string | null;
@@ -30,11 +32,36 @@ const PAYMENT_STATUS_VARIANT: Record<ReceivingLogRow["payment_status"], "danger"
   paid: "success",
 };
 
+const SOURCE_FILTER_OPTIONS = [
+  { label: "All Sources", value: "" },
+  { label: "Manual", value: "manual" },
+  { label: "Purchase Order", value: "po" },
+];
+
+const PAYMENT_FILTER_OPTIONS = [
+  { label: "All Payment Statuses", value: "" },
+  { label: "Unpaid", value: "unpaid" },
+  { label: "Partial", value: "partial" },
+  { label: "Paid", value: "paid" },
+];
+
 type Props = {
   data: ReceivingLogRow[];
+  from: string;
+  to: string;
 };
 
-export function ReceivingLogTable({ data }: Props) {
+export function ReceivingLogTable({ data, from, to }: Props) {
+  const [sourceFilter, setSourceFilter] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState("");
+
+  const filteredData = data.filter((row) => {
+    if (sourceFilter === "manual" && row.purchase_order_reference) return false;
+    if (sourceFilter === "po" && !row.purchase_order_reference) return false;
+    if (paymentFilter && row.payment_status !== paymentFilter) return false;
+    return true;
+  });
+
   const columns: Column<ReceivingLogRow>[] = [
     {
       key: "reference",
@@ -115,11 +142,6 @@ export function ReceivingLogTable({ data }: Props) {
       ),
     },
     {
-      key: "status",
-      header: "Status",
-      render: (value) => <Badge variant="success">{String(value)}</Badge>,
-    },
-    {
       key: "received_by_email",
       header: "Received By",
       render: (value) => (
@@ -131,12 +153,31 @@ export function ReceivingLogTable({ data }: Props) {
   ];
 
   return (
-    <DataTable
-      columns={columns}
-      data={data}
-      searchPlaceholder="Search receiving log…"
-      emptyMessage="No receiving entries yet"
-      emptyDescription="Received purchase orders and manual receipts will appear here."
-    />
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <DateRangeFilter from={from} to={to} />
+        <div className="flex flex-wrap gap-3">
+          <FilterBar
+            aria-label="Filter by source"
+            options={SOURCE_FILTER_OPTIONS}
+            value={sourceFilter}
+            onChange={setSourceFilter}
+          />
+          <FilterBar
+            aria-label="Filter by payment status"
+            options={PAYMENT_FILTER_OPTIONS}
+            value={paymentFilter}
+            onChange={setPaymentFilter}
+          />
+        </div>
+      </div>
+      <DataTable
+        columns={columns}
+        data={filteredData}
+        searchPlaceholder="Search receiving log…"
+        emptyMessage="No receiving entries yet"
+        emptyDescription="Received purchase orders and manual receipts will appear here."
+      />
+    </div>
   );
 }

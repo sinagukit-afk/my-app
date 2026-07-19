@@ -20,6 +20,7 @@ import { useAiFilledKeys } from "@/components/ai-autofill/use-ai-filled-keys";
 import { supplierInvoiceSchema } from "@/lib/ai-autofill/schemas";
 import { toIsoDate } from "@/lib/ai-autofill/normalize-date";
 import type { DropdownOptionsByField, ExtractionResult } from "@/lib/ai-autofill/types";
+import { formatCurrency } from "@/lib/utils/format";
 
 type SupplierOption = { id: string; name: string };
 type CategoryOption = { id: string; name: string };
@@ -35,6 +36,11 @@ type ItemRow = {
 
 function emptyRow(): ItemRow {
   return { rowId: randomId(), categoryId: "", description: "", quantity: "1", unitCost: "", discount: "0" };
+}
+
+/** Discount can never be negative or exceed the line's gross (qty × unit cost). */
+function clampDiscount(gross: number, discount: number): number {
+  return Math.min(Math.max(discount, 0), Math.max(gross, 0));
 }
 
 type Props = {
@@ -112,13 +118,26 @@ export function NewExpensePurchaseOrderForm({ suppliers, categories }: Props) {
       rows.map((r) => {
         const qty = Number(r.quantity) || 0;
         const cost = Number(r.unitCost) || 0;
-        const discount = Number(r.discount) || 0;
-        return Math.max(0, qty * cost - discount);
+        const gross = qty * cost;
+        const discount = clampDiscount(gross, Number(r.discount) || 0);
+        return gross - discount;
       }),
     [rows]
   );
 
   const subtotal = rowTotals.reduce((sum, t) => sum + t, 0);
+
+  /** Per-category subtotal breakdown — only worth showing once a PO actually spans more than one category. */
+  const categoryBreakdown = useMemo(() => {
+    const totals = new Map<string, number>();
+    rows.forEach((r, i) => {
+      if (!r.categoryId) return;
+      totals.set(r.categoryId, (totals.get(r.categoryId) ?? 0) + rowTotals[i]);
+    });
+    return [...totals.entries()]
+      .map(([id, total]) => ({ id, name: categories.find((c) => c.id === id)?.name ?? "—", total }))
+      .filter((c) => c.total > 0);
+  }, [rows, rowTotals, categories]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -127,13 +146,17 @@ export function NewExpensePurchaseOrderForm({ suppliers, categories }: Props) {
 
     const items: NewItemInput[] = rows
       .filter((r) => r.categoryId && r.description.trim() && Number(r.quantity) > 0)
-      .map((r) => ({
-        expense_category_id: r.categoryId,
-        description: r.description.trim(),
-        quantity_ordered: Number(r.quantity) || 0,
-        unit_cost: Number(r.unitCost) || 0,
-        discount_amount: Number(r.discount) || 0,
-      }));
+      .map((r) => {
+        const quantity_ordered = Number(r.quantity) || 0;
+        const unit_cost = Number(r.unitCost) || 0;
+        return {
+          expense_category_id: r.categoryId,
+          description: r.description.trim(),
+          quantity_ordered,
+          unit_cost,
+          discount_amount: clampDiscount(quantity_ordered * unit_cost, Number(r.discount) || 0),
+        };
+      });
 
     if (items.length === 0) {
       setError("Add at least one line item with a category, description, and quantity greater than zero.");
@@ -152,8 +175,15 @@ export function NewExpensePurchaseOrderForm({ suppliers, categories }: Props) {
     });
   }
 
+  function handleFormKeyDown(e: React.KeyboardEvent<HTMLFormElement>) {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      e.currentTarget.requestSubmit();
+    }
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6">
       <PageHeader title="New Expense PO" description="Request approval to purchase an operating expense before buying." />
 
       <AutoFillPanel schema={supplierInvoiceSchema} dropdownOptions={dropdownOptions} onExtracted={handleExtracted} />
@@ -227,49 +257,54 @@ export function NewExpensePurchaseOrderForm({ suppliers, categories }: Props) {
             <div
               key={row.rowId}
               className={cn(
-                "grid grid-cols-1 gap-3 border-b border-(--color-border) pb-4 last:border-0 sm:grid-cols-[1fr_1.5fr_0.7fr_0.8fr_0.8fr_auto] sm:items-end",
+                "space-y-1 border-b border-(--color-border) pb-4 last:border-0",
                 aiRowIds.has(row.rowId) && "rounded-md ring-2 ring-(--color-info) ring-offset-1 ring-offset-(--color-surface)"
               )}
             >
-              <Select
-                label={i === 0 ? "Category" : undefined}
-                value={row.categoryId}
-                onChange={(e) => updateRow(row.rowId, { categoryId: e.target.value })}
-                placeholder="Select…"
-                options={categories.map((c) => ({ value: c.id, label: c.name }))}
-              />
-              <Input
-                label={i === 0 ? "Description" : undefined}
-                value={row.description}
-                onChange={(e) => updateRow(row.rowId, { description: e.target.value })}
-                placeholder="e.g. Aircon repair"
-              />
-              <NumberInput
-                label={i === 0 ? "Quantity" : undefined}
-                min={0.01}
-                step="any"
-                value={row.quantity}
-                onChange={(e) => updateRow(row.rowId, { quantity: e.target.value })}
-              />
-              <CurrencyInput
-                label={i === 0 ? "Unit Cost" : undefined}
-                value={row.unitCost}
-                onChange={(e) => updateRow(row.rowId, { unitCost: e.target.value })}
-              />
-              <CurrencyInput
-                label={i === 0 ? "Discount" : undefined}
-                value={row.discount}
-                onChange={(e) => updateRow(row.rowId, { discount: e.target.value })}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                className="text-(--color-danger)"
-                disabled={rows.length === 1}
-                onClick={() => removeRow(row.rowId)}
-              >
-                Remove
-              </Button>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1.5fr_0.7fr_0.8fr_0.8fr_auto] sm:items-end">
+                <Select
+                  label={i === 0 ? "Category" : undefined}
+                  value={row.categoryId}
+                  onChange={(e) => updateRow(row.rowId, { categoryId: e.target.value })}
+                  placeholder="Select…"
+                  options={categories.map((c) => ({ value: c.id, label: c.name }))}
+                />
+                <Input
+                  label={i === 0 ? "Description" : undefined}
+                  value={row.description}
+                  onChange={(e) => updateRow(row.rowId, { description: e.target.value })}
+                  placeholder="e.g. Aircon repair"
+                />
+                <NumberInput
+                  label={i === 0 ? "Quantity" : undefined}
+                  min={0.01}
+                  step="any"
+                  value={row.quantity}
+                  onChange={(e) => updateRow(row.rowId, { quantity: e.target.value })}
+                />
+                <CurrencyInput
+                  label={i === 0 ? "Unit Cost" : undefined}
+                  value={row.unitCost}
+                  onChange={(e) => updateRow(row.rowId, { unitCost: e.target.value })}
+                />
+                <CurrencyInput
+                  label={i === 0 ? "Discount" : undefined}
+                  value={row.discount}
+                  onChange={(e) => updateRow(row.rowId, { discount: e.target.value })}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="text-(--color-danger)"
+                  disabled={rows.length === 1}
+                  onClick={() => removeRow(row.rowId)}
+                >
+                  Remove
+                </Button>
+              </div>
+              <p className="text-xs text-(--color-text-muted)">
+                Line Total: <span className="font-medium text-(--color-text)">{formatCurrency(rowTotals[i])}</span>
+              </p>
             </div>
           ))}
           <Button type="button" variant="secondary" onClick={addRow}>
@@ -277,8 +312,18 @@ export function NewExpensePurchaseOrderForm({ suppliers, categories }: Props) {
           </Button>
         </CardContent>
         <CardFooter className="flex-col items-end gap-1 text-sm text-(--color-text-muted)">
+          {categoryBreakdown.length > 1 && (
+            <div className="mb-1 w-full space-y-0.5 border-b border-(--color-border) pb-2">
+              {categoryBreakdown.map((c) => (
+                <p key={c.id} className="flex justify-between gap-4">
+                  <span>{c.name}</span>
+                  <span className="text-(--color-text)">{formatCurrency(c.total)}</span>
+                </p>
+              ))}
+            </div>
+          )}
           <p>
-            Subtotal: <span className="font-medium text-(--color-text)">₱{subtotal.toFixed(2)}</span>
+            Subtotal: <span className="font-medium text-(--color-text)">{formatCurrency(subtotal)}</span>
           </p>
         </CardFooter>
       </Card>

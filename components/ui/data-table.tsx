@@ -37,6 +37,8 @@ export interface DataTableProps<T extends Record<string, unknown>> {
   rowHref?: (row: T) => string;
   /** Base filename (no extension) for the "Export to Excel" button. Omit to hide the button. */
   exportFilename?: string;
+  /** Keeps column headers pinned to the top of the scrolling container while long tables scroll past them. */
+  stickyHeader?: boolean;
 }
 
 function csvCell(value: string | number): string {
@@ -86,6 +88,7 @@ function DataTable<T extends Record<string, unknown>>({
   onRowClick,
   rowHref,
   exportFilename,
+  stickyHeader = false,
 }: DataTableProps<T>) {
   const [search, setSearch] = React.useState("");
   const [sortKey, setSortKey] = React.useState<string | null>(null);
@@ -242,6 +245,7 @@ function DataTable<T extends Record<string, unknown>>({
                     }
                     className={cn(
                       "px-4 py-3 text-left text-xs font-semibold text-(--color-text-muted) uppercase tracking-wider whitespace-nowrap",
+                      stickyHeader && "sticky top-0 z-10 bg-(--color-bg)",
                       col.className
                     )}
                   >

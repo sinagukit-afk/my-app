@@ -394,3 +394,62 @@ in `pending_review`. Fixed via migration `journal_entries_source_type_allow_newe
 **Verification residue (test env):** a voided ₱100 BDO payment on `SPO26-0717-0005`
 (demo of the void flow) and cancelled test PO `SPO26-0718-0009` (created through the new
 combobox, marked sent without a dialog, cancelled through the confirm path).
+
+## PUR-4 — Manual Incoming / Asset PO / Expense PO UX audit: 18 items implemented ✅ DONE
+
+**2026-07-19.** A follow-up ERP-UX audit specifically of Manual Incoming (Receiving →
+Log Manual Incoming), Asset PO, and Expense PO — the three purchasing surfaces PUR-3
+didn't touch — found these three screens were visibly behind their Inventory PO sibling.
+18 items implemented and live-verified across three passes in one session:
+
+1. **`formatCurrency` sweep** — Asset/Expense PO forms, tables, and detail pages still had
+   inline `` `₱${Number(value).toFixed(2)}` `` (PUR-3's item 9 sweep only covered Inventory PO).
+2. **Searchable Combobox** for the item picker in Manual Incoming (mirrors PUR-3 item 13,
+   which only touched Inventory PO's picker).
+3. **Filters + Export to Excel** added to the Asset PO and Expense PO list pages
+   (`DateRangeFilter` + status `FilterBar`, server-side `?from/&to` on `order_date`).
+4. **`rowHref`** added to Asset PO / Expense PO tables for real `<Link>` row navigation
+   (PUR-3 item 10 only covered Inventory PO + AP lists).
+5. **Total Payable preview** in Manual Incoming's footer (Subtotal + Shipping Fee + Total
+   Payable), live-updating — previously the form only showed Subtotal pre-submit.
+6. **Draft → Sent without confirm** ported to Asset/Expense PO detail (PUR-3 item 14 was
+   Inventory-PO-only); Cancel dialog relabeled "Cancel Order" so it no longer reads
+   "Cancel"/"Cancel" (the exact bug PUR-3 fixed elsewhere had re-appeared here).
+7. **Duplicate-item warning** in Manual Incoming — flags when the same item/variant is
+   picked on two rows ("consider combining them into one line").
+8. **Sticky line-item table headers** — new opt-in `stickyHeader` prop on `DataTable`
+   (`components/ui/data-table.tsx`), enabled only on the Asset/Expense PO Line Items
+   tables so the ~20 other `DataTable` usages app-wide are unaffected.
+9. **Per-category running total** in Asset/Expense PO forms — breakdown shown above
+   Subtotal once a PO spans more than one category.
+10. **Ctrl+Enter submit shortcut** on all three creation forms (`requestSubmit()` on the
+    `<form>`'s `onKeyDown`); live-verified it actually creates and navigates.
+11. *(re-verified, already done by item 1)*
+12. *(re-verified, already done by item 6)*
+13. **Per-row Line Total** now rendered on Asset/Expense PO forms (was computed via
+    `rowTotals` but never shown to the user before submit).
+14. **`discount_amount` clamped to `[0, gross]`** — client-side (`clampDiscount()` in both
+    `new-*-po-form.tsx`) and server-side (both `actions.ts`, in `createXPurchaseOrder` and
+    `addXPurchaseOrderItem`). Previously a discount exceeding qty×unit_cost saved as raw
+    input while the displayed total silently floored at 0 — inconsistent bookkeeping.
+    Live-verified: entering a ₱500 discount on a ₱100 gross line persisted as ₱100.00, not 500.
+15. **Receiving log filters** — `DateRangeFilter` (server-side, `page.tsx`) + client-side
+    Source (Manual/PO) and Payment Status `FilterBar`s; dropped the hard-coded Status
+    column (every row was always "received," pure noise).
+16. **Windowed the Receiving log query** — added `.limit(500)` ordered by
+    `date_received desc`; this is an append-only log with no natural bound like PO counts.
+17. **Supplier field alignment** — Manual Incoming's Supplier field now reads
+    "Supplier (optional)" / "Select a supplier…", matching Asset/Expense PO (was
+    "Supplier" / "— None —").
+18. **Useful Life validation** in the Asset PO Receive dialog — blocks "Post Receipt" with
+    an inline error naming the item when a category has no default and the field is
+    empty (previously sent `undefined` to `receive_asset_purchase_order`).
+
+Also fixed the **Open Purchase Orders table** on the Receiving page (`receiving-table.tsx`)
+during the sweep — it sat right next to the Manual Incoming log but never got `formatDate`,
+sortable columns, or `rowHref`.
+
+**Verification residue (test env):** cancelled Asset PO `SPO26-0719-0011` (Ctrl+Enter +
+draft→sent→cancel lifecycle test), cancelled Inventory PO `SPO26-0719-0012` (Open POs
+table rowHref/formatDate test), cancelled Asset PO `SPO26-0719-0013` (discount-clamp +
+useful-life-validation test).
