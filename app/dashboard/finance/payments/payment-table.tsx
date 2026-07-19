@@ -17,6 +17,7 @@ export type OrderRow = {
   orderDate: string;
   totalMoney: number;
   shippingFeeTotal: number;
+  hasPendingShippingFee: boolean;
   totalPaid: number;
   remainingBalance: number;
   paymentStatus: "Unpaid" | "Partially Paid" | "Paid" | "Overpaid";
@@ -32,6 +33,7 @@ const STATUS_VARIANT: Record<string, "success" | "default" | "danger" | "warning
   delivered: "success",
   completed: "success",
   on_hold: "neutral",
+  cancelled: "danger",
 };
 
 const PAYMENT_STATUS_VARIANT: Record<string, "success" | "danger" | "warning" | "neutral"> = {
@@ -102,7 +104,20 @@ export function PaymentOrdersTable({ data, from, to }: Props) {
       key: "shippingFeeTotal",
       header: "Shipping Fee",
       sortable: true,
-      render: (value) => (value ? formatCurrency(value as number) : <span className="text-(--color-text-subtle)">—</span>),
+      render: (value, row) => {
+        if (row.hasPendingShippingFee) {
+          return (
+            <Badge variant="warning" title="Courier cost was recorded but no shipping fee was charged to the customer">
+              Fee not set
+            </Badge>
+          );
+        }
+        return value ? (
+          formatCurrency(value as number)
+        ) : (
+          <span className="text-(--color-text-subtle)">—</span>
+        );
+      },
     },
     {
       key: "totalPaid",

@@ -267,6 +267,7 @@ export function OnHoldOrderDetail({ data }: { data: OnHoldOrderData }) {
           customer={data.shipmentCustomer}
           canAddShipment={false}
           isShippingRole={data.isShippingRole}
+          isPaymentClosed={false}
           onChanged={() => router.refresh()}
         />
       )}

@@ -24,6 +24,7 @@ import {
   markShipmentShipped,
   markShipmentDelivered,
   markShipmentPickedUp,
+  updateShipmentFee,
 } from "../actions";
 import { randomId } from "@/lib/utils/random-id";
 import { AutoFillPanel } from "@/components/ai-autofill/auto-fill-panel";
@@ -118,6 +119,7 @@ export function OrderShipments({
   customer,
   canAddShipment,
   isShippingRole,
+  isPaymentClosed,
   onChanged,
 }: {
   orderId: string;
@@ -129,6 +131,7 @@ export function OrderShipments({
   customer: ShipmentCustomer | null;
   canAddShipment: boolean;
   isShippingRole: boolean;
+  isPaymentClosed: boolean;
   onChanged: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
@@ -142,6 +145,12 @@ export function OrderShipments({
   const [deliverError, setDeliverError] = useState<string | null>(null);
   const [pickupTarget, setPickupTarget] = useState<string | null>(null);
   const [pickupError, setPickupError] = useState<string | null>(null);
+
+  const [feeEditTarget, setFeeEditTarget] = useState<OrderShipmentRow | null>(null);
+  const [feeEditShippingCost, setFeeEditShippingCost] = useState("");
+  const [feeEditShippingFeeCharged, setFeeEditShippingFeeCharged] = useState("");
+  const [feeEditCourierPaymentTypeId, setFeeEditCourierPaymentTypeId] = useState("");
+  const [feeEditError, setFeeEditError] = useState<string | null>(null);
 
   const hasCustomer = customer != null;
 
@@ -340,6 +349,14 @@ export function OrderShipments({
       return;
     }
 
+    const shippingFeeChargedValue = isPickup ? null : shippingFeeCharged ? Number(shippingFeeCharged) : null;
+    if (shippingCostValue != null && shippingCostValue > 0 && shippingFeeChargedValue == null) {
+      setFormError(
+        "Enter a Shipping Fee Charged (to customer) — enter 0 if this shipment is free to the customer."
+      );
+      return;
+    }
+
     const input = {
       fulfillmentType,
       shipsToCustomer: isPickup ? true : shipsToCustomer,
@@ -353,7 +370,7 @@ export function OrderShipments({
       courierId: isPickup ? null : courierId || null,
       trackingNumber: isPickup ? null : trackingNumber.trim() || null,
       shippingCost: shippingCostValue,
-      shippingFeeCharged: isPickup ? null : shippingFeeCharged ? Number(shippingFeeCharged) : null,
+      shippingFeeCharged: shippingFeeChargedValue,
       courierPaymentTypeId: isPickup ? null : courierPaymentTypeId || null,
       note: note.trim() || null,
       items,
@@ -413,6 +430,47 @@ export function OrderShipments({
         onChanged();
       } else {
         setPickupError(res.error);
+      }
+    });
+  }
+
+  function openFeeEdit(s: OrderShipmentRow) {
+    setFeeEditError(null);
+    setFeeEditTarget(s);
+    setFeeEditShippingCost(s.shippingCost != null ? String(s.shippingCost) : "");
+    setFeeEditShippingFeeCharged(s.shippingFeeCharged != null ? String(s.shippingFeeCharged) : "");
+    setFeeEditCourierPaymentTypeId(s.courierPaymentTypeId ?? "");
+  }
+
+  function handleSaveFeeEdit() {
+    if (!feeEditTarget) return;
+    setFeeEditError(null);
+
+    const costValue = feeEditShippingCost ? Number(feeEditShippingCost) : null;
+    const feeValue = feeEditShippingFeeCharged ? Number(feeEditShippingFeeCharged) : null;
+
+    if (costValue != null && costValue > 0 && feeValue == null) {
+      setFeeEditError(
+        "Enter a Shipping Fee Charged (to customer) — enter 0 if this shipment is free to the customer."
+      );
+      return;
+    }
+    if (costValue != null && costValue > 0 && !feeEditCourierPaymentTypeId) {
+      setFeeEditError("Select how the courier was paid — required whenever a shipping cost is entered.");
+      return;
+    }
+
+    startTransition(async () => {
+      const res = await updateShipmentFee(orderId, feeEditTarget.id, {
+        shippingCost: costValue,
+        shippingFeeCharged: feeValue,
+        courierPaymentTypeId: feeEditCourierPaymentTypeId || null,
+      });
+      if (res.success) {
+        setFeeEditTarget(null);
+        onChanged();
+      } else {
+        setFeeEditError(res.error);
       }
     });
   }
@@ -518,13 +576,23 @@ export function OrderShipments({
               </>
             )}
             {s.note && <p className="text-(--color-text-muted)">Notes: {s.note}</p>}
-            {isShippingRole && (s.status === "preparing" || s.status === "shipped") && (
+            {isShippingRole &&
+              (s.status === "preparing" ||
+                s.status === "shipped" ||
+                (s.status === "delivered" && s.fulfillmentType === "delivery")) && (
               <div className="flex justify-end gap-2 pt-1">
                 {s.status === "preparing" && (
                   <Button size="sm" variant="secondary" disabled={isPending} onClick={() => openEditForm(s)}>
                     Edit
                   </Button>
                 )}
+                {s.fulfillmentType === "delivery" &&
+                  (s.status === "shipped" || s.status === "delivered") &&
+                  !isPaymentClosed && (
+                    <Button size="sm" variant="secondary" disabled={isPending} onClick={() => openFeeEdit(s)}>
+                      Edit Fee
+                    </Button>
+                  )}
                 {s.status === "preparing" && s.fulfillmentType === "pickup" && (
                   <Button
                     size="sm"
@@ -889,6 +957,60 @@ export function OrderShipments({
             </DialogClose>
             <Button type="button" onClick={handleMarkPickedUp} disabled={isPending}>
               {isPending ? "Saving…" : "Mark as Picked Up"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!feeEditTarget}
+        onOpenChange={(next) => {
+          if (!next) {
+            setFeeEditTarget(null);
+            setFeeEditError(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Shipping Fee — {feeEditTarget?.shipmentNumber}</DialogTitle>
+            <DialogDescription>
+              Correct the shipping cost or the fee charged to the customer for a shipment that has already
+              shipped. Only these fields change — items and stock already moved are untouched.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <CurrencyInput
+                label="Shipping Cost (paid to courier)"
+                value={feeEditShippingCost}
+                onChange={(e) => setFeeEditShippingCost(e.target.value)}
+              />
+              <CurrencyInput
+                label="Shipping Fee Charged (to customer)"
+                value={feeEditShippingFeeCharged}
+                onChange={(e) => setFeeEditShippingFeeCharged(e.target.value)}
+              />
+            </div>
+            {feeEditShippingCost && Number(feeEditShippingCost) > 0 && (
+              <Select
+                label="Paid Via"
+                placeholder="Select payment method…"
+                value={feeEditCourierPaymentTypeId}
+                onChange={(e) => setFeeEditCourierPaymentTypeId(e.target.value)}
+                options={paymentTypeOptions.map((pt) => ({ value: pt.id, label: pt.name }))}
+              />
+            )}
+          </div>
+          {feeEditError && <p className="text-sm text-(--color-danger)">{feeEditError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" onClick={handleSaveFeeEdit} disabled={isPending}>
+              {isPending ? "Saving…" : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>

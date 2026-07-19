@@ -29,7 +29,7 @@ export default async function ShippingOrderPage({ params }: { params: Promise<{ 
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, order_number, status, fulfillment_method, customers(name, phone_number, address_line1, barangay, city, province), order_items(id, item_name_snapshot, sku_snapshot, quantity)"
+      "id, order_number, status, fulfillment_method, payment_closed_at, customers(name, phone_number, address_line1, barangay, city, province), order_items(id, item_name_snapshot, sku_snapshot, quantity)"
     )
     .eq("order_number", orderNumber)
     .single();
@@ -97,6 +97,7 @@ export default async function ShippingOrderPage({ params }: { params: Promise<{ 
       : null,
     canAddShipment,
     isShippingRole,
+    isPaymentClosed: order.payment_closed_at != null,
     shipments: (shipmentsData ?? []).map((s): OrderShipmentRow => {
       const courier = firstOf(s.couriers);
       return {

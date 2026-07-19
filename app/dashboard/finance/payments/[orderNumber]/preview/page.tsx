@@ -30,7 +30,7 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, order_number, status, created_at, total_money, subtotal, total_discount, store_id, created_by, customers(name, phone_number, address_line1, barangay, city, province), order_items(id, item_name_snapshot, sku_snapshot, quantity, unit_price, line_discount, order_item_modifiers(name_snapshot, price_snapshot)), preparer:profiles!orders_created_by_fkey(full_name, function_title)"
+      "id, order_number, status, created_at, total_money, total_tax, subtotal, total_discount, store_id, created_by, customers(name, phone_number, address_line1, barangay, city, province), order_items(id, item_name_snapshot, sku_snapshot, quantity, unit_price, line_discount, order_item_modifiers(name_snapshot, price_snapshot)), preparer:profiles!orders_created_by_fkey(full_name, function_title)"
     )
     .eq("order_number", orderNumber)
     .single();
@@ -69,7 +69,8 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
   const payments = paymentsData ?? [];
   const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
   const totalMoney = Number(order.total_money);
-  const totalDue = totalMoney + shippingFeeTotal;
+  const totalTax = Number(order.total_tax ?? 0);
+  const totalDue = totalMoney + totalTax + shippingFeeTotal;
   const remainingBalance = Math.max(0, totalDue - totalPaid);
   const overpaid = Math.max(0, totalPaid - totalDue);
   const paymentStatusLabel = paymentStatus(totalPaid, totalDue);
@@ -171,17 +172,23 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
               <span>Order Total</span>
               <span>{formatCurrency(totalMoney)}</span>
             </div>
+            {totalTax > 0 && (
+              <div className="flex justify-between text-(--color-text-muted)">
+                <span>Tax</span>
+                <span>{formatCurrency(totalTax)}</span>
+              </div>
+            )}
             {shippingFeeTotal > 0 && (
-              <>
-                <div className="flex justify-between text-(--color-text-muted)">
-                  <span>Shipping Fee</span>
-                  <span>{formatCurrency(shippingFeeTotal)}</span>
-                </div>
-                <div className="flex justify-between font-medium text-(--color-text)">
-                  <span>Amount Due</span>
-                  <span>{formatCurrency(totalDue)}</span>
-                </div>
-              </>
+              <div className="flex justify-between text-(--color-text-muted)">
+                <span>Shipping Fee</span>
+                <span>{formatCurrency(shippingFeeTotal)}</span>
+              </div>
+            )}
+            {(totalTax > 0 || shippingFeeTotal > 0) && (
+              <div className="flex justify-between font-medium text-(--color-text)">
+                <span>Amount Due</span>
+                <span>{formatCurrency(totalDue)}</span>
+              </div>
             )}
           </div>
 

@@ -369,3 +369,20 @@ with each line pre-filled to its remaining quantity; manually-set Valid
 Until/Target Date surviving a subsequent Quote/Order Date change; and
 the Completed → Active Orders `?status=completed` link landing
 pre-filtered. No new console or server errors.
+
+---
+
+**2026-07-19 — Customer Payment audit + fixes (FIN-2), all 9 items done:** Sinag asked for a
+UX audit of Customer Payment, then to implement every finding. Confirmed live gap: shipping
+fee charged to the customer was optional and unrecoverable once a shipment shipped (3 real
+delivered shipments had ₱0 billed to the customer despite real courier cost). Fixed same
+session: fee now required at entry (client + RPC), a new `update_shipment_fee()` RPC +
+"Edit Fee" dialog lets staff correct it post-ship until payment is closed, `order_payments`
+inserts are now blocked once payment is closed or the order is cancelled (RLS + action),
+Cancel Order warns when payments exist, `total_tax` is wired into Total Due everywhere, plus
+3 smaller UX fixes (quick-fill full balance, pending-fee badge in Finance's list, clearer
+Change/Tip wording). Full write-up, verification detail (including 2 server-side bypass
+tests run directly via SQL), and the 2 still-unfixed historical shipments live in
+`PROGRESS-FINANCE.md` FIN-2 (that's where Customer Payment itself lives, per FIN-1's
+relocation from `orders/payment/`); shipping-specific slice cross-referenced from
+`PROGRESS-PRODUCTION-SHIPPING.md` PS-25.

@@ -24,7 +24,7 @@ export default async function PaymentOrderPage({ params }: { params: Promise<{ o
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, order_number, status, target_date, created_at, fulfillment_method, total_money, payment_closed_at, payment_close_note, tip_amount, payment_closed_by_profile:profiles!orders_payment_closed_by_fkey(full_name, email), customers(name, phone_number, email, address_line1, barangay, city, province), order_items(id, quantity)"
+      "id, order_number, status, target_date, created_at, fulfillment_method, total_money, total_tax, payment_closed_at, payment_close_note, tip_amount, payment_closed_by_profile:profiles!orders_payment_closed_by_fkey(full_name, email), customers(name, phone_number, email, address_line1, barangay, city, province), order_items(id, quantity)"
     )
     .eq("order_number", orderNumber)
     .single();
@@ -68,8 +68,8 @@ export default async function PaymentOrderPage({ params }: { params: Promise<{ o
 
   const customer = firstOf(order.customers);
   const closedByProfile = firstOf(order.payment_closed_by_profile);
-  const canAddPayment = ["admin", "manager", "encoder"].includes(role);
-  const canClosePayment = ["admin", "manager", "encoder"].includes(role);
+  const canAddPayment = ["admin", "manager", "encoder"].includes(role) && order.status !== "cancelled";
+  const canClosePayment = ["admin", "manager", "encoder"].includes(role) && order.status !== "cancelled";
 
   // Mirrors close_order_payment()'s own dispatch gate: the final shipping fee isn't
   // known until every order item has been allocated to a shipment and none is still Preparing.
@@ -92,6 +92,7 @@ export default async function PaymentOrderPage({ params }: { params: Promise<{ o
     createdAt: order.created_at,
     fulfillmentMethod: order.fulfillment_method,
     totalMoney: Number(order.total_money),
+    totalTax: Number(order.total_tax ?? 0),
     shippingFeeTotal,
     allShipmentsDispatched,
     customerName: customer?.name ?? null,

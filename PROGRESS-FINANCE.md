@@ -89,3 +89,94 @@ data per this project's standing verification convention):**
   PUR-1 — same session, same Category Mapping setup.
 - `npm run build` passes, all `/dashboard/finance/*` routes registered including the moved
   `payments/[orderNumber]/preview`; `get_advisors(security)` clean (standard baseline only).
+
+---
+
+## FIN-2 — Customer Payment audit findings ✅ DONE (2026-07-19)
+
+**Status:** Audited, then all 9 findings implemented same-session per Sinag's follow-up
+("proceed to 1-9"). Cross-referenced from `PROGRESS-ORDERS.md` (2026-07-19 entry) and
+`PROGRESS-PRODUCTION-SHIPPING.md` PS-25, since the affected code spans all three modules —
+`Total Due` was (and still is) computed independently in 5 places: the `order-detail` page,
+this Finance list (`payments/page.tsx`), this Finance order detail
+(`payments/[orderNumber]/page.tsx`), this Finance print preview
+(`payments/[orderNumber]/preview/page.tsx`), and `close_order_payment()` itself — each was
+fixed individually rather than centralized (see "Still open" below).
+
+**Confirmed live bug that triggered this audit — shipping fee charged to customer was
+optional and unrecoverable after shipping:** `order-shipments.tsx` let staff enter "Shipping
+Cost (paid to courier)" without requiring "Shipping Fee Charged (to customer)," and once a
+shipment was Shipped/Delivered there was no way to fix a missed fee. Verified via direct SQL
+against live data before any fix: 3 delivered shipments had real courier cost but ₱0 charged
+to the customer — SSH26-0707-0006 (₱500 cost, order SOD26-0707-0009), SSH26-0707-0009 (₱69,
+SOD26-0707-0011), SSH26-0708-0023 (₱55, SOD26-0708-0019).
+
+**What was built (all 9 items):**
+
+1. **Fee required at entry** — `order-shipments.tsx`'s Add/Edit Shipment form now blocks
+   submit if Shipping Cost > 0 and Shipping Fee Charged is empty (enter 0 explicitly if a
+   shipment is free to the customer). Mirrored server-side in `create_shipment()` and
+   `update_shipment()` — verified by calling `create_shipment()` directly via SQL with
+   `p_shipping_fee_charged => null`, which correctly raised the exception even bypassing the
+   client.
+2. **Post-ship correction** — new RPC `update_shipment_fee(p_shipment_id, p_shipping_cost,
+   p_shipping_fee_charged, p_courier_payment_type_id)`: only touches those 3 columns (items/
+   stock stay locked), requires the calling shipment to be delivery + Shipped/Delivered, and
+   refuses if `orders.payment_closed_at` is already set. New `updateShipmentFee` server
+   action; a narrow "Edit Fee" button/dialog appears on Shipped/Delivered delivery shipments
+   in `order-shipments.tsx` whenever the order's payment isn't closed (new `isPaymentClosed`
+   prop, threaded through all 3 pages that render `OrderShipments`: Orders active-order
+   detail, Orders Shipping detail, Orders On Hold detail — the latter hardcodes `false` since
+   an On Hold order can never have a Shipped/Delivered shipment, matching that file's existing
+   `canAddShipment={false}` shortcut). Used this live to fix SSH26-0707-0006 (now ₱500/₱500)
+   as part of verification; the other 2 historical shipments are intentionally left for Sinag
+   to fix via the same "Edit Fee" button once the actual customer-facing amount is decided —
+   not a call this session should make unilaterally.
+3. **Payment-insert guard** — `order_payments_insert_encoder_manager_admin` RLS policy now
+   also requires `payment_closed_at IS NULL AND status <> 'cancelled'` on the referenced
+   order (`ALTER POLICY`, no drop/recreate needed); `addOrderPayment` pre-checks the same
+   condition for a friendly error message before hitting RLS. Verified by attempting a raw
+   insert as the authenticated test user against a payment-closed order via `set local role
+   authenticated` + `request.jwt.claims` — correctly rejected with "new row violates
+   row-level security policy."
+4. **Cancel-with-payments warning** — Cancel Order dialog now shows "This order has ₱X in
+   recorded payments. Cancelling does not reverse or refund them" when `data.payments` sums
+   to more than 0 (pure client-side, no new query). Verified live against SOD26-0714-0033
+   (₱600 paid, still in a cancellable status) — warning rendered correctly; not actually
+   cancelled during verification.
+5. **Tax wired into Total Due** — `orders.total_tax` now added into the due calculation in
+   all 5 duplicated locations plus `close_order_payment()`'s `v_total_due`; a conditional
+   "Tax" line was added next to the existing conditional "Shipping Fee" line in the Payments
+   card and the print preview. Still 0 on every real order today, so no visible change yet —
+   this closes the latent gap for whenever tax is populated.
+6. **Pay Full Remaining Balance** — quick-fill link under the Amount field in Add Payment,
+   sets the field to the exact current `remainingBalance`. Verified live: filled the field to
+   ₱2,330 correctly (matching order total + the just-corrected shipping fee).
+7. **Pending-fee indicator** — Finance → Customer Payment list computes
+   `hasPendingShippingFee` per order (any dispatched shipment with cost > 0 and fee = 0) and
+   shows a "Fee not set" warning badge in the Shipping Fee column instead of a silent "—".
+   Verified live: badge showed for SOD26-0707-0009 before the fix, disappeared immediately
+   after correcting SSH26-0707-0006's fee.
+8. **Change → Overpayment wording** — relabelled with a sub-line: "Becomes a recorded tip if
+   closed without returning change." Verified live on SOD26-0714-0033 (already-closed,
+   overpaid order).
+9. **Cancelled-but-paid surfaced** — Finance list query no longer hard-excludes
+   `status = 'cancelled'`; rows are filtered client-side to drop cancelled orders only when
+   `totalPaid === 0`, so a cancelled order with real payments stays visible. Badge map gained
+   `cancelled: "danger"`. `canAddPayment`/`canClosePayment` also now require
+   `status !== "cancelled"` in both order-detail pages (Orders module and Finance module), on
+   top of the RLS/action guard from #3. No cancelled order currently has a payment recorded,
+   so the positive case wasn't exercisable live without fabricating data — verified by code
+   review instead (the filter is a one-line, directly-readable predicate).
+
+**Still open (flagged, not part of the 9 requested items):** the `Total Due` formula remains
+duplicated across 5 independent call sites rather than centralized into one shared helper —
+each copy is now individually correct (tax included), but a future change still has to touch
+all 5 (6 counting the RPC) by hand. Also: the 2 remaining historical underbilled shipments
+(SSH26-0707-0009 / order SOD26-0707-0011, SSH26-0708-0023 / order SOD26-0708-0019) are
+fixable via the new Edit Fee button whenever Sinag decides what to charge.
+
+**Verification:** `npx tsc --noEmit` and `eslint` clean across every touched file. Browser-
+verified end-to-end (Claude admin test account) as detailed above, including two server-side
+bypass tests run directly via SQL (RLS policy rejection, RPC-level validation) that a
+UI-only test wouldn't have caught.

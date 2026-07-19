@@ -25,7 +25,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, order_number, status, note, target_date, created_at, subtotal, total_discount, total_money, payment_closed_at, payment_close_note, tip_amount, payment_closed_by_profile:profiles!orders_payment_closed_by_fkey(full_name, email), customers(id, name, phone_number, email, address_line1, barangay, city, province), order_items(id, item_name_snapshot, sku_snapshot, quantity, unit_price, line_discount, reserved_qty, completed_qty, order_item_modifiers(name_snapshot, price_snapshot), production_orders(production_order_number, status, quantity, completed_qty))"
+      "id, order_number, status, note, target_date, created_at, subtotal, total_discount, total_tax, total_money, payment_closed_at, payment_close_note, tip_amount, payment_closed_by_profile:profiles!orders_payment_closed_by_fkey(full_name, email), customers(id, name, phone_number, email, address_line1, barangay, city, province), order_items(id, item_name_snapshot, sku_snapshot, quantity, unit_price, line_discount, reserved_qty, completed_qty, order_item_modifiers(name_snapshot, price_snapshot), production_orders(production_order_number, status, quantity, completed_qty))"
     )
     .eq("order_number", orderNumber)
     .single();
@@ -111,8 +111,8 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
     ["confirmed", "in_production", "partially_completed", "production_completed"].includes(order.status);
   const canAdvance = role === "admin" && order.status === "confirmed";
   const canOverrideReservedQty = ["admin", "manager", "encoder"].includes(role) && order.status === "confirmed";
-  const canAddPayment = ["admin", "manager", "encoder"].includes(role);
-  const canClosePayment = ["admin", "manager", "encoder"].includes(role);
+  const canAddPayment = ["admin", "manager", "encoder"].includes(role) && order.status !== "cancelled";
+  const canClosePayment = ["admin", "manager", "encoder"].includes(role) && order.status !== "cancelled";
 
   const canCancel = role === "admin" && ["confirmed", "in_production", "partially_completed"].includes(order.status);
   const canHold =
@@ -137,6 +137,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
     subtotal: Number(order.subtotal),
     totalDiscount: Number(order.total_discount),
     totalMoney: Number(order.total_money),
+    totalTax: Number(order.total_tax ?? 0),
     shippingFeeTotal,
     allShipmentsDispatched,
     customerName: customer?.name ?? null,

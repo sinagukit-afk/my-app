@@ -550,6 +550,16 @@ Confirmed by reading the live RPC definitions directly (Supabase MCP): `add_prod
 
 ---
 
+## PS-25 — Shipping fee charged to customer required at entry + post-ship correction ✅ DONE (2026-07-19)
+
+**Requested by Sinag** as part of a Customer Payment UX audit (persona: Senior ERP UX Auditor), then asked to implement every finding — full write-up and verification detail live in `PROGRESS-FINANCE.md` FIN-2; this is the Shipping-specific slice.
+
+**Finding (before fix):** `order-shipments.tsx`'s Add/Edit Shipment form let staff record "Shipping Cost (paid to courier)" without requiring "Shipping Fee Charged (to customer)." Once a shipment moved past `preparing` (Shipped/Delivered), the Edit button disappeared and `update_shipment()` rejected non-preparing shipments, so a missed fee could never be corrected. Confirmed via direct SQL against live data: 3 delivered shipments (SSH26-0707-0006, SSH26-0707-0009, SSH26-0708-0023) had real courier cost (₱500/₱69/₱55) but ₱0 charged to the customer.
+
+**What was built:** the fee is now required (client validation in `order-shipments.tsx` + a matching check in `create_shipment()`/`update_shipment()` — verified server-side by calling `create_shipment()` directly with a null fee, which correctly raised even bypassing the client). A new narrow RPC `update_shipment_fee()` plus an "Edit Fee" button/dialog lets staff correct `shipping_cost`/`shipping_fee_charged`/`courier_payment_type_id` on a Shipped/Delivered shipment as long as `orders.payment_closed_at` is still null — used live to fix SSH26-0707-0006 (now ₱500/₱500, `order_shipments.updated_at` and a `shipment_fee_corrected` activity log confirm the write). SSH26-0707-0009 and SSH26-0708-0023 are intentionally left for Sinag to fix via the same button once the actual customer charge is decided.
+
+---
+
 ## Sequencing summary
 
 ```

@@ -183,6 +183,19 @@ export async function addOrderPayment(orderId: string, payment: AddPaymentInput)
     data: { user },
   } = await supabase.auth.getUser()
 
+  const { data: order } = await supabase
+    .from('orders')
+    .select('payment_closed_at, status')
+    .eq('id', orderId)
+    .single()
+
+  if (order?.payment_closed_at) {
+    return { success: false, error: 'Payment for this order is already closed.' }
+  }
+  if (order?.status === 'cancelled') {
+    return { success: false, error: 'This order has been cancelled — payments can no longer be recorded against it.' }
+  }
+
   const { error } = await supabase.from('order_payments').insert({
     order_id: orderId,
     payment_date: payment.paymentDate,
@@ -364,5 +377,32 @@ export async function markShipmentPickedUp(orderId: string, shipmentId: string):
   revalidatePath(`${LIST_PATH}/${orderId}`)
   revalidatePath('/dashboard/orders/shipping')
   revalidatePath('/dashboard/inventory/monitoring')
+  return { success: true }
+}
+
+export type UpdateShipmentFeeInput = {
+  shippingCost: number | null
+  shippingFeeCharged: number | null
+  courierPaymentTypeId: string | null
+}
+
+export async function updateShipmentFee(
+  orderId: string,
+  shipmentId: string,
+  input: UpdateShipmentFeeInput
+): Promise<ActionResult> {
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('update_shipment_fee', {
+    p_shipment_id: shipmentId,
+    p_shipping_cost: input.shippingCost,
+    p_shipping_fee_charged: input.shippingFeeCharged,
+    p_courier_payment_type_id: input.courierPaymentTypeId,
+  })
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath(`${LIST_PATH}/${orderId}`)
+  revalidatePath('/dashboard/orders/shipping')
+  revalidatePath(`/dashboard/finance/payments/${orderId}`)
   return { success: true }
 }

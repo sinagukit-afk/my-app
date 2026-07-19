@@ -27,6 +27,7 @@ export type ShippingOrderData = {
   shipmentCustomer: ShipmentCustomer | null;
   canAddShipment: boolean;
   isShippingRole: boolean;
+  isPaymentClosed: boolean;
   shipments: OrderShipmentRow[];
   shippableItems: ShippableOrderItem[];
   packagingOptions: PackagingVariantOption[];
@@ -79,6 +80,7 @@ export function ShippingOrderDetail({ data }: { data: ShippingOrderData }) {
         customer={data.shipmentCustomer}
         canAddShipment={data.canAddShipment}
         isShippingRole={data.isShippingRole}
+        isPaymentClosed={data.isPaymentClosed}
         onChanged={() => router.refresh()}
       />
     </div>

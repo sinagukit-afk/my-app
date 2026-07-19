@@ -60,6 +60,7 @@ export type OrderDetailData = {
   subtotal: number;
   totalDiscount: number;
   totalMoney: number;
+  totalTax: number;
   shippingFeeTotal: number;
   allShipmentsDispatched: boolean;
   customerName: string | null;
@@ -129,6 +130,7 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
     .filter((i) => reservedQty[i.id] !== i.reservedQty)
     .map((i) => ({ id: i.id, name: i.name, sku: i.sku, from: i.reservedQty, to: reservedQty[i.id] }));
   const reservedQtyDirty = reservedQtyChanges.length > 0;
+  const totalPaidForCancelWarning = data.payments.reduce((sum, p) => sum + p.amount, 0);
 
   const [startProductionOpen, setStartProductionOpen] = useState(false);
   const [startProductionError, setStartProductionError] = useState<string | null>(null);
@@ -447,6 +449,7 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
                 customer={data.shipmentCustomer}
                 canAddShipment={data.canAddShipment}
                 isShippingRole={data.isShippingRole}
+                isPaymentClosed={data.isPaymentClosed}
                 onChanged={() => router.refresh()}
               />
             </div>
@@ -458,6 +461,7 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
                 id: data.id,
                 orderNumber: data.orderNumber,
                 totalMoney: data.totalMoney,
+                totalTax: data.totalTax,
                 shippingFeeTotal: data.shippingFeeTotal,
                 allShipmentsDispatched: data.allShipmentsDispatched,
                 payments: data.payments,
@@ -560,6 +564,13 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
               Cancel this order? Reserved inventory will be released back to Available.
             </DialogDescription>
           </DialogHeader>
+          {totalPaidForCancelWarning > 0 && (
+            <p className="rounded-md border border-(--color-warning) bg-(--color-warning-light) p-3 text-sm text-(--color-text)">
+              This order has {formatCurrency(totalPaidForCancelWarning)} in recorded payments. Cancelling
+              does <strong>not</strong> reverse or refund them — handle any refund manually outside the
+              system.
+            </p>
+          )}
           {cancelError && <p className="text-sm text-(--color-danger)">{cancelError}</p>}
           <DialogFooter>
             <DialogClose asChild>

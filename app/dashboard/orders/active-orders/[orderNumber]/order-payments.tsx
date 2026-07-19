@@ -36,6 +36,7 @@ export type OrderPaymentsData = {
   id: string;
   orderNumber: string;
   totalMoney: number;
+  totalTax: number;
   shippingFeeTotal: number;
   allShipmentsDispatched: boolean;
   payments: OrderPaymentRow[];
@@ -78,7 +79,7 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
   const [closeError, setCloseError] = useState<string | null>(null);
 
   const totalPaid = useMemo(() => data.payments.reduce((sum, p) => sum + p.amount, 0), [data.payments]);
-  const totalDue = data.totalMoney + data.shippingFeeTotal;
+  const totalDue = data.totalMoney + data.totalTax + data.shippingFeeTotal;
   const remainingBalance = Math.max(0, totalDue - totalPaid);
   const change = Math.max(0, totalPaid - totalDue);
   const payStatus = paymentStatus(totalPaid, totalDue);
@@ -186,6 +187,12 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
               <span>Merchandise Total</span>
               <span>{formatCurrency(data.totalMoney)}</span>
             </div>
+            {data.totalTax > 0 && (
+              <div className="flex justify-between text-(--color-text-muted)">
+                <span>Tax</span>
+                <span>{formatCurrency(data.totalTax)}</span>
+              </div>
+            )}
             {data.shippingFeeTotal > 0 && (
               <div className="flex justify-between text-(--color-text-muted)">
                 <span>Shipping Fee</span>
@@ -202,7 +209,10 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
             </div>
             {change > 0 && (
               <div className="flex justify-between text-(--color-text-muted)">
-                <span>Change</span>
+                <span>
+                  Overpayment
+                  <span className="block text-xs">Becomes a recorded tip if closed without returning change</span>
+                </span>
                 <span>{formatCurrency(change)}</span>
               </div>
             )}
@@ -241,12 +251,23 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
           </DialogHeader>
           <div className="space-y-3">
             <DatePicker label="Payment Date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
-            <CurrencyInput
-              id="payment-amount"
-              label={amountLabel}
-              value={paymentAmount}
-              onChange={(e) => setPaymentAmount(e.target.value)}
-            />
+            <div className="space-y-1.5">
+              <CurrencyInput
+                id="payment-amount"
+                label={amountLabel}
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+              />
+              {remainingBalance > 0 && (
+                <button
+                  type="button"
+                  className="text-xs text-(--color-primary) hover:underline"
+                  onClick={() => setPaymentAmount(String(remainingBalance))}
+                >
+                  Pay Full Remaining Balance ({formatCurrency(remainingBalance)})
+                </button>
+              )}
+            </div>
             <Select
               label="Payment Type"
               placeholder="Select payment type…"
