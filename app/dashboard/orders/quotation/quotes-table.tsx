@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { FilterBar } from "@/components/business/filter-bar";
 import { DateRangeFilter } from "@/components/business/date-range-filter";
 import { formatDate } from "@/lib/utils/format-date";
+import { formatCurrency } from "@/lib/utils/format";
 
 export type QuoteRow = {
   id: string;
@@ -36,10 +37,6 @@ const STATUS_FILTER_OPTIONS = [
   { label: "Cancelled", value: "cancelled" },
   { label: "Expired", value: "expired" },
 ];
-
-function peso(n: number) {
-  return `₱${n.toFixed(2)}`;
-}
 
 type Props = {
   data: QuoteRow[];
@@ -94,7 +91,7 @@ export function QuotesTable({ data, canCreate, from, to }: Props) {
       key: "totalMoney",
       header: "Total Amount",
       sortable: true,
-      render: (value) => peso(value as number),
+      render: (value) => formatCurrency(value as number),
     },
     {
       key: "lastActivity",
@@ -128,6 +125,7 @@ export function QuotesTable({ data, canCreate, from, to }: Props) {
         emptyMessage="No quotes yet"
         emptyDescription="Create a quote to get started."
         onRowClick={(row) => router.push(`/dashboard/orders/quotation/${row.quoteNumber}`)}
+        exportFilename="quotations"
       />
     </div>
   );

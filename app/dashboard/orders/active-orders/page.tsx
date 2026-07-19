@@ -2,10 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { OrderListTable } from "./order-list-table";
 import { fetchOrderRows } from "./queries";
 
-type SearchParams = Promise<{ from?: string; to?: string }>;
+type SearchParams = Promise<{ from?: string; to?: string; status?: string }>;
 
 export default async function OrderListPage({ searchParams }: { searchParams: SearchParams }) {
-  const { from = "", to = "" } = await searchParams;
+  const { from = "", to = "", status = "" } = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -26,7 +26,7 @@ export default async function OrderListPage({ searchParams }: { searchParams: Se
       {error && (
         <p className="text-sm text-(--color-danger)">Failed to load orders: {error}</p>
       )}
-      <OrderListTable data={rows} canCreate={canCreate} from={from} to={to} />
+      <OrderListTable data={rows} canCreate={canCreate} from={from} to={to} initialStatus={status} />
     </div>
   );
 }

@@ -4,14 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate } from "@/lib/utils/format-date";
+import { formatCurrency } from "@/lib/utils/format";
 
 function firstOf<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
   return value ?? null;
-}
-
-function peso(n: number) {
-  return `₱${n.toFixed(2)}`;
 }
 
 function modifierValue(nameSnapshot: string) {
@@ -122,11 +119,11 @@ export default async function QuoteViewPage({ params }: { params: Promise<{ quot
                         )}
                       </td>
                       <td className="py-2 text-(--color-text)">{item.quantity}</td>
-                      <td className="py-2 text-(--color-text)">{peso(unitPriceWithModifier)}</td>
+                      <td className="py-2 text-(--color-text)">{formatCurrency(unitPriceWithModifier)}</td>
                       <td className="py-2 text-(--color-text-muted)">
-                        {Number(item.line_discount) > 0 ? peso(Number(item.line_discount)) : "—"}
+                        {Number(item.line_discount) > 0 ? formatCurrency(Number(item.line_discount)) : "—"}
                       </td>
-                      <td className="py-2 text-right text-(--color-text)">{peso(total)}</td>
+                      <td className="py-2 text-right text-(--color-text)">{formatCurrency(total)}</td>
                     </tr>
                   );
                 })}
@@ -137,15 +134,15 @@ export default async function QuoteViewPage({ params }: { params: Promise<{ quot
           <div className="ml-auto max-w-xs space-y-1 border-t border-(--color-border) pt-4 text-sm">
             <div className="flex justify-between text-(--color-text-muted)">
               <span>Subtotal</span>
-              <span>{peso(Number(quote.subtotal) + Number(quote.total_discount))}</span>
+              <span>{formatCurrency(Number(quote.subtotal) + Number(quote.total_discount))}</span>
             </div>
             <div className="flex justify-between text-(--color-text-muted)">
               <span>Total Discount</span>
-              <span>-{peso(Number(quote.total_discount))}</span>
+              <span>-{formatCurrency(Number(quote.total_discount))}</span>
             </div>
             <div className="flex justify-between font-medium text-(--color-text)">
               <span>Grand Total</span>
-              <span>{peso(Number(quote.total_money))}</span>
+              <span>{formatCurrency(Number(quote.total_money))}</span>
             </div>
           </div>
 

@@ -4,14 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate } from "@/lib/utils/format-date";
+import { formatCurrency } from "@/lib/utils/format";
 
 function firstOf<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
   return value ?? null;
-}
-
-function peso(n: number) {
-  return `₱${n.toFixed(2)}`;
 }
 
 function modifierValue(nameSnapshot: string) {
@@ -149,11 +146,11 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
                         )}
                       </td>
                       <td className="py-2 text-(--color-text)">{item.quantity}</td>
-                      <td className="py-2 text-(--color-text)">{peso(unitPriceWithModifier)}</td>
+                      <td className="py-2 text-(--color-text)">{formatCurrency(unitPriceWithModifier)}</td>
                       <td className="py-2 text-(--color-text-muted)">
-                        {Number(item.line_discount) > 0 ? peso(Number(item.line_discount)) : "—"}
+                        {Number(item.line_discount) > 0 ? formatCurrency(Number(item.line_discount)) : "—"}
                       </td>
-                      <td className="py-2 text-right text-(--color-text)">{peso(total)}</td>
+                      <td className="py-2 text-right text-(--color-text)">{formatCurrency(total)}</td>
                     </tr>
                   );
                 })}
@@ -164,25 +161,25 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
           <div className="ml-auto max-w-xs space-y-1 border-t border-(--color-border) pt-4 text-sm">
             <div className="flex justify-between text-(--color-text-muted)">
               <span>Subtotal</span>
-              <span>{peso(Number(order.subtotal))}</span>
+              <span>{formatCurrency(Number(order.subtotal))}</span>
             </div>
             <div className="flex justify-between text-(--color-text-muted)">
               <span>Total Discount</span>
-              <span>-{peso(Number(order.total_discount))}</span>
+              <span>-{formatCurrency(Number(order.total_discount))}</span>
             </div>
             <div className="flex justify-between font-medium text-(--color-text)">
               <span>Order Total</span>
-              <span>{peso(totalMoney)}</span>
+              <span>{formatCurrency(totalMoney)}</span>
             </div>
             {shippingFeeTotal > 0 && (
               <>
                 <div className="flex justify-between text-(--color-text-muted)">
                   <span>Shipping Fee</span>
-                  <span>{peso(shippingFeeTotal)}</span>
+                  <span>{formatCurrency(shippingFeeTotal)}</span>
                 </div>
                 <div className="flex justify-between font-medium text-(--color-text)">
                   <span>Amount Due</span>
-                  <span>{peso(totalDue)}</span>
+                  <span>{formatCurrency(totalDue)}</span>
                 </div>
               </>
             )}
@@ -210,7 +207,7 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
                         <td className="py-2 text-(--color-text)">{formatDate(p.payment_date)}</td>
                         <td className="py-2 text-(--color-text-muted)">{paymentType?.name ?? "Unspecified"}</td>
                         <td className="py-2 text-(--color-text-muted)">{p.reference_no ?? "—"}</td>
-                        <td className="py-2 text-right text-(--color-text)">{peso(Number(p.amount))}</td>
+                        <td className="py-2 text-right text-(--color-text)">{formatCurrency(Number(p.amount))}</td>
                       </tr>
                     );
                   })}
@@ -222,17 +219,17 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
           <div className="ml-auto max-w-xs space-y-1 border-t border-(--color-border) pt-4 text-sm">
             <div className="flex justify-between text-(--color-text-muted)">
               <span>Total Paid</span>
-              <span>{peso(totalPaid)}</span>
+              <span>{formatCurrency(totalPaid)}</span>
             </div>
             {overpaid > 0 ? (
               <div className="flex justify-between font-medium text-(--color-text)">
                 <span>Service Tip</span>
-                <span>{peso(overpaid)}</span>
+                <span>{formatCurrency(overpaid)}</span>
               </div>
             ) : (
               <div className="flex justify-between font-medium text-(--color-text)">
                 <span>Remaining Balance</span>
-                <span>{peso(remainingBalance)}</span>
+                <span>{formatCurrency(remainingBalance)}</span>
               </div>
             )}
           </div>

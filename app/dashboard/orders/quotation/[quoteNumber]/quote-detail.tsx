@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { convertQuote, cancelQuote } from "../actions";
 import { formatDate, formatDateTime } from "@/lib/utils/format-date";
+import { formatCurrency } from "@/lib/utils/format";
 
 export type QuoteDetailItem = {
   id: string;
@@ -70,10 +71,6 @@ const STATUS_VARIANT: Record<string, "success" | "default" | "danger" | "warning
   cancelled: "danger",
   expired: "warning",
 };
-
-function peso(n: number) {
-  return `₱${n.toFixed(2)}`;
-}
 
 function lineTotal(item: QuoteDetailItem) {
   const modifierTotal = item.modifiers.reduce((sum, m) => sum + m.price, 0);
@@ -217,26 +214,26 @@ export function QuoteDetail({ data, logs }: { data: QuoteDetailData; logs: Activ
                       {item.name} × {item.quantity}
                       {item.sku ? ` (${item.sku})` : ""}
                     </span>
-                    <span className="font-medium text-(--color-text)">{peso(lineTotal(item))}</span>
+                    <span className="font-medium text-(--color-text)">{formatCurrency(lineTotal(item))}</span>
                   </div>
                   {item.modifiers.length > 0 && (
                     <p className="text-xs text-(--color-text-muted)">
-                      {item.modifiers.map((m) => `${m.name} (+${peso(m.price)})`).join(", ")}
+                      {item.modifiers.map((m) => `${m.name} (+${formatCurrency(m.price)})`).join(", ")}
                     </p>
                   )}
                   {item.discount > 0 && (
-                    <p className="text-xs text-(--color-text-muted)">Discount: -{peso(item.discount)}</p>
+                    <p className="text-xs text-(--color-text-muted)">Discount: -{formatCurrency(item.discount)}</p>
                   )}
                 </div>
               ))}
               <div className="space-y-1 border-t border-(--color-border) pt-3 text-sm">
                 <div className="flex justify-between text-(--color-text-muted)">
                   <span>Total Discount</span>
-                  <span>-{peso(data.totalDiscount)}</span>
+                  <span>-{formatCurrency(data.totalDiscount)}</span>
                 </div>
                 <div className="flex justify-between font-medium text-(--color-text)">
                   <span>Total Amount</span>
-                  <span>{peso(data.totalMoney)}</span>
+                  <span>{formatCurrency(data.totalMoney)}</span>
                 </div>
               </div>
             </CardContent>

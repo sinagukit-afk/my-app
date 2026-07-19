@@ -94,6 +94,7 @@ export function ShippingTables({ productionRows, shipmentRows }: Props) {
       key: "shippedQty",
       header: "Shipped",
       render: (_value, row) => `${row.shippedQty} / ${row.quantity}`,
+      exportValue: (_value, row) => `${row.shippedQty} / ${row.quantity}`,
     },
     {
       key: "orderStatus",
@@ -146,6 +147,10 @@ export function ShippingTables({ productionRows, shipmentRows }: Props) {
             {row.trackingNumber && <p className="text-xs text-(--color-text-muted)">{row.trackingNumber}</p>}
           </div>
         ),
+      exportValue: (_value, row) =>
+        row.fulfillmentType === "pickup"
+          ? "Pickup"
+          : [row.courierName, row.trackingNumber].filter(Boolean).join(" / ") || "—",
     },
     {
       key: "items",
@@ -163,6 +168,8 @@ export function ShippingTables({ productionRows, shipmentRows }: Props) {
         ) : (
           <span className="text-(--color-text-subtle)">—</span>
         ),
+      exportValue: (_value, row) =>
+        row.items.map((it) => `${it.name}${it.sku ? ` (${it.sku})` : ""} — ${it.quantityShipped}`).join("; ") || "—",
     },
     {
       key: "shippedAt",
@@ -188,6 +195,7 @@ export function ShippingTables({ productionRows, shipmentRows }: Props) {
           emptyMessage="No production orders in shipping"
           emptyDescription="Production orders on orders that are Ready for Shipping or Shipped will appear here."
           onRowClick={(row) => router.push(`/dashboard/orders/shipping/${row.orderNumber}`)}
+          exportFilename="shipping-production-progress"
         />
       </div>
 
@@ -200,6 +208,7 @@ export function ShippingTables({ productionRows, shipmentRows }: Props) {
           emptyMessage="No shipments yet"
           emptyDescription="Shipments created on orders that are Ready for Shipping or Shipped will appear here."
           onRowClick={(row) => router.push(`/dashboard/orders/shipping/${row.orderNumber}`)}
+          exportFilename="shipments"
         />
       </div>
     </div>

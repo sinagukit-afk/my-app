@@ -19,6 +19,7 @@ import {
 import { useNotifications } from "@/components/providers/notification-provider";
 import { resumeOrder, cancelOrder } from "../../active-orders/actions";
 import { formatDate } from "@/lib/utils/format-date";
+import { formatCurrency } from "@/lib/utils/format";
 import {
   OrderShipments,
   type OrderShipmentRow,
@@ -65,10 +66,6 @@ export type OnHoldOrderData = {
   canCancel: boolean;
   isShippingRole: boolean;
 };
-
-function peso(n: number) {
-  return `₱${n.toFixed(2)}`;
-}
 
 function lineTotal(item: OnHoldOrderItem) {
   const modifierTotal = item.modifiers.reduce((sum, m) => sum + m.price, 0);
@@ -175,11 +172,11 @@ export function OnHoldOrderDetail({ data }: { data: OnHoldOrderData }) {
                   </span>
                   {item.modifiers.length > 0 && (
                     <p className="text-xs text-(--color-text-muted)">
-                      {item.modifiers.map((m) => `${m.name} (+${peso(m.price)})`).join(", ")}
+                      {item.modifiers.map((m) => `${m.name} (+${formatCurrency(m.price)})`).join(", ")}
                     </p>
                   )}
                   {item.discount > 0 && (
-                    <p className="text-xs text-(--color-text-muted)">Discount: -{peso(item.discount)}</p>
+                    <p className="text-xs text-(--color-text-muted)">Discount: -{formatCurrency(item.discount)}</p>
                   )}
                 </div>
                 <span className="text-right text-(--color-text)">{item.quantity}</span>
@@ -197,7 +194,7 @@ export function OnHoldOrderDetail({ data }: { data: OnHoldOrderData }) {
                     </p>
                   )}
                 </div>
-                <span className="text-right font-medium text-(--color-text)">{peso(lineTotal(item))}</span>
+                <span className="text-right font-medium text-(--color-text)">{formatCurrency(lineTotal(item))}</span>
               </div>
 
               <div className="space-y-2 lg:hidden">
@@ -208,11 +205,11 @@ export function OnHoldOrderDetail({ data }: { data: OnHoldOrderData }) {
                   </span>
                   {item.modifiers.length > 0 && (
                     <p className="text-xs text-(--color-text-muted)">
-                      {item.modifiers.map((m) => `${m.name} (+${peso(m.price)})`).join(", ")}
+                      {item.modifiers.map((m) => `${m.name} (+${formatCurrency(m.price)})`).join(", ")}
                     </p>
                   )}
                   {item.discount > 0 && (
-                    <p className="text-xs text-(--color-text-muted)">Discount: -{peso(item.discount)}</p>
+                    <p className="text-xs text-(--color-text-muted)">Discount: -{formatCurrency(item.discount)}</p>
                   )}
                 </div>
                 <div className="flex justify-between">
@@ -241,7 +238,7 @@ export function OnHoldOrderDetail({ data }: { data: OnHoldOrderData }) {
                 </div>
                 <div className="flex justify-between font-medium">
                   <span className="text-(--color-text-muted)">Line Total</span>
-                  <span className="text-(--color-text)">{peso(lineTotal(item))}</span>
+                  <span className="text-(--color-text)">{formatCurrency(lineTotal(item))}</span>
                 </div>
               </div>
             </div>
@@ -249,11 +246,11 @@ export function OnHoldOrderDetail({ data }: { data: OnHoldOrderData }) {
           <div className="space-y-1 border-t border-(--color-border) pt-3 text-sm">
             <div className="flex justify-between text-(--color-text-muted)">
               <span>Total Discount</span>
-              <span>-{peso(data.totalDiscount)}</span>
+              <span>-{formatCurrency(data.totalDiscount)}</span>
             </div>
             <div className="flex justify-between font-medium text-(--color-text)">
               <span>Total Amount</span>
-              <span>{peso(data.totalMoney)}</span>
+              <span>{formatCurrency(data.totalMoney)}</span>
             </div>
           </div>
         </CardContent>
@@ -262,7 +259,6 @@ export function OnHoldOrderDetail({ data }: { data: OnHoldOrderData }) {
       {data.shipments.length > 0 && (
         <OrderShipments
           orderId={data.id}
-          orderNumber={data.orderNumber}
           shipments={data.shipments}
           shippableItems={data.shippableItems}
           packagingOptions={data.packagingOptions}

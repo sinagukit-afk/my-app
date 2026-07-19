@@ -99,6 +99,7 @@ export function ConfirmedOrdersTable({ data, canCreate, from, to }: Props) {
         emptyMessage="No confirmed orders"
         emptyDescription="Newly created or converted orders will appear here once confirmed."
         onRowClick={(row) => router.push(`/dashboard/orders/confirmed/${row.orderNumber}`)}
+        exportFilename="confirmed-orders"
       />
     </div>
   );

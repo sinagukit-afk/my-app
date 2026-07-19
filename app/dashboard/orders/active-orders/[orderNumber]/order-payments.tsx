@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { addOrderPayment, closeOrderPayment } from "../actions";
 import { formatDate } from "@/lib/utils/format-date";
+import { formatCurrency } from "@/lib/utils/format";
 
 export type OrderPaymentRow = {
   id: string;
@@ -55,10 +56,6 @@ const PAYMENT_STATUS_VARIANT: Record<string, "success" | "danger" | "warning" | 
   Overpaid: "neutral",
 };
 
-function peso(n: number) {
-  return `₱${n.toFixed(2)}`;
-}
-
 function paymentStatus(totalPaid: number, totalMoney: number): keyof typeof PAYMENT_STATUS_VARIANT {
   if (totalPaid <= 0) return "Unpaid";
   if (totalPaid < totalMoney) return "Partially Paid";
@@ -92,8 +89,8 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
   const enteredAmount = Number(paymentAmount);
   const amountLabel = (() => {
     const diff = remainingBalance - (enteredAmount > 0 ? enteredAmount : 0);
-    if (diff > 0) return `Amount (Remaining ${peso(diff)})`;
-    if (diff < 0) return `Amount (Overpaid ${peso(Math.abs(diff))})`;
+    if (diff > 0) return `Amount (Remaining ${formatCurrency(diff)})`;
+    if (diff < 0) return `Amount (Overpaid ${formatCurrency(Math.abs(diff))})`;
     return "Amount (Fully Paid)";
   })();
 
@@ -169,7 +166,7 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
                 <p className="text-(--color-text-muted)">Note: {data.paymentCloseNote}</p>
               )}
               {data.tipAmount > 0 && (
-                <p className="text-(--color-text-muted)">Tip recorded: {peso(data.tipAmount)}</p>
+                <p className="text-(--color-text-muted)">Tip recorded: {formatCurrency(data.tipAmount)}</p>
               )}
             </div>
           )}
@@ -181,32 +178,32 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
                 {formatDate(p.paymentDate)} · {p.paymentTypeName ?? "Unspecified"}
                 {p.referenceNo ? ` (${p.referenceNo})` : ""}
               </span>
-              <span className="font-medium text-(--color-text)">{peso(p.amount)}</span>
+              <span className="font-medium text-(--color-text)">{formatCurrency(p.amount)}</span>
             </div>
           ))}
           <div className="space-y-1 border-t border-(--color-border) pt-3 text-sm">
             <div className="flex justify-between text-(--color-text-muted)">
               <span>Merchandise Total</span>
-              <span>{peso(data.totalMoney)}</span>
+              <span>{formatCurrency(data.totalMoney)}</span>
             </div>
             {data.shippingFeeTotal > 0 && (
               <div className="flex justify-between text-(--color-text-muted)">
                 <span>Shipping Fee</span>
-                <span>{peso(data.shippingFeeTotal)}</span>
+                <span>{formatCurrency(data.shippingFeeTotal)}</span>
               </div>
             )}
             <div className="flex justify-between text-(--color-text-muted)">
               <span>Total Paid</span>
-              <span>{peso(totalPaid)}</span>
+              <span>{formatCurrency(totalPaid)}</span>
             </div>
             <div className="flex justify-between text-(--color-text-muted)">
               <span>Remaining Balance</span>
-              <span>{peso(remainingBalance)}</span>
+              <span>{formatCurrency(remainingBalance)}</span>
             </div>
             {change > 0 && (
               <div className="flex justify-between text-(--color-text-muted)">
                 <span>Change</span>
-                <span>{peso(change)}</span>
+                <span>{formatCurrency(change)}</span>
               </div>
             )}
             <div className="flex items-center justify-between font-medium text-(--color-text)">
@@ -289,7 +286,7 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
             <DialogTitle>Close Payment</DialogTitle>
             <DialogDescription>
               {payStatus === "Overpaid"
-                ? `This order is overpaid by ${peso(change)} — the excess will be recorded as a tip.`
+                ? `This order is overpaid by ${formatCurrency(change)} — the excess will be recorded as a tip.`
                 : payStatus === "Partially Paid"
                   ? "This order is only partially paid. A note is required to close it — use this for cases like the customer no longer responding after shipment."
                   : `Close payment for ${data.orderNumber}. Current status: ${payStatus}.`}

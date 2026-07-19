@@ -12,7 +12,7 @@ export default async function CompletedOrdersPage() {
   const { data, error } = await supabase
     .from("orders")
     .select(
-      "id, note, total_money, created_at, updated_at, loyverse_receipt_number, customers(name), order_items(id, item_name_snapshot, quantity, unit_price, line_discount)"
+      "id, order_number, note, total_money, created_at, updated_at, loyverse_receipt_number, customers(name), order_items(id, item_name_snapshot, quantity, unit_price, line_discount)"
     )
     .eq("status", "completed")
     .order("updated_at", { ascending: false });
@@ -21,6 +21,7 @@ export default async function CompletedOrdersPage() {
     const customer = firstOf(o.customers);
     return {
       id: o.id,
+      orderNumber: o.order_number,
       customerName: customer?.name ?? null,
       note: o.note,
       totalMoney: Number(o.total_money),

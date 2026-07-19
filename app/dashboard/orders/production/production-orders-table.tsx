@@ -107,6 +107,7 @@ export function ProductionOrdersTable({ data }: Props) {
         emptyMessage="No pending production orders"
         emptyDescription="Starting production on an Active Order will create Production Orders here."
         onRowClick={(row) => router.push(`/dashboard/orders/production/${row.productionOrderNumber}`)}
+        exportFilename="production-orders"
       />
     </div>
   );

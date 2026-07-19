@@ -338,6 +338,7 @@ const CRUMB_LABELS: Record<string, string> = {
 const NON_ROUTABLE_PATHS = new Set([
   "/dashboard/purchasing",
   "/dashboard/management",
+  "/dashboard/orders",
   "/dashboard/accounting/financial-settings",
   "/dashboard/finance/supplier-payments/incoming",
   "/dashboard/finance/supplier-payments/inventory-po",

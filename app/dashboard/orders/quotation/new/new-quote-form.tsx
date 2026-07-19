@@ -44,11 +44,17 @@ export function NewQuoteForm({ customers, variantOptions, discounts, modifierGro
   const [rows, setRows] = useState<QuoteLineRow[]>([emptyQuoteRow()]);
   const [quoteDate, setQuoteDate] = useState(todayIso());
   const [validUntil, setValidUntil] = useState(plus30Days(todayIso()));
+  const [validUntilTouched, setValidUntilTouched] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function handleQuoteDateChange(value: string) {
     setQuoteDate(value);
-    setValidUntil(plus30Days(value));
+    if (!validUntilTouched) setValidUntil(plus30Days(value));
+  }
+
+  function handleValidUntilChange(value: string) {
+    setValidUntilTouched(true);
+    setValidUntil(value);
   }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -97,7 +103,7 @@ export function NewQuoteForm({ customers, variantOptions, discounts, modifierGro
               value={quoteDate}
               onChange={(e) => handleQuoteDateChange(e.target.value)}
             />
-            <DatePicker label="Valid Until" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} />
+            <DatePicker label="Valid Until" value={validUntil} onChange={(e) => handleValidUntilChange(e.target.value)} />
           </div>
           <TextArea label="Notes" name="note" rows={2} />
         </CardContent>

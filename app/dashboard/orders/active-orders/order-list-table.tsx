@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { DATE_RANGE_PRESETS } from "@/lib/utils/date-range-presets";
 import { formatDate } from "@/lib/utils/format-date";
+import { formatCurrency } from "@/lib/utils/format";
 import { exportOrders } from "./actions";
 
 export type OrderRow = {
@@ -68,10 +69,6 @@ const PAYMENT_STATUS_VARIANT: Record<string, "success" | "danger" | "warning" | 
   Overpaid: "neutral",
 };
 
-function peso(n: number) {
-  return `₱${n.toFixed(2)}`;
-}
-
 const EXPORT_SCOPES = ["Current Filter", ...DATE_RANGE_PRESETS.map((p) => p.label)];
 
 const EXPORT_SCOPE_DESCRIPTIONS: Record<string, string> = {
@@ -91,11 +88,12 @@ type Props = {
   canCreate: boolean;
   from: string;
   to: string;
+  initialStatus?: string;
 };
 
-export function OrderListTable({ data, canCreate, from, to }: Props) {
+export function OrderListTable({ data, canCreate, from, to, initialStatus = "" }: Props) {
   const router = useRouter();
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [exportOpen, setExportOpen] = useState(false);
   const [exportScope, setExportScope] = useState(EXPORT_SCOPES[0]);
   const [isExporting, setIsExporting] = useState(false);
@@ -151,7 +149,7 @@ export function OrderListTable({ data, canCreate, from, to }: Props) {
       key: "totalMoney",
       header: "Order Total",
       sortable: true,
-      render: (value) => peso(value as number),
+      render: (value) => formatCurrency(value as number),
     },
     {
       key: "paymentStatus",

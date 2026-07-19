@@ -89,6 +89,7 @@ export function OnHoldOrdersTable({ data, from, to }: Props) {
         emptyMessage="No orders on hold"
         emptyDescription="Orders put on hold will appear here until resumed or cancelled."
         onRowClick={(row) => router.push(`/dashboard/orders/on-hold/${row.orderNumber}`)}
+        exportFilename="on-hold-orders"
       />
     </div>
   );

@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +32,7 @@ import { useAiFilledKeys } from "@/components/ai-autofill/use-ai-filled-keys";
 import { shippingLabelSchema } from "@/lib/ai-autofill/schemas";
 import type { DropdownOptionsByField, ExtractionResult } from "@/lib/ai-autofill/types";
 import { formatDate } from "@/lib/utils/format-date";
+import { formatCurrency } from "@/lib/utils/format";
 
 export type ShippableOrderItem = {
   orderItemId: string;
@@ -98,10 +98,6 @@ const SHIPMENT_STATUS_VARIANT: Record<string, "success" | "default" | "neutral">
   delivered: "success",
 };
 
-function peso(n: number) {
-  return `₱${n.toFixed(2)}`;
-}
-
 function formatAddress(parts: (string | null | undefined)[]) {
   return parts.filter(Boolean).join(", ") || null;
 }
@@ -114,7 +110,6 @@ function emptyPackagingRow(): PackagingRow {
 
 export function OrderShipments({
   orderId,
-  orderNumber,
   shipments,
   shippableItems,
   packagingOptions,
@@ -126,7 +121,6 @@ export function OrderShipments({
   onChanged,
 }: {
   orderId: string;
-  orderNumber: string;
   shipments: OrderShipmentRow[];
   shippableItems: ShippableOrderItem[];
   packagingOptions: PackagingVariantOption[];
@@ -281,6 +275,30 @@ export function OrderShipments({
     setFormOpen(true);
   }
 
+  function openCreateForm() {
+    setFormError(null);
+    setEditingShipment(null);
+    setFulfillmentType("delivery");
+    setShipsToCustomer(hasCustomer);
+    setReceiverName("");
+    setReceiverPhone("");
+    setReceiverAddressLine1("");
+    setReceiverCity("");
+    setReceiverProvince("");
+    setCourierId("");
+    setTrackingNumber("");
+    setShippingCost("");
+    setShippingFeeCharged("");
+    setCourierPaymentTypeId("");
+    setNote("");
+    // Default each line to its full remaining quantity — the common case is shipping
+    // everything left on the order, and the user can lower any line from there.
+    setLineQtys(Object.fromEntries(shippableItems.map((si) => [si.orderItemId, String(si.remainingQty)])));
+    setPackagingRows([emptyPackagingRow()]);
+    clearAiFields();
+    setFormOpen(true);
+  }
+
   function updatePackagingRow(rowId: string, patch: Partial<PackagingRow>) {
     setPackagingRows((rows) => rows.map((r) => (r.rowId === rowId ? { ...r, ...patch } : r)));
   }
@@ -406,11 +424,7 @@ export function OrderShipments({
           <CardTitle>Shipments</CardTitle>
           <CardDescription>Partial shipments supported — each ships and delivers independently.</CardDescription>
         </div>
-        {canAddShipment && (
-          <Button asChild>
-            <Link href={`/dashboard/orders/active-orders/${orderNumber}/shipments/new`}>Add Shipment</Link>
-          </Button>
-        )}
+        {canAddShipment && <Button onClick={openCreateForm}>Add Shipment</Button>}
       </CardHeader>
       <CardContent className="space-y-4">
         {shipments.length === 0 && <p className="text-sm text-(--color-text-muted)">No shipments yet.</p>}
@@ -475,8 +489,8 @@ export function OrderShipments({
               <div className="flex justify-between text-(--color-text-muted)">
                 <span>Shipping Cost / Fee Charged</span>
                 <span className="text-(--color-text)">
-                  {s.shippingCost != null ? peso(s.shippingCost) : "—"} /{" "}
-                  {s.shippingFeeCharged != null ? peso(s.shippingFeeCharged) : "—"}
+                  {s.shippingCost != null ? formatCurrency(s.shippingCost) : "—"} /{" "}
+                  {s.shippingFeeCharged != null ? formatCurrency(s.shippingFeeCharged) : "—"}
                 </span>
               </div>
             )}
@@ -565,7 +579,7 @@ export function OrderShipments({
       >
         <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Shipment {editingShipment?.shipmentNumber}</DialogTitle>
+            <DialogTitle>{editingShipment ? `Edit Shipment ${editingShipment.shipmentNumber}` : "New Shipment"}</DialogTitle>
             <DialogDescription>
               Allocate product and packaging quantities for this shipment. Creating a shipment does not affect stock —
               stock is deducted when it&apos;s marked Shipped (or Picked Up).

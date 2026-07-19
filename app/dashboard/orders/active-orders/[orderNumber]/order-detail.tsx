@@ -34,6 +34,7 @@ import {
 } from "./order-shipments";
 import { OrderPayments, type OrderPaymentRow } from "./order-payments";
 import { formatDate, formatDateTime } from "@/lib/utils/format-date";
+import { formatCurrency } from "@/lib/utils/format";
 
 export type OrderDetailItem = {
   id: string;
@@ -111,10 +112,6 @@ const STATUS_VARIANT: Record<string, "success" | "default" | "danger" | "warning
   cancelled: "danger",
 };
 
-function peso(n: number) {
-  return `₱${n.toFixed(2)}`;
-}
-
 function lineTotal(item: OrderDetailItem) {
   const modifierTotal = item.modifiers.reduce((sum, m) => sum + m.price, 0);
   return Math.max(0, item.quantity * (item.unitPrice + modifierTotal) - item.discount);
@@ -128,7 +125,10 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
   const [reservedQty, setReservedQty] = useState<Record<string, number>>(
     Object.fromEntries(data.items.map((i) => [i.id, i.reservedQty]))
   );
-  const reservedQtyDirty = data.items.some((i) => reservedQty[i.id] !== i.reservedQty);
+  const reservedQtyChanges = data.items
+    .filter((i) => reservedQty[i.id] !== i.reservedQty)
+    .map((i) => ({ id: i.id, name: i.name, sku: i.sku, from: i.reservedQty, to: reservedQty[i.id] }));
+  const reservedQtyDirty = reservedQtyChanges.length > 0;
 
   const [startProductionOpen, setStartProductionOpen] = useState(false);
   const [startProductionError, setStartProductionError] = useState<string | null>(null);
@@ -136,6 +136,8 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [holdOpen, setHoldOpen] = useState(false);
   const [holdError, setHoldError] = useState<string | null>(null);
+  const [reservedQtyConfirmOpen, setReservedQtyConfirmOpen] = useState(false);
+  const [reservedQtyError, setReservedQtyError] = useState<string | null>(null);
 
   function handleStartProduction() {
     setStartProductionError(null);
@@ -151,14 +153,19 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
   }
 
   function handleSaveReservedQty() {
-    const updates = data.items
-      .filter((i) => reservedQty[i.id] !== i.reservedQty)
-      .map((i) => ({ orderItemId: i.id, reservedQty: reservedQty[i.id] }));
-    if (updates.length === 0) return;
+    if (reservedQtyChanges.length === 0) return;
+    setReservedQtyError(null);
     startTransition(async () => {
-      const res = await overrideReservedQty(data.id, updates);
-      if (!res.success) notify(res.error, "error");
-      else router.refresh();
+      const res = await overrideReservedQty(
+        data.id,
+        reservedQtyChanges.map((c) => ({ orderItemId: c.id, reservedQty: c.to }))
+      );
+      if (res.success) {
+        setReservedQtyConfirmOpen(false);
+        router.refresh();
+      } else {
+        setReservedQtyError(res.error);
+      }
     });
   }
 
@@ -232,9 +239,29 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
         }
       />
 
+      <nav aria-label="Jump to section" className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+        <a href="#summary" className="text-(--color-text-muted) hover:text-(--color-text) hover:underline">
+          Summary
+        </a>
+        <a href="#line-items" className="text-(--color-text-muted) hover:text-(--color-text) hover:underline">
+          Line Items
+        </a>
+        {(data.shipments.length > 0 || data.canAddShipment) && (
+          <a href="#shipments" className="text-(--color-text-muted) hover:text-(--color-text) hover:underline">
+            Shipments
+          </a>
+        )}
+        <a href="#payments" className="text-(--color-text-muted) hover:text-(--color-text) hover:underline">
+          Payments
+        </a>
+        <a href="#activity-log" className="text-(--color-text-muted) hover:text-(--color-text) hover:underline">
+          Activity Log
+        </a>
+      </nav>
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <Card>
+          <Card id="summary" className="scroll-mt-4">
             <CardHeader>
               <CardTitle>Order Summary</CardTitle>
             </CardHeader>
@@ -253,7 +280,7 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
             </CardContent>
           </Card>
 
-          <Card>
+          <Card id="line-items" className="scroll-mt-4">
             <CardHeader>
               <CardTitle>Line Items</CardTitle>
               <CardDescription>Ordered, Reserved, and Completed quantities per line.</CardDescription>
@@ -276,11 +303,11 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
                       </span>
                       {item.modifiers.length > 0 && (
                         <p className="text-xs text-(--color-text-muted)">
-                          {item.modifiers.map((m) => `${m.name} (+${peso(m.price)})`).join(", ")}
+                          {item.modifiers.map((m) => `${m.name} (+${formatCurrency(m.price)})`).join(", ")}
                         </p>
                       )}
                       {item.discount > 0 && (
-                        <p className="text-xs text-(--color-text-muted)">Discount: -{peso(item.discount)}</p>
+                        <p className="text-xs text-(--color-text-muted)">Discount: -{formatCurrency(item.discount)}</p>
                       )}
                     </div>
                     <span className="text-right text-(--color-text)">{item.quantity}</span>
@@ -315,7 +342,7 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
                         </p>
                       )}
                     </div>
-                    <span className="text-right font-medium text-(--color-text)">{peso(lineTotal(item))}</span>
+                    <span className="text-right font-medium text-(--color-text)">{formatCurrency(lineTotal(item))}</span>
                   </div>
 
                   <div className="space-y-2 lg:hidden">
@@ -326,11 +353,11 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
                       </span>
                       {item.modifiers.length > 0 && (
                         <p className="text-xs text-(--color-text-muted)">
-                          {item.modifiers.map((m) => `${m.name} (+${peso(m.price)})`).join(", ")}
+                          {item.modifiers.map((m) => `${m.name} (+${formatCurrency(m.price)})`).join(", ")}
                         </p>
                       )}
                       {item.discount > 0 && (
-                        <p className="text-xs text-(--color-text-muted)">Discount: -{peso(item.discount)}</p>
+                        <p className="text-xs text-(--color-text-muted)">Discount: -{formatCurrency(item.discount)}</p>
                       )}
                     </div>
                     <div className="flex justify-between">
@@ -376,7 +403,7 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
                     </div>
                     <div className="flex justify-between font-medium">
                       <span className="text-(--color-text-muted)">Line Total</span>
-                      <span className="text-(--color-text)">{peso(lineTotal(item))}</span>
+                      <span className="text-(--color-text)">{formatCurrency(lineTotal(item))}</span>
                     </div>
                   </div>
                 </div>
@@ -384,11 +411,11 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
               <div className="space-y-1 border-t border-(--color-border) pt-3 text-sm">
                 <div className="flex justify-between text-(--color-text-muted)">
                   <span>Total Discount</span>
-                  <span>-{peso(data.totalDiscount)}</span>
+                  <span>-{formatCurrency(data.totalDiscount)}</span>
                 </div>
                 <div className="flex justify-between font-medium text-(--color-text)">
                   <span>Total Amount</span>
-                  <span>{peso(data.totalMoney)}</span>
+                  <span>{formatCurrency(data.totalMoney)}</span>
                 </div>
               </div>
             </CardContent>
@@ -397,52 +424,58 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
                 <Button
                   variant="secondary"
                   disabled={!reservedQtyDirty || isPending}
-                  onClick={handleSaveReservedQty}
+                  onClick={() => {
+                    setReservedQtyError(null);
+                    setReservedQtyConfirmOpen(true);
+                  }}
                 >
-                  {isPending ? "Saving…" : "Save Reserved Qty"}
+                  Save Reserved Qty
                 </Button>
               </CardFooter>
             )}
           </Card>
 
           {(data.shipments.length > 0 || data.canAddShipment) && (
-            <OrderShipments
-              orderId={data.id}
-              orderNumber={data.orderNumber}
-              shipments={data.shipments}
-              shippableItems={data.shippableItems}
-              packagingOptions={data.packagingOptions}
-              courierOptions={data.courierOptions}
-              paymentTypeOptions={data.paymentTypeOptions}
-              customer={data.shipmentCustomer}
-              canAddShipment={data.canAddShipment}
-              isShippingRole={data.isShippingRole}
-              onChanged={() => router.refresh()}
-            />
+            <div id="shipments" className="scroll-mt-4">
+              <OrderShipments
+                orderId={data.id}
+                shipments={data.shipments}
+                shippableItems={data.shippableItems}
+                packagingOptions={data.packagingOptions}
+                courierOptions={data.courierOptions}
+                paymentTypeOptions={data.paymentTypeOptions}
+                customer={data.shipmentCustomer}
+                canAddShipment={data.canAddShipment}
+                isShippingRole={data.isShippingRole}
+                onChanged={() => router.refresh()}
+              />
+            </div>
           )}
 
-          <OrderPayments
-            data={{
-              id: data.id,
-              orderNumber: data.orderNumber,
-              totalMoney: data.totalMoney,
-              shippingFeeTotal: data.shippingFeeTotal,
-              allShipmentsDispatched: data.allShipmentsDispatched,
-              payments: data.payments,
-              paymentTypeOptions: data.paymentTypeOptions,
-              canAddPayment: data.canAddPayment,
-              canClosePayment: data.canClosePayment,
-              isClosed: data.isPaymentClosed,
-              paymentClosedAt: data.paymentClosedAt,
-              paymentClosedByName: data.paymentClosedByName,
-              paymentCloseNote: data.paymentCloseNote,
-              tipAmount: data.tipAmount,
-            }}
-            onChanged={() => router.refresh()}
-          />
+          <div id="payments" className="scroll-mt-4">
+            <OrderPayments
+              data={{
+                id: data.id,
+                orderNumber: data.orderNumber,
+                totalMoney: data.totalMoney,
+                shippingFeeTotal: data.shippingFeeTotal,
+                allShipmentsDispatched: data.allShipmentsDispatched,
+                payments: data.payments,
+                paymentTypeOptions: data.paymentTypeOptions,
+                canAddPayment: data.canAddPayment,
+                canClosePayment: data.canClosePayment,
+                isClosed: data.isPaymentClosed,
+                paymentClosedAt: data.paymentClosedAt,
+                paymentClosedByName: data.paymentClosedByName,
+                paymentCloseNote: data.paymentCloseNote,
+                tipAmount: data.tipAmount,
+              }}
+              onChanged={() => router.refresh()}
+            />
+          </div>
         </div>
 
-        <Card>
+        <Card id="activity-log" className="scroll-mt-4">
           <CardHeader>
             <CardTitle>Activity Log</CardTitle>
             <CardDescription>Immutable audit trail for this order.</CardDescription>
@@ -536,6 +569,47 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
             </DialogClose>
             <Button type="button" variant="danger" onClick={handleCancelOrder} disabled={isPending}>
               {isPending ? "Cancelling…" : "Cancel Order"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={reservedQtyConfirmOpen}
+        onOpenChange={(next) => {
+          setReservedQtyConfirmOpen(next);
+          if (!next) setReservedQtyError(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Reserved Quantity Change</DialogTitle>
+            <DialogDescription>
+              This directly changes stock reservations for this order — any released quantity returns to Available.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5 text-sm">
+            {reservedQtyChanges.map((c) => (
+              <div key={c.id} className="flex justify-between">
+                <span className="text-(--color-text)">
+                  {c.name}
+                  {c.sku ? ` (${c.sku})` : ""}
+                </span>
+                <span className="text-(--color-text-muted)">
+                  {c.from} → <span className="font-medium text-(--color-text)">{c.to}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+          {reservedQtyError && <p className="text-sm text-(--color-danger)">{reservedQtyError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" onClick={handleSaveReservedQty} disabled={isPending}>
+              {isPending ? "Saving…" : "Confirm Change"}
             </Button>
           </DialogFooter>
         </DialogContent>

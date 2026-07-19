@@ -2,10 +2,12 @@
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { NumberInput } from "@/components/ui/number-input";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Button } from "@/components/ui/button";
 import { randomId } from "@/lib/utils/random-id";
+import { formatCurrency } from "@/lib/utils/format";
 
 export type VariantOption = {
   id: string;
@@ -223,19 +225,23 @@ export function OrderLineItemsEditor({
           const total = lineTotal(row, variantOptions, discounts, modifierGroups);
           const disabled = locked;
           const removeDisabled = locked || rows.length === 1 || row.completedQty > 0;
+          const zeroQtyWarning =
+            !disabled && row.variantId && !(Number(row.quantity) > 0) ? "Won't be saved — enter a quantity" : undefined;
 
           return (
             <div key={row.rowId} className="space-y-3 border-b border-(--color-border) pb-4 last:border-0">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-[2fr_1fr_1fr_auto] sm:items-end">
-                <Select
+                <Combobox
                   label={i === 0 ? "Item" : undefined}
                   value={row.variantId}
-                  onChange={(e) => handleVariantChange(row.rowId, e.target.value)}
+                  onValueChange={(next) => handleVariantChange(row.rowId, next)}
                   placeholder="Select an item…"
+                  searchPlaceholder="Search by name or SKU…"
                   disabled={disabled}
                   options={variantOptions.map((v) => ({
                     value: v.id,
                     label: v.sku ? `${v.label} (${v.sku})` : v.label,
+                    keywords: v.sku ?? undefined,
                   }))}
                 />
                 <NumberInput
@@ -246,6 +252,7 @@ export function OrderLineItemsEditor({
                   value={row.quantity}
                   disabled={disabled}
                   onChange={(e) => updateRow(row.rowId, { quantity: e.target.value })}
+                  error={zeroQtyWarning}
                 />
                 <CurrencyInput
                   label={i === 0 ? "Unit Price" : undefined}
@@ -301,7 +308,7 @@ export function OrderLineItemsEditor({
                       }
                       options={g.options.map((o) => ({
                         value: o.id,
-                        label: o.price ? `${o.name} (+₱${o.price.toFixed(2)})` : o.name,
+                        label: o.price ? `${o.name} (+${formatCurrency(o.price)})` : o.name,
                       }))}
                     />
                   ))}
@@ -309,7 +316,7 @@ export function OrderLineItemsEditor({
               )}
 
               <p className="text-right text-xs text-(--color-text-muted)">
-                Line total: <span className="font-medium text-(--color-text)">₱{total.toFixed(2)}</span>
+                Line total: <span className="font-medium text-(--color-text)">{formatCurrency(total)}</span>
               </p>
             </div>
           );
@@ -322,7 +329,7 @@ export function OrderLineItemsEditor({
       </CardContent>
       <CardFooter className="flex-col items-end gap-1 text-sm text-(--color-text-muted)">
         <p>
-          Subtotal: <span className="font-medium text-(--color-text)">₱{subtotal.toFixed(2)}</span>
+          Subtotal: <span className="font-medium text-(--color-text)">{formatCurrency(subtotal)}</span>
         </p>
       </CardFooter>
     </Card>

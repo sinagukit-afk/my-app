@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { fetchOrderRows } from './queries'
 import type { OrderRow } from './order-list-table'
+import { formatCurrency } from '@/lib/utils/format'
 
 export type ActionResult =
   | { success: true; orderId?: string; orderNumber?: string }
@@ -197,7 +198,7 @@ export async function addOrderPayment(orderId: string, payment: AddPaymentInput)
     action: 'order_payment_added',
     entity_type: 'order',
     entity_id: orderId,
-    description: `Payment recorded — ₱${payment.amount.toFixed(2)}`,
+    description: `Payment recorded — ${formatCurrency(payment.amount)}`,
   })
 
   revalidatePath(`${LIST_PATH}/${orderId}`)

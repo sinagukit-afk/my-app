@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
@@ -16,7 +17,8 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useNotifications } from "@/components/providers/notification-provider";
-import { formatDate } from "@/lib/utils/format-date";
+import { formatDate, formatDateTime } from "@/lib/utils/format-date";
+import { formatCurrency } from "@/lib/utils/format";
 import {
   startProduction,
   overrideReservedQty,
@@ -59,9 +61,13 @@ export type ConfirmedOrderData = {
   canCancel: boolean;
 };
 
-function peso(n: number) {
-  return `₱${n.toFixed(2)}`;
-}
+export type ActivityLogRow = {
+  id: string;
+  action: string;
+  description: string;
+  createdAt: string;
+  userName: string;
+};
 
 function lineTotal(item: ConfirmedOrderItem) {
   const modifierTotal = item.modifiers.reduce((sum, m) => sum + m.price, 0);
@@ -70,7 +76,7 @@ function lineTotal(item: ConfirmedOrderItem) {
 
 const LIST_PATH = "/dashboard/orders/confirmed";
 
-export function ConfirmedOrderDetail({ data }: { data: ConfirmedOrderData }) {
+export function ConfirmedOrderDetail({ data, logs }: { data: ConfirmedOrderData; logs: ActivityLogRow[] }) {
   const router = useRouter();
   const { notify } = useNotifications();
   const [isPending, startTransition] = useTransition();
@@ -78,7 +84,10 @@ export function ConfirmedOrderDetail({ data }: { data: ConfirmedOrderData }) {
   const [reservedQty, setReservedQty] = useState<Record<string, number>>(
     Object.fromEntries(data.items.map((i) => [i.id, i.reservedQty]))
   );
-  const reservedQtyDirty = data.items.some((i) => reservedQty[i.id] !== i.reservedQty);
+  const reservedQtyChanges = data.items
+    .filter((i) => reservedQty[i.id] !== i.reservedQty)
+    .map((i) => ({ id: i.id, name: i.name, sku: i.sku, from: i.reservedQty, to: reservedQty[i.id] }));
+  const reservedQtyDirty = reservedQtyChanges.length > 0;
 
   const [startProductionOpen, setStartProductionOpen] = useState(false);
   const [startProductionError, setStartProductionError] = useState<string | null>(null);
@@ -86,16 +95,23 @@ export function ConfirmedOrderDetail({ data }: { data: ConfirmedOrderData }) {
   const [holdError, setHoldError] = useState<string | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [reservedQtyConfirmOpen, setReservedQtyConfirmOpen] = useState(false);
+  const [reservedQtyError, setReservedQtyError] = useState<string | null>(null);
 
   function handleSaveReservedQty() {
-    const updates = data.items
-      .filter((i) => reservedQty[i.id] !== i.reservedQty)
-      .map((i) => ({ orderItemId: i.id, reservedQty: reservedQty[i.id] }));
-    if (updates.length === 0) return;
+    if (reservedQtyChanges.length === 0) return;
+    setReservedQtyError(null);
     startTransition(async () => {
-      const res = await overrideReservedQty(data.id, updates);
-      if (!res.success) notify(res.error, "error");
-      else router.refresh();
+      const res = await overrideReservedQty(
+        data.id,
+        reservedQtyChanges.map((c) => ({ orderItemId: c.id, reservedQty: c.to }))
+      );
+      if (res.success) {
+        setReservedQtyConfirmOpen(false);
+        router.refresh();
+      } else {
+        setReservedQtyError(res.error);
+      }
     });
   }
 
@@ -145,6 +161,12 @@ export function ConfirmedOrderDetail({ data }: { data: ConfirmedOrderData }) {
         description={`Order Date ${formatDate(data.createdAt)} · Target Date ${formatDate(data.targetDate)}`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={`/dashboard/orders/active-orders/${data.orderNumber}`}
+              className="text-sm text-(--color-primary) hover:underline"
+            >
+              View Full Order →
+            </Link>
             {data.canAdvance && (
               <Button disabled={isPending} onClick={() => setStartProductionOpen(true)}>
                 Start Production
@@ -164,155 +186,180 @@ export function ConfirmedOrderDetail({ data }: { data: ConfirmedOrderData }) {
         }
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Confirmed Order</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <p className="text-sm font-medium text-(--color-text)">
-              Customer: {data.customerName ?? "Walk-in customer"}
-            </p>
-            {data.customerAddress && <p className="text-xs text-(--color-text-muted)">{data.customerAddress}</p>}
-            {(data.customerPhone || data.customerEmail) && (
-              <p className="text-xs text-(--color-text-muted)">
-                {[data.customerPhone, data.customerEmail].filter(Boolean).join(" · ")}
-              </p>
-            )}
-          </div>
-          {!data.sameAsCustomer && (
-            <div className="rounded-md border border-(--color-border) p-3">
-              <p className="text-xs font-medium text-(--color-text-muted)">Ships to</p>
-              <p className="text-sm text-(--color-text)">{data.receiverName}</p>
-              {data.receiverAddress && <p className="text-xs text-(--color-text-muted)">{data.receiverAddress}</p>}
-              {data.receiverPhone && <p className="text-xs text-(--color-text-muted)">{data.receiverPhone}</p>}
-            </div>
-          )}
-          {data.note && <p className="text-sm text-(--color-text-muted)">Notes: {data.note}</p>}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Line Items</CardTitle>
-          <CardDescription>Ordered and Reserved quantities per line.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="hidden gap-2 text-xs font-medium text-(--color-text-muted) lg:grid lg:grid-cols-[2fr_1fr_1fr_1fr]">
-            <span>Item</span>
-            <span className="text-right">Ordered</span>
-            <span className="text-right">Reserved</span>
-            <span className="text-right">Line Total</span>
-          </div>
-          {data.items.map((item) => (
-            <div key={item.id} className="border-b border-(--color-border) pb-3 text-sm last:border-0">
-              <div className="hidden items-center gap-2 lg:grid lg:grid-cols-[2fr_1fr_1fr_1fr]">
-                <div>
-                  <span className="text-(--color-text)">
-                    {item.name}
-                    {item.sku ? ` (${item.sku})` : ""}
-                  </span>
-                  {item.modifiers.length > 0 && (
-                    <p className="text-xs text-(--color-text-muted)">
-                      {item.modifiers.map((m) => `${m.name} (+${peso(m.price)})`).join(", ")}
-                    </p>
-                  )}
-                  {item.discount > 0 && (
-                    <p className="text-xs text-(--color-text-muted)">Discount: -{peso(item.discount)}</p>
-                  )}
-                </div>
-                <span className="text-right text-(--color-text)">{item.quantity}</span>
-                {data.canOverrideReservedQty ? (
-                  <NumberInput
-                    className="h-8 text-right"
-                    min={0}
-                    max={item.quantity}
-                    step="0.001"
-                    decimals={3}
-                    value={reservedQty[item.id]}
-                    onChange={(e) =>
-                      setReservedQty((prev) => ({
-                        ...prev,
-                        [item.id]: Math.max(0, Math.min(item.quantity, Number(e.target.value) || 0)),
-                      }))
-                    }
-                  />
-                ) : (
-                  <span className="text-right text-(--color-text)">{item.reservedQty}</span>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Confirmed Order</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-sm font-medium text-(--color-text)">
+                  Customer: {data.customerName ?? "Walk-in customer"}
+                </p>
+                {data.customerAddress && <p className="text-xs text-(--color-text-muted)">{data.customerAddress}</p>}
+                {(data.customerPhone || data.customerEmail) && (
+                  <p className="text-xs text-(--color-text-muted)">
+                    {[data.customerPhone, data.customerEmail].filter(Boolean).join(" · ")}
+                  </p>
                 )}
-                <span className="text-right font-medium text-(--color-text)">{peso(lineTotal(item))}</span>
               </div>
+              {!data.sameAsCustomer && (
+                <div className="rounded-md border border-(--color-border) p-3">
+                  <p className="text-xs font-medium text-(--color-text-muted)">Ships to</p>
+                  <p className="text-sm text-(--color-text)">{data.receiverName}</p>
+                  {data.receiverAddress && <p className="text-xs text-(--color-text-muted)">{data.receiverAddress}</p>}
+                  {data.receiverPhone && <p className="text-xs text-(--color-text-muted)">{data.receiverPhone}</p>}
+                </div>
+              )}
+              {data.note && <p className="text-sm text-(--color-text-muted)">Notes: {data.note}</p>}
+            </CardContent>
+          </Card>
 
-              <div className="space-y-2 lg:hidden">
-                <div>
-                  <span className="text-(--color-text)">
-                    {item.name}
-                    {item.sku ? ` (${item.sku})` : ""}
-                  </span>
-                  {item.modifiers.length > 0 && (
-                    <p className="text-xs text-(--color-text-muted)">
-                      {item.modifiers.map((m) => `${m.name} (+${peso(m.price)})`).join(", ")}
-                    </p>
-                  )}
-                  {item.discount > 0 && (
-                    <p className="text-xs text-(--color-text-muted)">Discount: -{peso(item.discount)}</p>
-                  )}
+          <Card>
+            <CardHeader>
+              <CardTitle>Line Items</CardTitle>
+              <CardDescription>Ordered and Reserved quantities per line.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="hidden gap-2 text-xs font-medium text-(--color-text-muted) lg:grid lg:grid-cols-[2fr_1fr_1fr_1fr]">
+                <span>Item</span>
+                <span className="text-right">Ordered</span>
+                <span className="text-right">Reserved</span>
+                <span className="text-right">Line Total</span>
+              </div>
+              {data.items.map((item) => (
+                <div key={item.id} className="border-b border-(--color-border) pb-3 text-sm last:border-0">
+                  <div className="hidden items-center gap-2 lg:grid lg:grid-cols-[2fr_1fr_1fr_1fr]">
+                    <div>
+                      <span className="text-(--color-text)">
+                        {item.name}
+                        {item.sku ? ` (${item.sku})` : ""}
+                      </span>
+                      {item.modifiers.length > 0 && (
+                        <p className="text-xs text-(--color-text-muted)">
+                          {item.modifiers.map((m) => `${m.name} (+${formatCurrency(m.price)})`).join(", ")}
+                        </p>
+                      )}
+                      {item.discount > 0 && (
+                        <p className="text-xs text-(--color-text-muted)">Discount: -{formatCurrency(item.discount)}</p>
+                      )}
+                    </div>
+                    <span className="text-right text-(--color-text)">{item.quantity}</span>
+                    {data.canOverrideReservedQty ? (
+                      <NumberInput
+                        className="h-8 text-right"
+                        min={0}
+                        max={item.quantity}
+                        step="0.001"
+                        decimals={3}
+                        value={reservedQty[item.id]}
+                        onChange={(e) =>
+                          setReservedQty((prev) => ({
+                            ...prev,
+                            [item.id]: Math.max(0, Math.min(item.quantity, Number(e.target.value) || 0)),
+                          }))
+                        }
+                      />
+                    ) : (
+                      <span className="text-right text-(--color-text)">{item.reservedQty}</span>
+                    )}
+                    <span className="text-right font-medium text-(--color-text)">{formatCurrency(lineTotal(item))}</span>
+                  </div>
+
+                  <div className="space-y-2 lg:hidden">
+                    <div>
+                      <span className="text-(--color-text)">
+                        {item.name}
+                        {item.sku ? ` (${item.sku})` : ""}
+                      </span>
+                      {item.modifiers.length > 0 && (
+                        <p className="text-xs text-(--color-text-muted)">
+                          {item.modifiers.map((m) => `${m.name} (+${formatCurrency(m.price)})`).join(", ")}
+                        </p>
+                      )}
+                      {item.discount > 0 && (
+                        <p className="text-xs text-(--color-text-muted)">Discount: -{formatCurrency(item.discount)}</p>
+                      )}
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-(--color-text-muted)">Ordered</span>
+                      <span className="text-(--color-text)">{item.quantity}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-(--color-text-muted)">Reserved</span>
+                      {data.canOverrideReservedQty ? (
+                        <NumberInput
+                          className="h-8 w-24 text-right"
+                          min={0}
+                          max={item.quantity}
+                          step="0.001"
+                          decimals={3}
+                          value={reservedQty[item.id]}
+                          onChange={(e) =>
+                            setReservedQty((prev) => ({
+                              ...prev,
+                              [item.id]: Math.max(0, Math.min(item.quantity, Number(e.target.value) || 0)),
+                            }))
+                          }
+                        />
+                      ) : (
+                        <span className="text-(--color-text)">{item.reservedQty}</span>
+                      )}
+                    </div>
+                    <div className="flex justify-between font-medium">
+                      <span className="text-(--color-text-muted)">Line Total</span>
+                      <span className="text-(--color-text)">{formatCurrency(lineTotal(item))}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-(--color-text-muted)">Ordered</span>
-                  <span className="text-(--color-text)">{item.quantity}</span>
+              ))}
+              <div className="space-y-1 border-t border-(--color-border) pt-3 text-sm">
+                <div className="flex justify-between text-(--color-text-muted)">
+                  <span>Total Discount</span>
+                  <span>-{formatCurrency(data.totalDiscount)}</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-(--color-text-muted)">Reserved</span>
-                  {data.canOverrideReservedQty ? (
-                    <NumberInput
-                      className="h-8 w-24 text-right"
-                      min={0}
-                      max={item.quantity}
-                      step="0.001"
-                      decimals={3}
-                      value={reservedQty[item.id]}
-                      onChange={(e) =>
-                        setReservedQty((prev) => ({
-                          ...prev,
-                          [item.id]: Math.max(0, Math.min(item.quantity, Number(e.target.value) || 0)),
-                        }))
-                      }
-                    />
-                  ) : (
-                    <span className="text-(--color-text)">{item.reservedQty}</span>
-                  )}
-                </div>
-                <div className="flex justify-between font-medium">
-                  <span className="text-(--color-text-muted)">Line Total</span>
-                  <span className="text-(--color-text)">{peso(lineTotal(item))}</span>
+                <div className="flex justify-between font-medium text-(--color-text)">
+                  <span>Total Amount</span>
+                  <span>{formatCurrency(data.totalMoney)}</span>
                 </div>
               </div>
-            </div>
-          ))}
-          <div className="space-y-1 border-t border-(--color-border) pt-3 text-sm">
-            <div className="flex justify-between text-(--color-text-muted)">
-              <span>Total Discount</span>
-              <span>-{peso(data.totalDiscount)}</span>
-            </div>
-            <div className="flex justify-between font-medium text-(--color-text)">
-              <span>Total Amount</span>
-              <span>{peso(data.totalMoney)}</span>
-            </div>
-          </div>
-        </CardContent>
-        {data.canOverrideReservedQty && (
-          <CardFooter className="justify-end gap-2">
-            <Button
-              variant="secondary"
-              disabled={!reservedQtyDirty || isPending}
-              onClick={handleSaveReservedQty}
-            >
-              {isPending ? "Saving…" : "Save Reserved Qty"}
-            </Button>
-          </CardFooter>
-        )}
-      </Card>
+            </CardContent>
+            {data.canOverrideReservedQty && (
+              <CardFooter className="justify-end gap-2">
+                <Button
+                  variant="secondary"
+                  disabled={!reservedQtyDirty || isPending}
+                  onClick={() => {
+                    setReservedQtyError(null);
+                    setReservedQtyConfirmOpen(true);
+                  }}
+                >
+                  Save Reserved Qty
+                </Button>
+              </CardFooter>
+            )}
+          </Card>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Activity Log</CardTitle>
+            <CardDescription>Immutable audit trail for this order.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {logs.length === 0 && <p className="text-sm text-(--color-text-muted)">No activity yet.</p>}
+            {logs.map((log) => (
+              <div key={log.id} className="border-b border-(--color-border) pb-2 text-sm last:border-0">
+                <p className="text-(--color-text)">{log.description || log.action}</p>
+                <p className="text-xs text-(--color-text-muted)">
+                  {log.userName} · {formatDateTime(log.createdAt)}
+                </p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
 
       <Dialog
         open={startProductionOpen}
@@ -389,6 +436,47 @@ export function ConfirmedOrderDetail({ data }: { data: ConfirmedOrderData }) {
             </DialogClose>
             <Button type="button" variant="danger" onClick={handleCancelOrder} disabled={isPending}>
               {isPending ? "Cancelling…" : "Cancel Order"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={reservedQtyConfirmOpen}
+        onOpenChange={(next) => {
+          setReservedQtyConfirmOpen(next);
+          if (!next) setReservedQtyError(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Reserved Quantity Change</DialogTitle>
+            <DialogDescription>
+              This directly changes stock reservations for this order — any released quantity returns to Available.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5 text-sm">
+            {reservedQtyChanges.map((c) => (
+              <div key={c.id} className="flex justify-between">
+                <span className="text-(--color-text)">
+                  {c.name}
+                  {c.sku ? ` (${c.sku})` : ""}
+                </span>
+                <span className="text-(--color-text-muted)">
+                  {c.from} → <span className="font-medium text-(--color-text)">{c.to}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+          {reservedQtyError && <p className="text-sm text-(--color-danger)">{reservedQtyError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" onClick={handleSaveReservedQty} disabled={isPending}>
+              {isPending ? "Saving…" : "Confirm Change"}
             </Button>
           </DialogFooter>
         </DialogContent>

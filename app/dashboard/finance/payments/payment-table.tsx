@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { FilterBar } from "@/components/business/filter-bar";
 import { DateRangeFilter } from "@/components/business/date-range-filter";
 import { formatDate } from "@/lib/utils/format-date";
+import { formatCurrency } from "@/lib/utils/format";
 
 export type OrderRow = {
   orderNumber: string;
@@ -47,10 +48,6 @@ const PAYMENT_STATUS_FILTER_OPTIONS = [
   { label: "Paid", value: "Paid" },
   { label: "Overpaid", value: "Overpaid" },
 ];
-
-function peso(n: number) {
-  return `₱${n.toFixed(2)}`;
-}
 
 type Props = {
   data: OrderRow[];
@@ -99,25 +96,25 @@ export function PaymentOrdersTable({ data, from, to }: Props) {
       key: "totalMoney",
       header: "Order Total",
       sortable: true,
-      render: (value) => peso(value as number),
+      render: (value) => formatCurrency(value as number),
     },
     {
       key: "shippingFeeTotal",
       header: "Shipping Fee",
       sortable: true,
-      render: (value) => (value ? peso(value as number) : <span className="text-(--color-text-subtle)">—</span>),
+      render: (value) => (value ? formatCurrency(value as number) : <span className="text-(--color-text-subtle)">—</span>),
     },
     {
       key: "totalPaid",
       header: "Total Paid",
       sortable: true,
-      render: (value) => peso(value as number),
+      render: (value) => formatCurrency(value as number),
     },
     {
       key: "remainingBalance",
       header: "Remaining Balance",
       sortable: true,
-      render: (value) => peso(value as number),
+      render: (value) => formatCurrency(value as number),
     },
     {
       key: "paymentStatus",

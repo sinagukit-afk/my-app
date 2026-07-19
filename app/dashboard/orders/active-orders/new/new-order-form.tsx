@@ -43,12 +43,18 @@ export function NewOrderForm({ customers, variantOptions, discounts, modifierGro
   const [isPending, startTransition] = useTransition();
   const [orderDate, setOrderDate] = useState(todayIso());
   const [targetDate, setTargetDate] = useState(plusDays(todayIso(), 5));
+  const [targetDateTouched, setTargetDateTouched] = useState(false);
   const [rows, setRows] = useState<OrderLineRow[]>([emptyOrderRow()]);
   const [error, setError] = useState<string | null>(null);
 
   function handleOrderDateChange(value: string) {
     setOrderDate(value);
-    setTargetDate(plusDays(value, 5));
+    if (!targetDateTouched) setTargetDate(plusDays(value, 5));
+  }
+
+  function handleTargetDateChange(value: string) {
+    setTargetDateTouched(true);
+    setTargetDate(value);
   }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -95,7 +101,7 @@ export function NewOrderForm({ customers, variantOptions, discounts, modifierGro
           />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <DatePicker label="Order Date" value={orderDate} onChange={(e) => handleOrderDateChange(e.target.value)} />
-            <DatePicker label="Target Date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
+            <DatePicker label="Target Date" value={targetDate} onChange={(e) => handleTargetDateChange(e.target.value)} />
           </div>
           <TextArea label="Notes" name="note" rows={2} />
         </CardContent>

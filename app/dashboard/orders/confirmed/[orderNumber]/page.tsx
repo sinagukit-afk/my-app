@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { ConfirmedOrderDetail, type ConfirmedOrderData } from "./confirmed-order-detail";
+import { ConfirmedOrderDetail, type ConfirmedOrderData, type ActivityLogRow } from "./confirmed-order-detail";
 
 function firstOf<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
@@ -34,6 +34,24 @@ export default async function ConfirmedOrderDetailPage({
     .single();
 
   if (!order || order.status !== "confirmed") notFound();
+
+  const { data: logsData } = await supabase
+    .from("activity_logs")
+    .select("id, action, description, created_at, profiles(full_name, email)")
+    .eq("entity_type", "order")
+    .eq("entity_id", order.id)
+    .order("created_at", { ascending: false });
+
+  const logs: ActivityLogRow[] = (logsData ?? []).map((l) => {
+    const actor = firstOf(l.profiles);
+    return {
+      id: l.id,
+      action: l.action,
+      description: l.description ?? "",
+      createdAt: l.created_at,
+      userName: actor?.full_name ?? actor?.email ?? "System",
+    };
+  });
 
   const customer = firstOf(order.customers);
 
@@ -83,5 +101,5 @@ export default async function ConfirmedOrderDetailPage({
     canCancel,
   };
 
-  return <ConfirmedOrderDetail data={data} />;
+  return <ConfirmedOrderDetail data={data} logs={logs} />;
 }
