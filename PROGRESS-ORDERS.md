@@ -288,3 +288,84 @@ single terminal `orders.status` for both pickup and delivery orders.
 The 2 live `completed` rows were migrated to `delivered` and
 `'completed'` was dropped from `orders_status_check`. See
 `PROGRESS-PRODUCTION-SHIPPING.md` PS-7 and `DECISIONS.md` D035.
+
+---
+
+**2026-07-19 — Quote-to-Shipping UX audit (12 fixes), commit `8af5364`:**
+Sinag requested a UX audit of the Order process end-to-end (Quote →
+Order → Confirmed → Production → Shipping, persona: Senior ERP UX
+Auditor), then asked to implement every finding. All 12 items landed in
+one session, UI/navigation only — no schema or RPC changes:
+
+1. **Currency formatting** — every local `peso()`/inline
+   `` ₱${n.toFixed(2)} `` helper across Quotation, Active Orders,
+   Confirmed, On Hold, Completed, and Finance → Customer Payment was
+   replaced with the shared `formatCurrency()` (`lib/utils/format.ts`).
+   Money had been rendering without thousands separators app-wide in
+   this module (e.g. `₱123456.78` instead of `₱123,456.78`).
+2. **Completed archive traceability** — `completed-table.tsx` now shows
+   Order No. and its row click routes to the canonical
+   `active-orders/[orderNumber]` detail page instead of a stripped
+   read-only modal that had no shipments/payments/activity log and
+   didn't even surface the order number.
+3. **`ConfirmedOrderDetail` parity** — gained an Activity Log card and a
+   "View Full Order →" link, matching the thin-view-plus-link pattern
+   Shipping/Payment's own detail views already used.
+4. **Searchable item picker** — Quote/Order line-item editors
+   (`quote-line-items.tsx`/`order-line-items.tsx`) swapped the plain
+   `Select` for the searchable `Combobox`, matching Purchasing's
+   existing item-picker pattern.
+5. **Silent line-item drop** — a row with a selected item but a
+   zero/blank quantity now shows an inline "Won't be saved — enter a
+   quantity" warning instead of silently vanishing from the saved
+   Quote/Order with only a generic top-level error if every row was
+   invalid.
+6. **Dead breadcrumb** — `/dashboard/orders` added to
+   `components/layout/app-shell.tsx`'s `NON_ROUTABLE_PATHS`; the
+   "Orders" breadcrumb segment on every nested order page had been a
+   dead link to a "Coming soon" stub (that page itself isn't in the
+   sidebar nav, only reachable via the breadcrumb).
+7. **Reserved Qty override confirmation** — saving a Reserved Qty
+   change (Order Detail + Confirmed Detail) now requires confirming an
+   item-by-item before→after diff dialog first, matching the
+   confirm-before-mutate pattern every other stock-affecting action on
+   the page already used (Cancel/Hold/Start Production).
+8. **Merged shipment forms** — "Add Shipment" now opens the same Dialog
+   used for editing (pre-filled to each line's full remaining
+   quantity) instead of navigating to a separate full-page form with
+   near-duplicate state/validation/AI-autofill wiring; deleted the
+   now-redundant `active-orders/[orderNumber]/shipments/new/` route
+   (see `PROGRESS-PRODUCTION-SHIPPING.md` PS-24).
+9. **CSV export coverage** — added the `DataTable` `exportFilename`
+   button (ORDER-11's plain-button variant) to Quotation, Confirmed,
+   Production, both Shipping tables, and On Hold — previously only
+   Active Orders had export.
+10. **Jump-to nav** — added an anchor-link row (Summary/Line
+    Items/Shipments/Payments/Activity Log) to the top of Order Detail,
+    conditionally showing Shipments only when that section renders.
+11. **Date auto-recompute gotcha** — in both New Quote and New Order,
+    manually editing Valid Until/Target Date and then changing the
+    Quote/Order Date was silently overwriting the manual edit; both
+    forms now track whether the derived field has been touched and
+    stop auto-recomputing it once it has.
+12. **Completed ↔ Active Orders link** — Active Orders' status filter
+    now reads an initial value from a `?status=` URL param
+    (`OrderListTable`'s new `initialStatus` prop), and the Completed
+    page links to `/dashboard/orders/active-orders?status=completed` —
+    one canonical, more capable path (Payment Status, richer filters)
+    to the same data instead of two divergent views.
+
+**Verification:** `npx tsc --noEmit` and `eslint` clean on every touched
+file (two pre-existing, untouched `_id`/`_poStatus` unused-var warnings
+in `quotation/actions.ts`/`shipping/page.tsx` confirmed unrelated).
+Browser-verified end-to-end (Claude admin test account): thousands
+separators on Completed/Quotation/Customer Payment lists; Completed row
+click landing on the full order detail with shipments/payments/activity
+log intact; Combobox type-to-filter narrowing to matching SKUs on New
+Order; the zero-qty inline warning appearing the moment a quantity is
+cleared; the Reserved Qty confirm dialog showing the correct
+item/before/after diff; "Add Shipment" opening in place (URL unchanged)
+with each line pre-filled to its remaining quantity; manually-set Valid
+Until/Target Date surviving a subsequent Quote/Order Date change; and
+the Completed → Active Orders `?status=completed` link landing
+pre-filtered. No new console or server errors.

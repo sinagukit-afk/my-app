@@ -538,6 +538,18 @@ Confirmed by reading the live RPC definitions directly (Supabase MCP): `add_prod
 
 ---
 
+## PS-24 — Merged shipment create/edit forms + Shipping CSV export ✅ DONE (2026-07-19)
+
+**Requested by Sinag** as part of a broader Quote-to-Shipping UX audit (persona: Senior ERP UX Auditor) covering the whole Order module — full writeup lives in `PROGRESS-ORDERS.md`'s 2026-07-19 entry; this is the Shipping-specific slice of that work.
+
+**What was built:**
+- "Add Shipment" in `order-shipments.tsx` now opens the same Dialog already used for editing a shipment (`editingShipment = null`), pre-filled with each shippable line's full remaining quantity, instead of navigating to a separate full-page form. The two forms had drifted into near-identical, independently-maintained implementations (same state, validation, and AI Auto-Fill wiring from PS-23) — a fix to one wasn't guaranteed to reach the other. Deleted the now-redundant `active-orders/[orderNumber]/shipments/new/` route (`page.tsx` + `new-shipment-form.tsx`). The Dialog's title/submit label now read "New Shipment"/"Save Shipment" in create mode vs "Edit Shipment {number}"/"Save Changes" in edit mode.
+- `shipping-table.tsx`'s two tables (Production Progress, Shipments) both gained the `DataTable` `exportFilename` CSV button (ORDER-11's plain-button variant). The Shipments table's `items` and `courierName` columns needed explicit `exportValue` overrides — their raw field values are an array of shipment-item objects and a `null` that actually means "Pickup," respectively, both of which would have serialized unusably in a plain CSV cell.
+
+**Verification:** `npx tsc --noEmit`/`eslint` clean. Browser-verified (Claude admin account): clicked "Add Shipment" on a real `ready_for_shipping` order — Dialog opened in place (URL unchanged, confirmed via `location.pathname`), titled "New Shipment," each product line pre-filled to its remaining quantity. Confirmed both Shipping tables' "Export to Excel" buttons render.
+
+---
+
 ## Sequencing summary
 
 ```

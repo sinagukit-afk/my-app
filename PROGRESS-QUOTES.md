@@ -105,3 +105,15 @@ column removed, company header (name/address/phone/email) and a new
 `PROGRESS-PRODUCTION-SHIPPING.md`'s PS-19 (that's where the matching Payment
 Preview change also landed, and where the new `stores.phone/email` +
 `profiles.function_title` migrations are documented).
+
+**2026-07-19 — Quote-to-Shipping UX audit:** the Quote line-item Item
+picker (`quote-line-items.tsx`) was swapped from a plain `Select` to the
+searchable `Combobox`; a row with a selected item but zero/blank
+quantity now shows an inline "Won't be saved" warning instead of
+silently being dropped; and the Quote Date → Valid Until auto-recompute
+no longer overwrites a manually-edited Valid Until. All local `peso()`
+formatting in this module was also replaced with the shared
+`formatCurrency()`. Full writeup lives in `PROGRESS-ORDERS.md`'s
+2026-07-19 entry (that's also where the matching Order-side changes —
+same Combobox/zero-qty-warning/date-touch fixes, plus several
+list/detail navigation fixes — are documented).
