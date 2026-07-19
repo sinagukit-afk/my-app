@@ -202,6 +202,13 @@ export function ItemDetail({ item, variants, modifiers, canWrite }: Props) {
                     {v.low_stock_threshold !== null && (
                       <p className="text-xs text-(--color-text-muted)">Min {formatQty(v.low_stock_threshold)}</p>
                     )}
+                    <Link
+                      href={`/dashboard/inventory/monitoring/${encodeURIComponent(v.sku)}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="block text-xs text-(--color-primary) hover:underline"
+                    >
+                      View in Monitoring →
+                    </Link>
                   </span>
                 )}
               </div>
@@ -224,11 +231,18 @@ export function ItemDetail({ item, variants, modifiers, canWrite }: Props) {
                   <span className="text-(--color-text)">{v.cost !== null ? formatCurrency(v.cost) : "—"}</span>
                 </div>
                 {item.track_stock && (
-                  <div className="flex justify-between">
+                  <div className="flex items-center justify-between">
                     <span className="text-(--color-text-muted)">Stock</span>
-                    <span className="text-(--color-text)">
+                    <span className="text-right text-(--color-text)">
                       {v.in_stock !== null ? formatQty(v.in_stock) : "—"}
                       {v.low_stock_threshold !== null && ` (min ${formatQty(v.low_stock_threshold)})`}
+                      <Link
+                        href={`/dashboard/inventory/monitoring/${encodeURIComponent(v.sku)}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="block text-xs text-(--color-primary) hover:underline"
+                      >
+                        View in Monitoring →
+                      </Link>
                     </span>
                   </div>
                 )}

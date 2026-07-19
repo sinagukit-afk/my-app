@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils/format";
+import { getStockStatus } from "@/lib/inventory/calculations";
 import { ItemsTable, type ItemRow } from "./items-table";
 
 function firstOf<T>(value: T | T[] | null | undefined): T | null {
@@ -30,9 +31,10 @@ export default async function ItemsPage() {
   const { data, error } = await supabase
     .from("items")
     .select(
-      `id, name, item_type, is_available_for_sale, deleted_at,
+      `id, name, item_type, is_available_for_sale, deleted_at, track_stock,
        categories(name),
-       item_variants(id, sku, cost, default_price, pricing_type, deleted_at)`
+       item_variants(id, sku, cost, default_price, pricing_type, deleted_at,
+         inventory_levels(available_qty, low_stock_threshold))`
     )
     .order("name");
 
@@ -105,6 +107,20 @@ export default async function ItemsPage() {
         ? "available"
         : "not_for_sale";
 
+    let stock_qty: number | null = null;
+    let stock_status: ItemRow["stock_status"] = null;
+    if (item.track_stock) {
+      const levels = variants.flatMap((v) => arrayOf(v.inventory_levels));
+      stock_qty = levels.reduce((sum, l) => sum + Number(l.available_qty), 0);
+      const statuses = levels.map((l) =>
+        getStockStatus({
+          available_qty: Number(l.available_qty),
+          low_stock_threshold: l.low_stock_threshold != null ? Number(l.low_stock_threshold) : null,
+        })
+      );
+      stock_status = statuses.includes("out") ? "out" : statuses.includes("low") ? "low" : "ok";
+    }
+
     return {
       id: item.id,
       name: item.name,
@@ -115,6 +131,9 @@ export default async function ItemsPage() {
       sku_count: skus.length,
       price_label: priceLabel,
       cost_label: costLabel,
+      track_stock: item.track_stock,
+      stock_qty,
+      stock_status,
     };
   });
 

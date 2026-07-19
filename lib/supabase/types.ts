@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -2511,6 +2511,9 @@ export type Database = {
           payable_id: string
           payable_type: string
           payment_type_id: string | null
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
         }
         Insert: {
           amount: number
@@ -2522,6 +2525,9 @@ export type Database = {
           payable_id: string
           payable_type: string
           payment_type_id?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Update: {
           amount?: number
@@ -2533,6 +2539,9 @@ export type Database = {
           payable_id?: string
           payable_type?: string
           payment_type_id?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Relationships: [
           {
@@ -4307,6 +4316,33 @@ export type Database = {
         }
       }
       archive_item: { Args: { p_item_id: string }; Returns: undefined }
+      bulk_adjust_stock: {
+        Args: { p_items: Json; p_note?: string; p_reason?: string }
+        Returns: {
+          counterpart_status: string | null
+          created_at: string
+          id: string
+          lot_id: string | null
+          movement_type: string
+          note: string | null
+          occurred_at: string
+          quantity_after: number | null
+          quantity_before: number
+          quantity_change: number
+          source_id: string | null
+          source_reference_id: string | null
+          status: string
+          store_id: string
+          transfer_group_id: string | null
+          variant_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "inventory_movements"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       cancel_order: {
         Args: { p_order_id: string }
         Returns: {
@@ -5557,6 +5593,46 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      update_shipment_fee: {
+        Args: {
+          p_courier_payment_type_id?: string
+          p_shipment_id: string
+          p_shipping_cost?: number
+          p_shipping_fee_charged?: number
+        }
+        Returns: {
+          courier_id: string | null
+          courier_payment_type_id: string | null
+          created_at: string
+          created_by: string | null
+          delivered_at: string | null
+          fulfillment_type: string
+          id: string
+          note: string | null
+          order_id: string
+          receiver_address_line1: string | null
+          receiver_barangay: string | null
+          receiver_city: string | null
+          receiver_name: string | null
+          receiver_phone: string | null
+          receiver_postal_code: string | null
+          receiver_province: string | null
+          shipment_number: string
+          shipped_at: string | null
+          shipping_cost: number | null
+          shipping_fee_charged: number | null
+          ships_to_customer: boolean | null
+          status: string | null
+          tracking_number: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "order_shipments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       upsert_item: {
         Args: {
           p_category_id: string
@@ -5607,6 +5683,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      void_payable_payment: {
+        Args: { p_payment_id: string; p_reason: string }
+        Returns: string
       }
     }
     Enums: {

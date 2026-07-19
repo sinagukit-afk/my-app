@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { AdjustmentForm, type VariantOption } from "./adjustment-form";
+import { type VariantOption } from "./adjustment-form";
+import { AdjustmentPanel } from "./adjustment-panel";
 import { RecentAdjustments, type AdjustmentRow } from "./recent-adjustments";
 
 function firstOf<T>(value: T | T[] | null | undefined): T | null {
@@ -84,7 +85,7 @@ export default async function ItemAdjustmentPage() {
       )}
 
       {canAdjust ? (
-        <AdjustmentForm variants={variants} />
+        <AdjustmentPanel variants={variants} />
       ) : (
         <Card className="max-w-lg">
           <CardContent className="p-4 text-sm text-(--color-text-muted)">

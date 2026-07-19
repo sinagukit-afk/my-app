@@ -4,7 +4,6 @@ import { getOnHand, getProjectedStock, getStockStatus } from "@/lib/inventory/ca
 import { InventoryMonitoringTable, type InventoryMonitoringRow } from "./inventory-monitoring-table";
 import { MovementsTable } from "./movements-table";
 import { MOVEMENT_SELECT, mapMovementRow } from "./movement-utils";
-import { QtyTile } from "./qty-tile";
 
 function firstOf<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
@@ -88,15 +87,6 @@ export default async function InventoryMonitoringPage() {
     );
   });
 
-  const summary = {
-    lowStock: rows.filter((r) => r.status === "low").length,
-    outOfStock: rows.filter((r) => r.status === "out").length,
-    onHold: rows.filter((r) => r.on_hold_qty > 0).length,
-    inProduction: rows.filter((r) => r.in_production_qty > 0).length,
-    incoming: rows.filter((r) => r.incoming_qty > 0).length,
-    reserved: rows.filter((r) => r.reserved_qty > 0).length,
-  };
-
   const movementRows = (movementsData ?? []).map(mapMovementRow);
 
   return (
@@ -108,15 +98,6 @@ export default async function InventoryMonitoringPage() {
           </CardContent>
         </Card>
       )}
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
-        <QtyTile label="Low Stock" value={summary.lowStock.toLocaleString("en-PH")} variant="warning" />
-        <QtyTile label="Out of Stock" value={summary.outOfStock.toLocaleString("en-PH")} variant="danger" />
-        <QtyTile label="On Hold" value={summary.onHold.toLocaleString("en-PH")} variant="warning" />
-        <QtyTile label="In Production" value={summary.inProduction.toLocaleString("en-PH")} variant="default" />
-        <QtyTile label="Incoming" value={summary.incoming.toLocaleString("en-PH")} variant="neutral" />
-        <QtyTile label="Reserved" value={summary.reserved.toLocaleString("en-PH")} variant="info" />
-      </div>
 
       <InventoryMonitoringTable data={rows} />
 

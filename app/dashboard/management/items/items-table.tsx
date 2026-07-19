@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { Select } from "@/components/ui/select";
 import { FilterBar } from "@/components/business/filter-bar";
+import { formatQty } from "@/lib/utils/format";
 
 export type ItemRow = {
   id: string;
@@ -20,6 +21,15 @@ export type ItemRow = {
   sku_count: number;
   price_label: string;
   cost_label: string;
+  track_stock: boolean;
+  stock_qty: number | null;
+  stock_status: "ok" | "low" | "out" | null;
+};
+
+const STOCK_STATUS_BADGE: Record<"ok" | "low" | "out", "success" | "warning" | "danger"> = {
+  ok: "success",
+  low: "warning",
+  out: "danger",
 };
 
 export const STATUS_BADGE: Record<ItemRow["status"], "success" | "neutral" | "warning"> = {
@@ -132,6 +142,19 @@ export function ItemsTable({ data, canWrite }: Props) {
       render: (value) => String(value),
     },
     {
+      key: "stock_qty",
+      header: "Stock",
+      sortable: true,
+      render: (_value, row) =>
+        !row.track_stock ? (
+          <span className="text-(--color-text-subtle)">Not tracked</span>
+        ) : (
+          <Badge variant={STOCK_STATUS_BADGE[row.stock_status ?? "ok"]}>
+            {formatQty(row.stock_qty ?? 0)}
+          </Badge>
+        ),
+    },
+    {
       key: "item_type",
       header: "Type",
       sortable: true,
@@ -168,6 +191,7 @@ export function ItemsTable({ data, canWrite }: Props) {
 
       <div className="flex flex-wrap items-center gap-3">
         <FilterBar
+          aria-label="Filter by status"
           options={statusOptions}
           value={statusFilter}
           onChange={setStatusFilter}
