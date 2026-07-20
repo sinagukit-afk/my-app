@@ -7,7 +7,7 @@ import { BarChart, type BarChartDatum } from "@/components/business/bar-chart";
 import {
   ExpenseBreakdownTable,
   type ExpenseCategoryRow,
-} from "@/app/dashboard/finance/profit-loss/expense-breakdown-table";
+} from "./expense-breakdown-table";
 
 type SearchParams = Promise<{ from?: string; to?: string }>;
 
@@ -53,13 +53,13 @@ export default async function FinancialReportPage({ searchParams }: { searchPara
     );
   }
 
-  // Same revenue definition/filter as Finance > Profit & Loss (Phase 21) and
-  // Analytics > Sales Report (Phase 22): confirmed+ orders, dated by created_at.
+  // Same revenue definition/filter as Analytics > Sales Report (Phase 22):
+  // confirmed+ orders, dated by created_at.
   let revenueQuery = supabase
     .from("orders")
     .select("total_money, created_at")
     .in("status", REVENUE_STATUSES);
-  // Same expense query as Finance > Cash Flow / Profit & Loss (Phase 20/21).
+  // Same expense query as Accounting > Cash Flow (Phase 20/21).
   let expenseQuery = supabase.from("expenses").select("date, category, amount").is("deleted_at", null);
 
   if (from) {
@@ -163,10 +163,11 @@ export default async function FinancialReportPage({ searchParams }: { searchPara
       <Card>
         <CardContent className="p-4 text-xs text-(--color-text-muted)">
           Revenue includes orders with status confirmed, in production, or completed, dated by
-          order creation time — same convention as the Profit &amp; Loss and Sales reports, since
-          the database has no separate order-confirmation timestamp. This page is restricted to
-          Admin/Manager (matching Finance), even though the Analytics sidebar group itself has no
-          role restriction.
+          order creation time — same convention as the Sales report, since the database has no
+          separate order-confirmation timestamp. Accounting&apos;s Profit &amp; Loss report uses a
+          different, ledger-based methodology and may not match this total exactly. This page is
+          restricted to Admin/Manager (matching Accounting), even though the Analytics sidebar
+          group itself has no role restriction.
         </CardContent>
       </Card>
     </div>

@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-const LIST_PATH = '/dashboard/accounting/credit-card-payable'
+const LIST_PATH = '/dashboard/finance/credit-card-payable'
 
 export type ActionResult = { success: true } | { success: false; error: string }
 
