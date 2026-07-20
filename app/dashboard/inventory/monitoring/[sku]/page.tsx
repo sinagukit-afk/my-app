@@ -26,7 +26,7 @@ function formatQty(value: number) {
 
 const VARIANT_SELECT =
   `id, sku, option1_value, items(name, categories(name)),
-   inventory_levels(id, store_id, available_qty, reserved_qty, in_production_qty, on_hold_qty, stores(name))`;
+   inventory_levels(id, store_id, available_qty, reserved_qty, in_production_qty, on_hold_qty)`;
 
 export default async function InventoryItemDetailPage({
   params,
@@ -62,11 +62,16 @@ export default async function InventoryItemDetailPage({
 
   const levels = arrayOf(variant.inventory_levels);
   const level = (store ? levels.find((l) => l.store_id === store) : levels[0]) ?? null;
-  if (!level) notFound();
+
+  // A tracked variant that hasn't had a stock event yet has no inventory_levels row for
+  // this store — that's not a 404, it just means everything is 0 so far.
+  const storeId = store ?? level?.store_id;
+  if (!storeId) notFound();
 
   const item = firstOf(variant.items);
   const category = item ? firstOf(item.categories) : null;
-  const storeRow = firstOf(level.stores);
+  const { data: storeRow } = await supabase.from("stores").select("name").eq("id", storeId).maybeSingle();
+  if (!storeRow) notFound();
 
   const [
     { data: poItemsData },
@@ -84,7 +89,7 @@ export default async function InventoryItemDetailPage({
       .from("inventory_movements")
       .select(MOVEMENT_SELECT)
       .eq("variant_id", variant.id)
-      .eq("store_id", level.store_id)
+      .eq("store_id", storeId)
       .order("occurred_at", { ascending: false })
       .limit(50),
 
@@ -92,7 +97,7 @@ export default async function InventoryItemDetailPage({
       .from("incoming_items")
       .select(BATCH_SELECT)
       .eq("variant_id", variant.id)
-      .eq("store_id", level.store_id)
+      .eq("store_id", storeId)
       .order("date_received", { ascending: true })
       .order("created_at", { ascending: true }),
 
@@ -100,7 +105,7 @@ export default async function InventoryItemDetailPage({
       .from("inventory_movements")
       .select(MOVEMENT_SELECT)
       .eq("variant_id", variant.id)
-      .eq("store_id", level.store_id)
+      .eq("store_id", storeId)
       .not("lot_id", "is", null)
       .order("occurred_at", { ascending: true }),
   ]);
@@ -111,10 +116,10 @@ export default async function InventoryItemDetailPage({
   }, 0);
 
   const quantities = {
-    available_qty: Number(level.available_qty),
-    reserved_qty: Number(level.reserved_qty),
-    in_production_qty: Number(level.in_production_qty),
-    on_hold_qty: Number(level.on_hold_qty),
+    available_qty: Number(level?.available_qty ?? 0),
+    reserved_qty: Number(level?.reserved_qty ?? 0),
+    in_production_qty: Number(level?.in_production_qty ?? 0),
+    on_hold_qty: Number(level?.on_hold_qty ?? 0),
     incoming_qty,
   };
   const itemName = variant.option1_value ? `${item?.name ?? "Unknown item"} — ${variant.option1_value}` : item?.name ?? "Unknown item";
