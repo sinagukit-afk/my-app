@@ -48,12 +48,21 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
 
   const { data: shipmentsData } = await supabase
     .from("order_shipments")
-    .select("status, shipping_fee_charged")
+    .select("status, shipping_cost, shipping_fee_charged")
     .eq("order_id", order.id);
 
-  const shippingFeeTotal = (shipmentsData ?? [])
-    .filter((s) => s.status === "shipped" || s.status === "delivered")
-    .reduce((sum, s) => sum + (s.shipping_fee_charged != null ? Number(s.shipping_fee_charged) : 0), 0);
+  const shippedShipments = (shipmentsData ?? []).filter(
+    (s) => s.status === "shipped" || s.status === "delivered"
+  );
+  const shippingFeeTotal = shippedShipments.reduce(
+    (sum, s) => sum + (s.shipping_fee_charged != null ? Number(s.shipping_fee_charged) : 0),
+    0
+  );
+  const shippingCostTotal = shippedShipments.reduce(
+    (sum, s) => sum + (s.shipping_cost != null ? Number(s.shipping_cost) : 0),
+    0
+  );
+  const shippingDiscount = Math.max(0, shippingCostTotal - shippingFeeTotal);
 
   const { data: paymentsData } = await supabase
     .from("order_payments")
@@ -178,13 +187,25 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
                 <span>{formatCurrency(totalTax)}</span>
               </div>
             )}
-            {shippingFeeTotal > 0 && (
+            {(shippingFeeTotal > 0 || shippingCostTotal > 0) && (
               <div className="flex justify-between text-(--color-text-muted)">
                 <span>Shipping Fee</span>
-                <span>{formatCurrency(shippingFeeTotal)}</span>
+                <span>{formatCurrency(shippingDiscount > 0 ? shippingCostTotal : shippingFeeTotal)}</span>
               </div>
             )}
-            {(totalTax > 0 || shippingFeeTotal > 0) && (
+            {shippingDiscount > 0 && (
+              <>
+                <div className="flex justify-between text-(--color-text-muted)">
+                  <span>Shipping Discount</span>
+                  <span>-{formatCurrency(shippingDiscount)}</span>
+                </div>
+                <div className="flex justify-between font-medium text-(--color-text)">
+                  <span>Shipping (Net)</span>
+                  <span>{formatCurrency(shippingFeeTotal)}</span>
+                </div>
+              </>
+            )}
+            {(totalTax > 0 || shippingFeeTotal > 0 || shippingCostTotal > 0) && (
               <div className="flex justify-between font-medium text-(--color-text)">
                 <span>Amount Due</span>
                 <span>{formatCurrency(totalDue)}</span>
