@@ -180,6 +180,7 @@ const NAV: NavEntry[] = [
     children: [
       { kind: "item", label: "Suppliers", href: "/dashboard/management/suppliers", icon: ClipboardIcon },
       { kind: "item", label: "Items", href: "/dashboard/management/items", icon: ClipboardIcon },
+      { kind: "item", label: "Product BOM", href: "/dashboard/management/product-bom", icon: ClipboardIcon },
       { kind: "item", label: "Categories", href: "/dashboard/management/item-categories", icon: ClipboardIcon },
       { kind: "item", label: "Product Modifier", href: "/dashboard/management/product-modifiers", icon: ClipboardIcon },
       { kind: "item", label: "Stores", href: "/dashboard/management/stores", icon: ClipboardIcon },
@@ -358,6 +359,7 @@ const CRUMB_LABELS: Record<string, string> = {
   "supplier-payments": "Supplier Payment",
   "profit-loss": "Profit & Loss",
   "items-for-review": "Items for Review",
+  "product-bom": "Product BOM",
 };
 
 /** Intermediate route segments with no page.tsx behind them — rendered as text, never links. */
