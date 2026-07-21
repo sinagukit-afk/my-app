@@ -16,6 +16,7 @@ export type ProductBomRow = {
   variant_count: number;
   component_count: number;
   cost_label: string;
+  price_label: string;
   missing_bom: boolean;
 };
 
@@ -66,6 +67,11 @@ export function ProductBomTable({ data, canWrite }: Props) {
       key: "component_count",
       header: "Components",
       sortable: true,
+      render: (value) => String(value),
+    },
+    {
+      key: "price_label",
+      header: "Price",
       render: (value) => String(value),
     },
     {

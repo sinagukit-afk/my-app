@@ -13,6 +13,8 @@ export type ComponentInput = {
 
 export type VariantComponentsInput = {
   variant_id: string
+  pricing_type: 'FIXED' | 'VARIABLE'
+  default_price: number | null
   components: ComponentInput[]
 }
 

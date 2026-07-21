@@ -7,6 +7,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { NumberInput } from "@/components/ui/number-input";
+import { CurrencyInput } from "@/components/ui/currency-input";
+import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils/format";
 import { randomId } from "@/lib/utils/random-id";
@@ -38,7 +40,7 @@ type VariantState = {
   id: string;
   sku: string;
   options: string | null;
-  default_price: number | null;
+  default_price: string;
   pricing_type: "FIXED" | "VARIABLE";
   rows: ComponentRow[];
 };
@@ -65,7 +67,7 @@ export function BomEditor({ itemId, itemName, category, variants, componentOptio
       id: v.id,
       sku: v.sku,
       options: v.options,
-      default_price: v.default_price,
+      default_price: v.default_price !== null ? String(v.default_price) : "",
       pricing_type: v.pricing_type,
       rows:
         v.components.length > 0
@@ -94,6 +96,10 @@ export function BomEditor({ itemId, itemName, category, variants, componentOptio
           : v
       )
     );
+  }
+
+  function updateVariant(variantId: string, patch: Partial<VariantState>) {
+    setState((prev) => prev.map((v) => (v.id === variantId ? { ...v, ...patch } : v)));
   }
 
   function removeRow(variantId: string, rowId: string) {
@@ -127,10 +133,16 @@ export function BomEditor({ itemId, itemName, category, variants, componentOptio
         setError(`"${v.sku}" has a component with an invalid quantity.`);
         return;
       }
+      if (v.pricing_type === "FIXED" && (!v.default_price || Number(v.default_price) < 0)) {
+        setError(`"${v.sku}" needs a valid price.`);
+        return;
+      }
     }
 
     const payload = state.map((v) => ({
       variant_id: v.id,
+      pricing_type: v.pricing_type,
+      default_price: v.pricing_type === "FIXED" ? Number(v.default_price) : null,
       components: v.rows
         .filter((r) => r.component_variant_id)
         .map((r) => ({ component_variant_id: r.component_variant_id, quantity: Number(r.quantity || 1) })),
@@ -169,7 +181,7 @@ export function BomEditor({ itemId, itemName, category, variants, componentOptio
           }));
         const cost = variantCost(v);
         const margin =
-          v.pricing_type === "FIXED" && v.default_price !== null ? v.default_price - cost : null;
+          v.pricing_type === "FIXED" && v.default_price !== "" ? Number(v.default_price) - cost : null;
 
         return (
           <Card key={v.id}>
@@ -179,8 +191,6 @@ export function BomEditor({ itemId, itemName, category, variants, componentOptio
                 {v.options && <span className="ml-2 font-normal text-(--color-text-muted)">{v.options}</span>}
               </CardTitle>
               <CardDescription>
-                Price: {v.pricing_type === "FIXED" && v.default_price !== null ? formatCurrency(v.default_price) : "Variable"}
-                {" · "}
                 Cost: {formatCurrency(cost)}
                 {margin !== null && (
                   <>
@@ -192,6 +202,25 @@ export function BomEditor({ itemId, itemName, category, variants, componentOptio
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
+              <div className="grid grid-cols-1 gap-2 sm:max-w-md sm:grid-cols-2">
+                <Select
+                  label="Pricing Type"
+                  value={v.pricing_type}
+                  onChange={(e) =>
+                    updateVariant(v.id, { pricing_type: e.target.value as "FIXED" | "VARIABLE" })
+                  }
+                  options={[
+                    { value: "VARIABLE", label: "Variable" },
+                    { value: "FIXED", label: "Fixed" },
+                  ]}
+                />
+                <CurrencyInput
+                  label="Price"
+                  value={v.default_price}
+                  onChange={(e) => updateVariant(v.id, { default_price: e.target.value })}
+                  disabled={v.pricing_type !== "FIXED"}
+                />
+              </div>
               {v.rows.map((r) => (
                 <div key={r.rowId} className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr_auto] sm:items-end">
                   <Combobox

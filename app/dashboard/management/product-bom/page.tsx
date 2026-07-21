@@ -32,7 +32,7 @@ export default async function ProductBomPage() {
     .select(
       `id, name, deleted_at,
        categories(name),
-       item_variants(id, sku, deleted_at)`
+       item_variants(id, sku, deleted_at, default_price, pricing_type)`
     )
     .eq("item_type", "composite")
     .is("deleted_at", null)
@@ -78,6 +78,23 @@ export default async function ProductBomPage() {
       costLabel = min === max ? formatCurrency(min) : `${formatCurrency(min)} – ${formatCurrency(max)}`;
     }
 
+    const fixedPrices = variants
+      .filter((v) => v.pricing_type === "FIXED" && v.default_price !== null)
+      .map((v) => Number(v.default_price));
+
+    let priceLabel = "—";
+    if (variants.length > 0) {
+      if (fixedPrices.length === variants.length) {
+        const min = Math.min(...fixedPrices);
+        const max = Math.max(...fixedPrices);
+        priceLabel = min === max ? formatCurrency(min) : `${formatCurrency(min)} – ${formatCurrency(max)}`;
+      } else if (fixedPrices.length === 0) {
+        priceLabel = "Variable";
+      } else {
+        priceLabel = "Mixed";
+      }
+    }
+
     return {
       id: item.id,
       name: item.name,
@@ -86,6 +103,7 @@ export default async function ProductBomPage() {
       variant_count: variants.length,
       component_count: totalComponents,
       cost_label: costLabel,
+      price_label: priceLabel,
       missing_bom: missingBom,
     };
   });
