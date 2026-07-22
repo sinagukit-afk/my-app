@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
+import { UnsavedChangesProvider, useGuardedLinkClick } from "@/lib/hooks/use-unsaved-changes";
+import { BackForwardNav } from "@/components/layout/back-forward-nav";
 
 /* ── Nav config ─────────────────────────────────────────────── */
 type NavCountKey =
@@ -167,6 +169,7 @@ const NAV: NavEntry[] = [
     label: "Analytics",
     icon: ChartIcon,
     children: [
+      { kind: "item", label: "Sales Dashboard", href: "/dashboard/analytics/sales-dashboard", icon: ChartIcon },
       { kind: "item", label: "Sales", href: "/dashboard/analytics/sales-report", icon: ChartIcon },
       { kind: "item", label: "Inventory", href: "/dashboard/analytics/inventory-report", icon: ChartIcon },
       { kind: "item", label: "Production", href: "/dashboard/analytics/production-report", icon: ChartIcon },
@@ -389,10 +392,15 @@ function Breadcrumb({ pathname }: { pathname: string }) {
     const href = "/" + segments.slice(0, i + 1).join("/");
     return { label: crumbLabel(seg), href, routable: !NON_ROUTABLE_PATHS.has(href) };
   });
+  const guardedClick = useGuardedLinkClick();
 
   return (
     <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-(--color-text-muted)">
-      <Link href="/dashboard" className="flex items-center text-(--color-text-muted) hover:text-(--color-text) transition-colors">
+      <Link
+        href="/dashboard"
+        onClick={guardedClick("/dashboard")}
+        className="flex items-center text-(--color-text-muted) hover:text-(--color-text) transition-colors"
+      >
         <BreadcrumbHomeIcon />
       </Link>
       {crumbs.map((crumb, i) => (
@@ -401,7 +409,7 @@ function Breadcrumb({ pathname }: { pathname: string }) {
           {i === crumbs.length - 1 ? (
             <span className="text-(--color-text) font-medium">{crumb.label}</span>
           ) : crumb.routable ? (
-            <Link href={crumb.href} className="hover:text-(--color-text) transition-colors">
+            <Link href={crumb.href} onClick={guardedClick(crumb.href)} className="hover:text-(--color-text) transition-colors">
               {crumb.label}
             </Link>
           ) : (
@@ -428,12 +436,14 @@ function NavItemRow({
   count?: number;
 }) {
   const Icon = leaf.icon;
+  const guardedClick = useGuardedLinkClick();
   return (
     <Link
       href={leaf.href}
+      onClick={guardedClick(leaf.href)}
       title={collapsed ? leaf.label : undefined}
       className={cn(
-        "flex items-center gap-2.5 rounded-(--radius-md) py-2 text-sm font-medium transition-colors",
+        "flex items-center gap-2.5 rounded-(--radius-md) py-2 text-sm font-medium font-(--font-sans-heading) transition-colors",
         indent && !collapsed ? "pl-7 pr-2" : "px-2",
         active
           ? "bg-(--color-primary-light) text-(--color-primary)"
@@ -550,6 +560,7 @@ export function AppShell({ children, userEmail, userRole, signOutAction, navCoun
   }
 
   return (
+    <UnsavedChangesProvider>
     <div className="flex h-screen overflow-hidden bg-(--color-bg)">
       {/* ── Mobile drawer backdrop ──────────────────────────── */}
       <div
@@ -611,7 +622,7 @@ export function AppShell({ children, userEmail, userRole, signOutAction, navCoun
                     onClick={() => !effectiveCollapsed && toggleGroup(entry.label)}
                     title={effectiveCollapsed ? entry.label : undefined}
                     className={cn(
-                      "flex w-full items-center gap-2.5 rounded-(--radius-md) px-2 py-2 text-sm font-medium transition-colors",
+                      "flex w-full items-center gap-2.5 rounded-(--radius-md) px-2 py-2 text-sm font-medium font-(--font-sans-heading) transition-colors",
                       hasActive
                         ? "text-(--color-primary)"
                         : "text-(--color-text-muted) hover:bg-(--color-bg) hover:text-(--color-text)",
@@ -739,7 +750,9 @@ export function AppShell({ children, userEmail, userRole, signOutAction, navCoun
         </header>
 
         {/* Breadcrumb bar */}
-        <div className="flex h-10 shrink-0 items-center overflow-x-auto border-b border-(--color-border) bg-(--color-bg) px-4 lg:px-6">
+        <div className="flex h-10 shrink-0 items-center gap-2 overflow-x-auto border-b border-(--color-border) bg-(--color-bg) px-4 lg:px-6">
+          <BackForwardNav />
+          <div className="h-4 w-px shrink-0 bg-(--color-border-strong)" />
           <Breadcrumb pathname={pathname} />
         </div>
 
@@ -749,5 +762,6 @@ export function AppShell({ children, userEmail, userRole, signOutAction, navCoun
         </main>
       </div>
     </div>
+    </UnsavedChangesProvider>
   );
 }

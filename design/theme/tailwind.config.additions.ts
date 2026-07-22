@@ -63,11 +63,11 @@ const config: Partial<Config> = {
         // shadcn token system (e.g. logo lockup, login screen,
         // print/export headers, marketing-style empty states) ---
         brand: {
-          gold: "#B68E44",
-          charcoal: "#1F1F1F",
-          ivory: "#F6EFE4",
-          red: "#D84A3A",
-          bronze: "#8A673E",
+          gold: "#C9A24B",
+          charcoal: "#161616",
+          ivory: "#FAF6EF",
+          red: "#D62828",
+          bronze: "#8A6B39",
         },
 
         sidebar: {

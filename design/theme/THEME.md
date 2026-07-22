@@ -4,15 +4,43 @@ How the brand infographic was translated into UI tokens, and what I had to
 assume because the brand kit was built for marketing/print, not a dense
 admin/POS interface.
 
+**2026-07-22 — updated to the Sinag Ukit Design System V3 kit.** The V3 kit
+supersedes the original infographic as the source of truth for brand color
+and typography. Notable changes from the original mapping below:
+- All five brand hexes shifted slightly (see table) and gained official
+  hover/active steps, a 050–900 ramp per color, and official
+  Success/Warning/Info/Danger values — the "things I had to invent" in §3
+  are now officially specified, not guesses.
+- The V3 kit's own semantic layer maps **Secondary = Ember Red** (grouped
+  with Destructive) and **Accent = Antique Bronze** — the reverse of this
+  app's original `secondary`=Bronze/`accent`=pale-gold-tint convention.
+  Since neither the `--secondary` nor `--accent` shadcn token is actually
+  consumed anywhere in the app (all real UI reads the `--color-*` hex layer
+  in `app/globals.css`, not `bg-secondary`/`bg-accent`), this was a
+  zero-visual-impact decision — the shadcn layer's `--secondary`/`--accent`
+  now follow the V3 kit's own Red/Bronze labels for future-consumer
+  correctness. The **live** `--color-*` layer never had a "secondary" or
+  solid "accent" concept to begin with (its accent-ish role, `--color-bg`
+  hover tint, is unaffected).
+- Adds a three-typeface system (Cormorant Garamond / Manrope / Inter),
+  loaded via `next/font/google` in `app/layout.tsx` — see §5.
+- Adds `--chart-cat-*`, a colorblind-validated categorical chart palette
+  (separate from the `--chart-1..5` tokens below, which remain unused
+  legacy). Re-validated against the V3 gold via the dataviz skill's
+  `validate_palette.js`: the light-mode gold slot uses the literal new
+  brand gold (`#C9A24B`) unchanged; the dark-mode step could not reuse it
+  (fails the lightness band and CVD separation from the green slot on a
+  dark surface) and instead uses `#B07914` — same hue family, tuned to pass.
+
 ## 1. Direct mappings (no ambiguity)
 
-| Brand color | Hex | Role in infographic | Role in ERP |
+| Brand color | Hex (V3) | Role in infographic | Role in ERP |
 |---|---|---|---|
-| Warm Ivory | `#F6EFE4` | Primary background (60%) | `background` — app shell, page background |
-| Deep Charcoal | `#1F1F1F` | Primary foundation / text (25%) | `foreground` (light mode) text, and the dark `sidebar` surface |
-| Heritage Gold | `#B68E44` | Primary accent (10%) | `primary` — main buttons, active nav state, links |
-| Ember Red | `#D84A3A` | CTA/highlight, used sparingly (5%) | `destructive` — delete/cancel actions, error states |
-| Antique Bronze | `#8A673E` | Secondary accent (5%) | `secondary` — secondary buttons, less-prominent emphasis |
+| Warm Ivory | `#FAF6EF` | Primary background (60%) | `background` — app shell, page background |
+| Deep Charcoal | `#161616` | Primary foundation / text (25%) | `foreground` (light mode) text, and the dark `sidebar` surface |
+| Heritage Gold | `#C9A24B` | Primary accent (10%) | `primary` — main buttons, active nav state, links |
+| Ember Red | `#D62828` | CTA/highlight, used sparingly (5%) | `destructive` — delete/cancel actions, error states |
+| Antique Bronze | `#8A6B39` | Secondary accent (5%) | Bronze itself isn't consumed by any live token today (see note above) |
 
 The infographic's own usage ratio (60/25/10/5/5) maps surprisingly well onto
 a typical admin UI: ivory as the dominant background, charcoal for text and
@@ -66,12 +94,53 @@ business management system needs:
 
 ## 4. Files
 
-- `globals-theme.css` — merge into your `app/globals.css`, inside the
-  existing `@layer base { :root {...} .dark {...} }` block from shadcn init.
-- `tailwind.config.additions.ts` — merge the `colors` additions (status
-  colors + `brand.*` raw hex) into your existing `tailwind.config.ts`.
+- `globals-theme.css` / `tailwind.config.additions.ts` are **historical
+  scaffolding, not live config** — their content was hand-merged into
+  `app/globals.css` early on, and this project has no `tailwind.config.ts`
+  at all (Tailwind v4, CSS-based config via `@theme inline`). They're kept
+  in sync with the current palette for documentation purposes only; editing
+  them has no effect on the running app. The actual token source of truth is
+  `app/globals.css`, which — confusingly — carries **two** color layers:
+  the shadcn HSL layer described above (dead; nothing in the app reads
+  `bg-primary`/`text-foreground`/etc.), and a separate `--color-*` raw-hex
+  layer consumed everywhere via `bg-(--color-x)` arbitrary values. Both are
+  kept in sync when the palette changes, but only the second one paints
+  pixels.
 
-After merging, things like `bg-primary`, `text-destructive`,
-`bg-success/10 text-success`, or `bg-brand-gold` (for marketing-style pages
-that want the literal hex rather than the semantic token) should all work
-through shadcn components without further changes.
+## 5. Typography (V3)
+
+Three-typeface system, all loaded via `next/font/google` in `app/layout.tsx`
+(no `<link>`/`@import` — the kit's own Google Fonts CDN loading was swapped
+for the project's existing font-loading mechanism... except there wasn't
+one: before this change the app used only the system font stack. This is
+new infrastructure, not a swap of an existing pattern):
+
+- **Cormorant Garamond** → `--font-serif-display` — marketing hero headlines
+  only. Loaded and available, but nothing in the ERP references it — no
+  screen in this dashboard should ever set `font-family:
+  var(--font-serif-display)`.
+- **Manrope** → `--font-sans-heading` (aliased `--font-display`) — section/
+  page titles (`h1`–`h6`, global rule), nav links, and buttons.
+- **Inter** → `--font-sans-body` (aliased `--font-body`, and the app's
+  default `--font-sans`) — body copy, forms, tables, numbers; everything
+  that isn't a heading/nav/button inherits this from `body { font-family:
+  var(--font-sans) }`.
+- **Oswald** — logo/wordmark only, unchanged, not loaded by the app (no live
+  text logo exists to load it for).
+
+`next/font`'s generated variables are set on `<html>` via `className`, not
+redeclared in `globals.css` — a `:root` redeclaration of the same variable
+name would win the CSS cascade over the `html`-scoped one (pseudo-class
+beats element selector) and silently break font loading, so `--font-sans` /
+`--font-display` / `--font-body` reference `var(--font-sans-heading|body)`
+rather than redefining them.
+
+## 6. Spacing / radius — deliberately untouched
+
+The V3 kit's `tokens/spacing.css` reuses the exact same variable names this
+app already has (`--space-*`, `--radius-*`) for a **different scale**
+(kit's `--space-6` = 32px; this app's `--space-6` = 24px/1.5rem, matching
+Tailwind's own numbering instead). Importing the kit's spacing.css wholesale
+would have silently corrupted every existing `--space-*`/`--radius-*`
+consumer in the app. Left the existing scale as-is; flagging here instead of
+guessing which callers could tolerate the change.

@@ -10,40 +10,40 @@
   :root {
     /* ---- Raw brand colors (kept as named vars for non-UI use:
        logo lockups, marketing/landing pages, print exports) ---- */
-    --brand-heritage-gold: 39 46% 49%;   /* #B68E44 */
-    --brand-deep-charcoal: 0 0% 12%;     /* #1F1F1F */
-    --brand-warm-ivory: 37 50% 93%;      /* #F6EFE4 */
-    --brand-ember-red: 6 67% 54%;        /* #D84A3A */
-    --brand-antique-bronze: 32 38% 39%;  /* #8A673E */
+    --brand-heritage-gold: 41.4 53.8% 54.1%;   /* #C9A24B */
+    --brand-deep-charcoal: 0 0% 8.6%;          /* #161616 */
+    --brand-warm-ivory: 38.2 52.4% 95.9%;      /* #FAF6EF */
+    --brand-ember-red: 0 68.5% 49.8%;          /* #D62828 */
+    --brand-antique-bronze: 37 41.5% 38.2%;    /* #8A6B39 */
 
     /* ---- shadcn/ui semantic tokens (light mode) ---- */
-    --background: 37 50% 93%;            /* Warm Ivory */
-    --foreground: 0 0% 12%;              /* Deep Charcoal */
+    --background: 38.2 52.4% 95.9%;      /* Warm Ivory */
+    --foreground: 0 0% 8.6%;             /* Deep Charcoal */
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 12%;
+    --card-foreground: 0 0% 8.6%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 12%;
+    --popover-foreground: 0 0% 8.6%;
 
-    --primary: 39 46% 49%;               /* Heritage Gold */
-    --primary-foreground: 0 0% 12%;      /* Charcoal text — see note below */
+    --primary: 41.4 53.8% 54.1%;         /* Heritage Gold */
+    --primary-foreground: 0 0% 8.6%;     /* Charcoal text — see note below */
 
-    --secondary: 32 38% 39%;             /* Antique Bronze */
-    --secondary-foreground: 37 50% 93%;
+    --secondary: 0 68.5% 49.8%;          /* Ember Red — V3 kit's "Secondary/Destructive" role */
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 37 25% 90%;                 /* Ivory, dialed down */
-    --muted-foreground: 0 0% 35%;
+    --muted: 38.2 25% 90%;               /* Ivory, dialed down */
+    --muted-foreground: 0 0% 43.5%;
 
-    --accent: 39 46% 92%;                /* Pale gold tint, for hover/selected rows */
-    --accent-foreground: 0 0% 12%;
+    --accent: 37 41.5% 38.2%;            /* Antique Bronze — V3 kit's dedicated Accent role */
+    --accent-foreground: 38.2 52.4% 95.9%;
 
-    --destructive: 6 67% 54%;            /* Ember Red */
+    --destructive: 0 68.5% 49.8%;        /* Ember Red */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 37 15% 83%;
-    --input: 37 15% 83%;
-    --ring: 39 46% 49%;
+    --border: 35.6 34.8% 82%;
+    --input: 35.6 34.8% 82%;
+    --ring: 41.4 53.8% 54.1%;
 
     --radius: 0.5rem;
 
@@ -52,32 +52,34 @@
        success/warning/info colors. For order/inventory states
        (draft, confirmed, fulfilled, low-stock, etc.) I extrapolated
        these to stay in-family. Flag if you'd rather pick these
-       deliberately instead of inheriting my guess. */
-    --success: 142 35% 36%;              /* muted green, brand-adjacent */
+       deliberately instead of inheriting my guess.
+       2026-07-22: superseded — the V3 kit now defines these explicitly
+       (see Success/Warning/Info/Danger below), values below are official. */
+    --success: 123 46.2% 33.5%;
     --success-foreground: 0 0% 100%;
-    --warning: 39 70% 50%;               /* warmer/more saturated gold */
-    --warning-foreground: 0 0% 12%;
-    --info: 210 30% 45%;                 /* neutral steel blue */
+    --warning: 40.2 100% 45.1%;
+    --warning-foreground: 0 0% 8.6%;
+    --info: 221.2 83.2% 53.3%;
     --info-foreground: 0 0% 100%;
 
     /* ---- Chart colors (for dashboard) ---- */
-    --chart-1: 39 46% 49%;   /* Heritage Gold */
-    --chart-2: 32 38% 39%;   /* Antique Bronze */
-    --chart-3: 6 67% 54%;    /* Ember Red */
-    --chart-4: 0 0% 30%;     /* Charcoal-gray */
-    --chart-5: 142 35% 36%;  /* Success green */
+    --chart-1: 41.4 53.8% 54.1%;   /* Heritage Gold */
+    --chart-2: 37 41.5% 38.2%;     /* Antique Bronze */
+    --chart-3: 0 68.5% 49.8%;      /* Ember Red */
+    --chart-4: 0 0% 30%;           /* Charcoal-gray */
+    --chart-5: 123 46.2% 33.5%;    /* Success green */
 
     /* ---- Sidebar (if using shadcn's sidebar block) ----
        "Premium & Bold" combo from the infographic = Charcoal base
        with Gold accent, which reads best as the nav/sidebar surface. */
-    --sidebar-background: 0 0% 12%;
-    --sidebar-foreground: 37 50% 93%;
-    --sidebar-primary: 39 46% 49%;
-    --sidebar-primary-foreground: 0 0% 12%;
+    --sidebar-background: 0 0% 8.6%;
+    --sidebar-foreground: 38.2 52.4% 95.9%;
+    --sidebar-primary: 41.4 53.8% 54.1%;
+    --sidebar-primary-foreground: 0 0% 8.6%;
     --sidebar-accent: 0 0% 18%;
-    --sidebar-accent-foreground: 37 50% 93%;
+    --sidebar-accent-foreground: 38.2 52.4% 95.9%;
     --sidebar-border: 0 0% 20%;
-    --sidebar-ring: 39 46% 49%;
+    --sidebar-ring: 41.4 53.8% 54.1%;
   }
 
   /* ---- Dark mode ----
@@ -88,53 +90,53 @@
      is wanted before treating it as "on-brand" — it's an assumption. */
   .dark {
     --background: 0 0% 10%;
-    --foreground: 37 40% 92%;
+    --foreground: 38.2 40% 92%;
 
     --card: 0 0% 14%;
-    --card-foreground: 37 40% 92%;
+    --card-foreground: 38.2 40% 92%;
 
     --popover: 0 0% 14%;
-    --popover-foreground: 37 40% 92%;
+    --popover-foreground: 38.2 40% 92%;
 
-    --primary: 39 50% 58%;               /* slightly lighter gold for dark bg contrast */
+    --primary: 41.4 53.8% 63%;           /* slightly lighter gold for dark bg contrast */
     --primary-foreground: 0 0% 10%;
 
-    --secondary: 32 35% 48%;
+    --secondary: 0 68.5% 58.8%;
     --secondary-foreground: 0 0% 10%;
 
     --muted: 0 0% 18%;
-    --muted-foreground: 37 15% 65%;
+    --muted-foreground: 0 0% 65%;
 
     --accent: 0 0% 20%;
-    --accent-foreground: 37 40% 92%;
+    --accent-foreground: 38.2 40% 92%;
 
-    --destructive: 6 70% 58%;
+    --destructive: 0 68.5% 58.8%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 0 0% 22%;
     --input: 0 0% 22%;
-    --ring: 39 50% 58%;
+    --ring: 41.4 53.8% 63%;
 
-    --success: 142 30% 45%;
+    --success: 123 46.2% 42.5%;
     --success-foreground: 0 0% 10%;
-    --warning: 39 65% 55%;
+    --warning: 40.2 100% 54.1%;
     --warning-foreground: 0 0% 10%;
-    --info: 210 25% 55%;
+    --info: 221.2 83.2% 62.3%;
     --info-foreground: 0 0% 10%;
 
-    --chart-1: 39 50% 58%;
-    --chart-2: 32 35% 48%;
-    --chart-3: 6 70% 58%;
+    --chart-1: 41.4 53.8% 63%;
+    --chart-2: 37 41.5% 47.2%;
+    --chart-3: 0 68.5% 58.8%;
     --chart-4: 0 0% 60%;
-    --chart-5: 142 30% 45%;
+    --chart-5: 123 46.2% 42.5%;
 
     --sidebar-background: 0 0% 8%;
-    --sidebar-foreground: 37 40% 92%;
-    --sidebar-primary: 39 50% 58%;
+    --sidebar-foreground: 38.2 40% 92%;
+    --sidebar-primary: 41.4 53.8% 63%;
     --sidebar-primary-foreground: 0 0% 10%;
     --sidebar-accent: 0 0% 16%;
-    --sidebar-accent-foreground: 37 40% 92%;
+    --sidebar-accent-foreground: 38.2 40% 92%;
     --sidebar-border: 0 0% 18%;
-    --sidebar-ring: 39 50% 58%;
+    --sidebar-ring: 41.4 53.8% 63%;
   }
 }

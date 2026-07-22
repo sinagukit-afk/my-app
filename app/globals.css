@@ -33,11 +33,11 @@
   --color-info-foreground: hsl(var(--info-foreground));
 
   /* Raw brand palette — for direct use outside the token system (new) */
-  --color-brand-gold: #B68E44;
-  --color-brand-charcoal: #1F1F1F;
-  --color-brand-ivory: #F6EFE4;
-  --color-brand-red: #D84A3A;
-  --color-brand-bronze: #8A673E;
+  --color-brand-gold: #C9A24B;
+  --color-brand-charcoal: #161616;
+  --color-brand-ivory: #FAF6EF;
+  --color-brand-red: #D62828;
+  --color-brand-bronze: #8A6B39;
 
   /* Sidebar (new) */
   --color-sidebar: hsl(var(--sidebar-background));
@@ -51,155 +51,187 @@
 }
 
 /* ─── Sinag Ukit Brand Theme Tokens ─────────────────────────── */
+/* NOTE: this shadcn HSL layer is not currently read by any component in the
+   app (all UI consumes the --color-* hex layer below via bg-(--color-x)
+   arbitrary values) — kept in sync with the V3 palette anyway so it isn't a
+   stale trap if something starts using bg-primary/text-foreground later. */
 @layer base {
   :root {
     /* ---- Raw brand colors (for logo lockups, print, marketing) ---- */
-    --brand-heritage-gold: 39 46% 49%;   /* #B68E44 */
-    --brand-deep-charcoal: 0 0% 12%;     /* #1F1F1F */
-    --brand-warm-ivory: 37 50% 93%;      /* #F6EFE4 */
-    --brand-ember-red: 6 67% 54%;        /* #D84A3A */
-    --brand-antique-bronze: 32 38% 39%;  /* #8A673E */
+    --brand-heritage-gold: 41.4 53.8% 54.1%;   /* #C9A24B */
+    --brand-deep-charcoal: 0 0% 8.6%;          /* #161616 */
+    --brand-warm-ivory: 38.2 52.4% 95.9%;      /* #FAF6EF */
+    --brand-ember-red: 0 68.5% 49.8%;          /* #D62828 */
+    --brand-antique-bronze: 37 41.5% 38.2%;    /* #8A6B39 */
 
     /* ---- shadcn/ui semantic tokens (light mode) ---- */
-    --background: 37 50% 93%;            /* Warm Ivory */
-    --foreground: 0 0% 12%;              /* Deep Charcoal */
+    --background: 38.2 52.4% 95.9%;      /* Warm Ivory */
+    --foreground: 0 0% 8.6%;             /* Deep Charcoal */
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 12%;
+    --card-foreground: 0 0% 8.6%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 12%;
+    --popover-foreground: 0 0% 8.6%;
 
-    --primary: 39 46% 49%;               /* Heritage Gold */
-    --primary-foreground: 0 0% 12%;      /* Charcoal text (5.45:1 contrast, passes AA) */
+    --primary: 41.4 53.8% 54.1%;         /* Heritage Gold */
+    --primary-foreground: 0 0% 8.6%;     /* Charcoal text — passes AA on the new gold too */
 
-    --secondary: 32 38% 39%;             /* Antique Bronze */
-    --secondary-foreground: 37 50% 93%;
+    --secondary: 0 68.5% 49.8%;          /* Ember Red — kit's "Secondary/Destructive" role */
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 37 25% 90%;
-    --muted-foreground: 0 0% 35%;
+    --muted: 38.2 25% 90%;
+    --muted-foreground: 0 0% 43.5%;      /* Muted Gray (V3) */
 
-    --accent: 39 46% 92%;                /* Pale gold tint, for hover/selected rows */
-    --accent-foreground: 0 0% 12%;
+    --accent: 37 41.5% 38.2%;            /* Antique Bronze — kit's dedicated Accent role */
+    --accent-foreground: 38.2 52.4% 95.9%;
 
-    --destructive: 6 67% 54%;            /* Ember Red */
+    --destructive: 0 68.5% 49.8%;        /* Ember Red */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 37 15% 83%;
-    --input: 37 15% 83%;
-    --ring: 39 46% 49%;
+    --border: 35.6 34.8% 82%;
+    --input: 35.6 34.8% 82%;
+    --ring: 41.4 53.8% 54.1%;
 
     --radius: 0.5rem;
 
     /* ---- Status colors (not in original brand palette — see THEME.md) ---- */
-    --success: 142 35% 36%;
+    --success: 123 46.2% 33.5%;
     --success-foreground: 0 0% 100%;
-    --warning: 39 70% 50%;
-    --warning-foreground: 0 0% 12%;
-    --info: 210 30% 45%;
+    --warning: 40.2 100% 45.1%;
+    --warning-foreground: 0 0% 8.6%;
+    --info: 221.2 83.2% 53.3%;
     --info-foreground: 0 0% 100%;
 
-    /* ---- Chart colors ---- */
-    --chart-1: 39 46% 49%;
-    --chart-2: 32 38% 39%;
-    --chart-3: 6 67% 54%;
+    /* ---- Chart colors (legacy shadcn tokens — unused by dashboard charts;
+       brand gold/bronze/red/gray/green here fail CVD-separation checks, see
+       --chart-cat-* below for the validated categorical set) ---- */
+    --chart-1: 41.4 53.8% 54.1%;
+    --chart-2: 37 41.5% 38.2%;
+    --chart-3: 0 68.5% 49.8%;
     --chart-4: 0 0% 30%;
-    --chart-5: 142 35% 36%;
+    --chart-5: 123 46.2% 33.5%;
 
     /* ---- Sidebar (Charcoal base + Gold accent per "Premium & Bold" combo) ---- */
-    --sidebar-background: 0 0% 12%;
-    --sidebar-foreground: 37 50% 93%;
-    --sidebar-primary: 39 46% 49%;
-    --sidebar-primary-foreground: 0 0% 12%;
+    --sidebar-background: 0 0% 8.6%;
+    --sidebar-foreground: 38.2 52.4% 95.9%;
+    --sidebar-primary: 41.4 53.8% 54.1%;
+    --sidebar-primary-foreground: 0 0% 8.6%;
     --sidebar-accent: 0 0% 18%;
-    --sidebar-accent-foreground: 37 50% 93%;
+    --sidebar-accent-foreground: 38.2 52.4% 95.9%;
     --sidebar-border: 0 0% 20%;
-    --sidebar-ring: 39 46% 49%;
+    --sidebar-ring: 41.4 53.8% 54.1%;
   }
 
   .dark {
     --background: 0 0% 10%;
-    --foreground: 37 40% 92%;
+    --foreground: 38.2 40% 92%;
 
     --card: 0 0% 14%;
-    --card-foreground: 37 40% 92%;
+    --card-foreground: 38.2 40% 92%;
 
     --popover: 0 0% 14%;
-    --popover-foreground: 37 40% 92%;
+    --popover-foreground: 38.2 40% 92%;
 
-    --primary: 39 50% 58%;               /* slightly lighter gold for dark bg contrast */
+    --primary: 41.4 53.8% 63%;           /* slightly lighter gold for dark bg contrast */
     --primary-foreground: 0 0% 10%;
 
-    --secondary: 32 35% 48%;
+    --secondary: 0 68.5% 58.8%;
     --secondary-foreground: 0 0% 10%;
 
     --muted: 0 0% 18%;
-    --muted-foreground: 37 15% 65%;
+    --muted-foreground: 0 0% 65%;
 
     --accent: 0 0% 20%;
-    --accent-foreground: 37 40% 92%;
+    --accent-foreground: 38.2 40% 92%;
 
-    --destructive: 6 70% 58%;
+    --destructive: 0 68.5% 58.8%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 0 0% 22%;
     --input: 0 0% 22%;
-    --ring: 39 50% 58%;
+    --ring: 41.4 53.8% 63%;
 
-    --success: 142 30% 45%;
+    --success: 123 46.2% 42.5%;
     --success-foreground: 0 0% 10%;
-    --warning: 39 65% 55%;
+    --warning: 40.2 100% 54.1%;
     --warning-foreground: 0 0% 10%;
-    --info: 210 25% 55%;
+    --info: 221.2 83.2% 62.3%;
     --info-foreground: 0 0% 10%;
 
-    --chart-1: 39 50% 58%;
-    --chart-2: 32 35% 48%;
-    --chart-3: 6 70% 58%;
+    --chart-1: 41.4 53.8% 63%;
+    --chart-2: 37 41.5% 47.2%;
+    --chart-3: 0 68.5% 58.8%;
     --chart-4: 0 0% 60%;
-    --chart-5: 142 30% 45%;
+    --chart-5: 123 46.2% 42.5%;
 
     --sidebar-background: 0 0% 8%;
-    --sidebar-foreground: 37 40% 92%;
-    --sidebar-primary: 39 50% 58%;
+    --sidebar-foreground: 38.2 40% 92%;
+    --sidebar-primary: 41.4 53.8% 63%;
     --sidebar-primary-foreground: 0 0% 10%;
     --sidebar-accent: 0 0% 16%;
-    --sidebar-accent-foreground: 37 40% 92%;
+    --sidebar-accent-foreground: 38.2 40% 92%;
     --sidebar-border: 0 0% 18%;
-    --sidebar-ring: 39 50% 58%;
+    --sidebar-ring: 41.4 53.8% 63%;
   }
 }
 
 /* ─── Design Tokens ─────────────────────────────────────────── */
+/* This is the layer actually consumed app-wide via bg-(--color-x) /
+   text-(--color-x) arbitrary values (200+ files) — the source of truth for
+   rendered color. Sinag Ukit V3 brand palette, applied 2026-07-22. */
 :root {
-  /* Brand — Sinag Ukit palette */
-  --color-primary:         #B68E44; /* Heritage Gold */
-  --color-primary-hover:   #9A7830; /* Heritage Gold, darkened */
-  --color-primary-light:   #F5EDD8; /* pale gold tint */
-  --color-primary-fg:      #1F1F1F; /* Charcoal on gold (5.45:1, passes AA) */
+  /* Brand — Sinag Ukit palette (V3) */
+  --color-primary:         #C9A24B; /* Heritage Gold */
+  --color-primary-hover:   #B8913D; /* Heritage Gold, darkened one step (gold-600) */
+  --color-primary-active:  #96762F; /* Heritage Gold, darkened two steps (gold-700) */
+  --color-primary-light:   #F5EDDB; /* pale gold tint (gold-100) */
+  --color-primary-fg:      #161616; /* Charcoal on gold */
 
   /* Semantic */
-  --color-success:         #3a7d44;
-  --color-success-light:   #eef7f0;
-  --color-warning:         #b87c1a;
-  --color-warning-light:   #fdf5e6;
-  --color-danger:          #D84A3A; /* Ember Red */
-  --color-danger-light:    #fdf0ee;
-  --color-info:            #3b6ea5;
-  --color-info-light:      #eaf1f8;
+  --color-success:         #2E7D32;
+  --color-success-light:   #EBF9EC;
+  --color-warning:         #E69A00;
+  --color-warning-light:   #F9F5EB;
+  --color-danger:          #C62828; /* Ember Red */
+  --color-danger-light:    #F9EBEB;
+  --color-danger-hover:    #B31F1F; /* Ember Red, darkened one step */
+  --color-info:            #2563EB;
+  --color-info-light:      #EBF0F9;
 
   /* Neutrals */
-  --color-bg:              #F6EFE4; /* Warm Ivory */
+  --color-bg:              #FAF6EF; /* Warm Ivory */
   --color-surface:         #ffffff;
-  --color-border:          #e2d8c8;
-  --color-border-strong:   #cdc0ad;
-  --color-text:            #1F1F1F; /* Deep Charcoal */
-  --color-text-muted:      #6b5f50;
+  --color-border:          #E1D4C1;
+  --color-border-strong:   #CBB99F;
+  --color-text:            #161616; /* Deep Charcoal */
+  --color-text-muted:      #6F6F6F; /* Muted Gray */
   --color-text-subtle:     #9c8e7e;
 
-  /* Typography */
-  --font-sans:             ui-sans-serif, system-ui, sans-serif;
-  --font-mono:             ui-monospace, "Cascadia Code", monospace;
+  /* Chart categorical palette — fixed hue order, validated CVD-safe
+     (node scripts/validate_palette.js from the dataviz skill; brand
+     gold/bronze both being warm-yellow hues fail separation, so slots 2/3/5
+     borrow outside the brand palette — gold/red/green stay on-brand). Assign
+     in order per series; never reassign by value. "Other"/catch-all buckets
+     use --color-text-subtle, not a chart-cat slot. Re-validated 2026-07-22
+     against the V3 brand gold (#C9A24B, light) — clean pass, no CVD floor
+     compromise needed; the dark-mode gold step (#B07914) had to move off the
+     literal brand hex to keep separation from the green — see PR notes. */
+  --chart-cat-1: #C9A24B; /* gold   */
+  --chart-cat-2: #3E8452; /* green  */
+  --chart-cat-3: #2F6FB0; /* blue   */
+  --chart-cat-4: #C8432E; /* red    */
+  --chart-cat-5: #8B3F86; /* plum   */
+
+  /* Typography — Sinag Ukit V3 three-typeface system.
+     --font-sans-heading / --font-sans-body / --font-serif-display are set on
+     <html> by next/font/google in app/layout.tsx; do not redeclare their
+     values here (a :root re-declaration would win the cascade over the
+     html-scoped next/font vars and silently break font loading). */
+  --font-sans:    var(--font-sans-body), ui-sans-serif, system-ui, sans-serif;    /* Inter — body/forms/tables */
+  --font-display: var(--font-sans-heading), ui-sans-serif, system-ui, sans-serif; /* Manrope — headings/nav/buttons */
+  --font-body:    var(--font-sans-body), ui-sans-serif, system-ui, sans-serif;
+  --font-mono:    ui-monospace, "Cascadia Code", monospace;
   --text-xs:               0.75rem;   /* 12px */
   --text-sm:               0.875rem;  /* 14px */
   --text-base:             1rem;      /* 16px */
@@ -239,9 +271,21 @@
     --color-border:        #383838;
     --color-border-strong: #4a4a4a;
     --color-text:          #f0e8d8;
-    --color-text-muted:    #a89880;
+    --color-text-muted:    #9c9c9c;
     --color-text-subtle:   #7a6a58;
     --color-primary-light: #2d2418;
+
+    /* Chart categorical palette — dark-mode steps, same hues, re-validated
+       against the dark card surface (#242424), not an automatic flip.
+       Re-validated 2026-07-22: the light-mode gold (#C9A24B) fails on a dark
+       surface (too light, and too close to the green for CVD separation),
+       so this slot steps to #B07914 instead — same hue family, tuned to
+       pass; see node scripts/validate_palette.js from the dataviz skill. */
+    --chart-cat-1: #B07914;
+    --chart-cat-2: #5FA873;
+    --chart-cat-3: #5B95D6;
+    --chart-cat-4: #E06B52;
+    --chart-cat-5: #B366AC;
   }
 }
 
@@ -252,4 +296,8 @@ body {
   font-family: var(--font-sans);
   font-size: var(--text-base);
   line-height: 1.5;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
 }

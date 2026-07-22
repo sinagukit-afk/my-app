@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Sinag Ukit ERP — POS, inventory, orders, and accounting.",
     start_url: "/",
     display: "standalone",
-    background_color: "#F6EFE4",
-    theme_color: "#B68E44",
+    background_color: "#FAF6EF",
+    theme_color: "#C9A24B",
     icons: [
       {
         src: "/icons/icon-192.png",
