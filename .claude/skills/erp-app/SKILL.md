@@ -26,6 +26,17 @@ Mirror RLS exactly — don't invent new gating logic. Convention: SELECT = any a
 
 This project is on Tailwind v4.3.1. CSS-variable arbitrary values need **parentheses**, not brackets: `bg-(--color-surface)`, not `bg-[--color-surface]`. The bracket form silently produces no CSS rule (transparent surfaces, invisible modals) — this was a real app-wide bug fixed in Phase 11. Always use the parenthesis form for any `--color-*` / `--shadow-*` token reference.
 
+## Brand tokens & typography (V3)
+
+Sinag Ukit Design System V3 (applied 2026-07-22) is the source of truth for brand color and typography. Full rationale lives in `design/theme/THEME.md` — read it before changing any token value.
+
+- **Two color layers exist in `app/globals.css`; only one renders.** A shadcn HSL layer (`--primary`, `--background`, `--destructive`, etc., wired via `@theme inline`) is dead — no component reads `bg-primary`/`text-foreground`. All real UI reads the second `--color-*` raw-hex layer (`--color-primary`, `--color-bg`, `--color-text`, `--color-danger`, etc.) via `bg-(--color-x)` arbitrary values (see the Tailwind v4 gotcha above). When changing a brand color, update both layers for consistency, but verify against the `--color-*` layer — that's the one that actually paints pixels.
+- **New states**: `--color-primary-active` (pressed/active gold) and `--color-danger-hover` were added in V3 — use these instead of inventing a new darkened shade inline.
+- **Typography**: three typefaces loaded via `next/font/google` in `app/layout.tsx`. Manrope (`--font-sans-heading`, aliased `--font-display`) drives headings/nav/buttons — applied automatically to `h1`–`h6` via a global rule, so apply `font-(--font-sans-heading)` explicitly on any new nav-link- or button-like element that isn't a real heading tag. Inter (`--font-sans-body`, aliased `--font-body`/the app's default `--font-sans`) is body/forms/tables. Cormorant Garamond (`--font-serif-display`) is loaded but **must never be used inside the ERP** — marketing-hero/print only, per the brand kit's Luxury-vs-Productivity mode split (this app is 100% Productivity mode).
+- **Never redeclare `--font-sans-heading` / `--font-sans-body` / `--font-serif-display` in `:root`.** next/font sets them on `<html>` via `className`; a `:root` redeclaration of the same name wins the cascade (pseudo-class beats element selector) and silently breaks font loading app-wide.
+- **Chart colors**: the categorical palette (`--chart-cat-1..5`, consumed via `lib/utils/chart-colors.ts` by `donut-chart.tsx`/`grouped-bar-chart.tsx`/`bar-chart.tsx`) is colorblind-validated per the `dataviz` skill, with separate light/dark steps. Don't hand-edit a slot without re-running `validate_palette.js` from that skill — a value that looks fine can fail CVD separation against its neighbors.
+- Spacing/radius were deliberately **not** adopted from the V3 kit — it reuses this app's existing `--space-*`/`--radius-*` variable names at different values (e.g. kit's `--space-6` = 32px vs. this app's 24px). Keep using the existing scale; don't pull spacing tokens from the kit even if you have it open for colors.
+
 ## Supabase typed-query gotchas (client-side/page code)
 
 - Build `.select("...")` strings as a single string literal, not via `string + string` concatenation — concatenation degrades the whole result type to `GenericStringError`.
