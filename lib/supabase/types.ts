@@ -4696,6 +4696,15 @@ export type Database = {
         }[]
       }
       get_email_for_username: { Args: { p_username: string }; Returns: string }
+      get_gross_profit_summary: {
+        Args: { p_end: string; p_start: string }
+        Returns: {
+          cogs: number
+          gross_margin_pct: number
+          gross_profit: number
+          revenue: number
+        }[]
+      }
       get_income_statement: {
         Args: { p_end: string; p_start: string }
         Returns: {
@@ -4707,6 +4716,15 @@ export type Database = {
           depth: number
           is_postable: boolean
           rollup_amount: number
+        }[]
+      }
+      get_monthly_gross_profit: {
+        Args: { p_year: number }
+        Returns: {
+          cogs: number
+          gross_profit: number
+          month: number
+          revenue: number
         }[]
       }
       get_trial_balance: {
@@ -5498,6 +5516,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      update_composite_components: {
+        Args: { p_item_id: string; p_variant_components: Json }
+        Returns: undefined
       }
       update_direct_expense: {
         Args: {
