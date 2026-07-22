@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useRegisterUnsavedChanges } from "@/lib/hooks/use-unsaved-changes";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
@@ -47,6 +48,10 @@ export function NewQuoteForm({ customers, variantOptions, discounts, modifierGro
   const [validUntilTouched, setValidUntilTouched] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const initialSnapshot = useRef(JSON.stringify({ rows, quoteDate, validUntil }));
+  const isDirty = JSON.stringify({ rows, quoteDate, validUntil }) !== initialSnapshot.current;
+  useRegisterUnsavedChanges(isDirty);
+
   function handleQuoteDateChange(value: string) {
     setQuoteDate(value);
     if (!validUntilTouched) setValidUntil(plus30Days(value));
@@ -75,7 +80,9 @@ export function NewQuoteForm({ customers, variantOptions, discounts, modifierGro
     startTransition(async () => {
       const res = await createQuoteWithItems(formData);
       if (res.success) {
-        router.push("/dashboard/orders/quotation");
+        // replace, not push: a successful save should drop this form out of history so
+        // browser Back doesn't return the user to the (now stale) create form.
+        router.replace("/dashboard/orders/quotation");
       } else {
         setError(res.error);
       }
@@ -84,7 +91,12 @@ export function NewQuoteForm({ customers, variantOptions, discounts, modifierGro
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <PageHeader title="New Quote" description="Build an itemized quote for a customer." />
+      <PageHeader
+        title="New Quote"
+        description="Build an itemized quote for a customer."
+        backHref="/dashboard/orders/quotation"
+        backLabel="Back to Quotation"
+      />
 
       <Card>
         <CardHeader>

@@ -231,15 +231,11 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/dashboard/purchasing/inventory-po" className="text-sm text-(--color-primary) hover:underline">
-          ← Purchase Orders
-        </Link>
-      </div>
-
       <PageHeader
         title={po.reference}
         description={`Supplier: ${po.supplier_name}`}
+        backHref="/dashboard/purchasing/inventory-po"
+        backLabel="Back to Inventory PO"
         actions={
           <div className="flex items-center gap-2">
             {canEditHeader && (

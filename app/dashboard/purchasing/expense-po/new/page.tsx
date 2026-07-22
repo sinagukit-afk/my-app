@@ -17,7 +17,12 @@ export default async function NewExpensePurchaseOrderPage() {
   if (!["admin", "manager"].includes(role)) {
     return (
       <div>
-        <PageHeader title="New Expense PO" description="Request approval to purchase an operating expense." />
+        <PageHeader
+          title="New Expense PO"
+          description="Request approval to purchase an operating expense."
+          backHref="/dashboard/purchasing/expense-po"
+          backLabel="Back to Expense PO"
+        />
         <Card className="max-w-lg">
           <CardContent className="p-4 text-sm text-(--color-text-muted)">
             Creating a purchase order is restricted to Admin and Manager roles. Contact an administrator if

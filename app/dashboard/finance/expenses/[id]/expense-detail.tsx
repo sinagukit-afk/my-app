@@ -166,15 +166,11 @@ export function ExpenseDetail({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/dashboard/finance/expenses" className="text-sm text-(--color-primary) hover:underline">
-          ← Expenses
-        </Link>
-      </div>
-
       <PageHeader
         title={expense.expense_number}
         description={expense.description}
+        backHref="/dashboard/finance/expenses"
+        backLabel="Back to Expenses"
         actions={
           <div className="flex items-center gap-2">
             {canEdit && (

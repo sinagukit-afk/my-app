@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useRegisterUnsavedChanges } from "@/lib/hooks/use-unsaved-changes";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
@@ -96,6 +97,11 @@ export function NewManualIncomingForm({ suppliers, variantOptions }: Props) {
   const [shippingFee, setShippingFee] = useState("0");
   const [note, setNote] = useState("");
   const { aiFilledKeys, markFilled, clear: clearAiField } = useAiFilledKeys();
+
+  const initialSnapshot = useRef(JSON.stringify({ rows, supplierId, dateReceived, shippingFee, note }));
+  const isDirty =
+    JSON.stringify({ rows, supplierId, dateReceived, shippingFee, note }) !== initialSnapshot.current;
+  useRegisterUnsavedChanges(isDirty);
 
   function updateRow(rowId: string, patch: Partial<ItemRow>) {
     setRows((prev) => prev.map((r) => (r.rowId === rowId ? { ...r, ...patch } : r)));
@@ -233,7 +239,9 @@ export function NewManualIncomingForm({ suppliers, variantOptions }: Props) {
     startTransition(async () => {
       const res = await createManualIncomingWithItems(formData);
       if (res.success) {
-        router.push("/dashboard/purchasing/receiving");
+        // replace, not push: a successful save should drop this form out of history so
+        // browser Back doesn't return the user to the (now stale) create form.
+        router.replace("/dashboard/purchasing/receiving");
       } else {
         setError(res.error);
       }
@@ -252,6 +260,8 @@ export function NewManualIncomingForm({ suppliers, variantOptions }: Props) {
       <PageHeader
         title="Log Manual Incoming"
         description="Record inventory receipts not tied to a purchase order. Each item gets its own receiving number and is marked Received automatically."
+        backHref="/dashboard/purchasing/receiving"
+        backLabel="Back to Receiving"
       />
 
       <AutoFillPanel schema={manualIncomingSchema} dropdownOptions={dropdownOptions} onExtracted={handleExtracted} />

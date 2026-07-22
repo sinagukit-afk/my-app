@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useGuardedNavigate, useRegisterUnsavedChanges } from "@/lib/hooks/use-unsaved-changes";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -44,10 +45,13 @@ type Props = {
 
 export function NewJournalForm({ accounts }: Props) {
   const router = useRouter();
+  const guardedNav = useGuardedNavigate();
   const [isPending, startTransition] = useTransition();
   // Start with two blank lines — a journal entry always needs at least two.
   const [rows, setRows] = useState<LineRow[]>([emptyRow(), emptyRow()]);
   const [error, setError] = useState<string | null>(null);
+
+  useRegisterUnsavedChanges(rows.some((r) => r.accountNumber || r.debit || r.credit || r.memo));
 
   const accountOptions = useMemo(
     () => accounts.map((a) => ({ value: a.account_number, label: `${a.account_number} — ${a.name}` })),
@@ -102,7 +106,9 @@ export function NewJournalForm({ accounts }: Props) {
     startTransition(async () => {
       const res = await postJournalEntry(formData);
       if (res.success) {
-        router.push(`/dashboard/accounting/journal/${res.id}`);
+        // replace, not push: a successful save should drop this form out of history so
+        // browser Back doesn't return the user to the (now stale) create form.
+        router.replace(`/dashboard/accounting/journal/${res.id}`);
       } else {
         setError(res.error);
       }
@@ -114,6 +120,8 @@ export function NewJournalForm({ accounts }: Props) {
       <PageHeader
         title="New Journal Entry"
         description="Record a balanced double-entry transaction. Debits must equal credits before you can post."
+        backHref="/dashboard/accounting/journal"
+        backLabel="Back to Journal"
       />
 
       <Card>
@@ -215,7 +223,7 @@ export function NewJournalForm({ accounts }: Props) {
       <div className="space-y-2">
         {error && <p className="text-sm text-(--color-danger)">{error}</p>}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={() => router.push("/dashboard/accounting/journal")} disabled={isPending}>
+          <Button type="button" variant="secondary" onClick={() => guardedNav.push("/dashboard/accounting/journal")} disabled={isPending}>
             Cancel
           </Button>
           <Button type="submit" disabled={!canSubmit}>

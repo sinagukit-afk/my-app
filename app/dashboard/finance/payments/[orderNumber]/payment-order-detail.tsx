@@ -62,6 +62,8 @@ export function PaymentOrderDetail({ data, logs }: { data: PaymentOrderData; log
       <PageHeader
         title={data.orderNumber}
         description="Payment information for this order."
+        backHref="/dashboard/finance/payments"
+        backLabel="Back to Payments"
         actions={
           <Link
             href={`/dashboard/orders/active-orders/${data.orderNumber}`}

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useRegisterUnsavedChanges } from "@/lib/hooks/use-unsaved-changes";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
@@ -52,6 +53,10 @@ export function EditQuoteForm({
   const [validUntilValue, setValidUntilValue] = useState(validUntil);
   const [error, setError] = useState<string | null>(null);
 
+  const initialSnapshot = useRef(JSON.stringify({ rows, quoteDateValue, validUntilValue }));
+  const isDirty = JSON.stringify({ rows, quoteDateValue, validUntilValue }) !== initialSnapshot.current;
+  useRegisterUnsavedChanges(isDirty);
+
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -70,7 +75,9 @@ export function EditQuoteForm({
     startTransition(async () => {
       const res = await updateQuoteWithItems(quoteId, formData);
       if (res.success) {
-        router.push("/dashboard/orders/quotation");
+        // replace, not push: a successful save should drop this edit form out of history so
+        // browser Back doesn't return the user to the (now stale) edit form.
+        router.replace("/dashboard/orders/quotation");
       } else {
         setError(res.error);
       }
@@ -79,7 +86,12 @@ export function EditQuoteForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <PageHeader title="Edit Quote" description="Update the customer, notes, or line items on this quote." />
+      <PageHeader
+        title="Edit Quote"
+        description="Update the customer, notes, or line items on this quote."
+        backHref="/dashboard/orders/quotation"
+        backLabel="Back to Quotation"
+      />
 
       <Card>
         <CardHeader>

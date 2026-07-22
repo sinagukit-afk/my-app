@@ -95,15 +95,12 @@ export default async function JournalEntryDetailPage({
       <PageHeader
         title={`Journal Entry — ${entry.journal_number}`}
         description={entry.description}
+        backHref="/dashboard/accounting/journal"
+        backLabel="Back to Journal"
         actions={
-          <div className="flex gap-2">
-            <Link href="/dashboard/accounting/journal">
-              <Button variant="secondary">Back to Journal</Button>
-            </Link>
-            {hasAccess && !reversedBy && entry.source_type !== "reversal" && (
-              <ReverseEntryButton entryId={entry.id} />
-            )}
-          </div>
+          hasAccess && !reversedBy && entry.source_type !== "reversal" && (
+            <ReverseEntryButton entryId={entry.id} />
+          )
         }
       />
 

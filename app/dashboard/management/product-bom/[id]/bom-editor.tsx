@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -163,11 +162,8 @@ export function BomEditor({ itemId, itemName, category, variants, componentOptio
       <PageHeader
         title={`Edit BOM — ${itemName}`}
         description={category ?? undefined}
-        actions={
-          <Link href="/dashboard/management/product-bom">
-            <Button variant="secondary">Back to Product BOM</Button>
-          </Link>
-        }
+        backHref="/dashboard/management/product-bom"
+        backLabel="Back to Product BOM"
       />
 
       {state.map((v) => {

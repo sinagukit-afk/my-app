@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useRegisterUnsavedChanges } from "@/lib/hooks/use-unsaved-changes";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { NumberInput } from "@/components/ui/number-input";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,10 @@ export function ReceiveForm({ purchaseOrderId, reference, items }: Props) {
   );
   const [error, setError] = useState<string | null>(null);
 
+  const initialSnapshot = useRef(JSON.stringify({ quantities }));
+  const isDirty = JSON.stringify({ quantities }) !== initialSnapshot.current;
+  useRegisterUnsavedChanges(isDirty);
+
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -41,7 +46,9 @@ export function ReceiveForm({ purchaseOrderId, reference, items }: Props) {
     startTransition(async () => {
       const res = await receivePurchaseOrder(purchaseOrderId, reference, lines);
       if (res.success) {
-        router.push("/dashboard/purchasing/receiving");
+        // replace, not push: a successful save should drop this form out of history so
+        // browser Back doesn't return the user to the (now stale) receipt form.
+        router.replace("/dashboard/purchasing/receiving");
         router.refresh();
       } else {
         setError(res.error);

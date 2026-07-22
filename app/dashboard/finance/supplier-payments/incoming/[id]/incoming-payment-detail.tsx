@@ -121,15 +121,11 @@ export function IncomingPaymentDetail({ item, payments, remainingBalance, paymen
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/dashboard/finance/supplier-payments" className="text-sm text-(--color-primary) hover:underline">
-          ← Supplier Payment
-        </Link>
-      </div>
-
       <PageHeader
         title={item.reference}
         description={item.variant_label ? `${item.item_name_snapshot} — ${item.variant_label}` : item.item_name_snapshot}
+        backHref="/dashboard/finance/supplier-payments"
+        backLabel="Back to Supplier Payments"
         actions={canShowPay ? <Button onClick={() => setPayOpen(true)}>Log Payment</Button> : undefined}
       />
 

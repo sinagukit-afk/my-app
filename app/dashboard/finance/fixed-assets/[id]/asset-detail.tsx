@@ -82,15 +82,11 @@ export function AssetDetail({ asset, payments, remainingBalance, paymentTypes, c
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/dashboard/finance/fixed-assets" className="text-sm text-(--color-primary) hover:underline">
-          ← Fixed Assets
-        </Link>
-      </div>
-
       <PageHeader
         title={asset.name}
         description={`${asset.asset_code} — Purchased ${formatDate(asset.purchased_date)}`}
+        backHref="/dashboard/finance/fixed-assets"
+        backLabel="Back to Fixed Assets"
         actions={canShowPay ? <Button onClick={() => setPayOpen(true)}>Log Payment</Button> : undefined}
       />
 

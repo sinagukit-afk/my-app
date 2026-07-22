@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useRegisterUnsavedChanges } from "@/lib/hooks/use-unsaved-changes";
 import { PageHeader } from "@/components/ui/page-header";
 import {
   Card,
@@ -170,6 +171,14 @@ export function ItemForm({
   );
   const [skuPending, setSkuPending] = useState(false);
 
+  const initialSnapshot = useRef(
+    JSON.stringify({ itemType, trackStock, isAvailableForSale, variant, selectedModifierIds })
+  );
+  const isDirty =
+    JSON.stringify({ itemType, trackStock, isAvailableForSale, variant, selectedModifierIds }) !==
+    initialSnapshot.current;
+  useRegisterUnsavedChanges(isDirty);
+
   useEffect(() => {
     if (itemType === "composite" && trackStock) setTrackStock(false);
   }, [itemType, trackStock]);
@@ -281,7 +290,9 @@ export function ItemForm({
     startTransition(async () => {
       const res = await upsertItem(formData);
       if (res.success) {
-        router.push("/dashboard/management/items");
+        // replace, not push: a successful save should drop this form out of history so
+        // browser Back doesn't return the user to the (now stale) create/edit form.
+        router.replace("/dashboard/management/items");
       } else {
         setError(res.error);
       }

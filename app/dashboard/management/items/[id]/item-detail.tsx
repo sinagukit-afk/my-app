@@ -90,11 +90,10 @@ export function ItemDetail({ item, variants, modifiers, canWrite }: Props) {
       <PageHeader
         title={item.name}
         description={item.category ?? undefined}
+        backHref="/dashboard/management/items"
+        backLabel="Back to Items"
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Link href="/dashboard/management/items">
-              <Button variant="secondary">Back to Items</Button>
-            </Link>
             {canWrite && item.status !== "archived" && (
               <Link href={`/dashboard/management/items/${item.id}/edit`}>
                 <Button variant="secondary">Edit Item</Button>

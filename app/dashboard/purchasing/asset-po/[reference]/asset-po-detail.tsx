@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -282,15 +281,11 @@ export function AssetPODetail({ po, items, suppliers, categories, canWrite, canD
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/dashboard/purchasing/asset-po" className="text-sm text-(--color-primary) hover:underline">
-          ← Asset Purchase Orders
-        </Link>
-      </div>
-
       <PageHeader
         title={po.reference}
         description={`Supplier: ${po.supplier_name}`}
+        backHref="/dashboard/purchasing/asset-po"
+        backLabel="Back to Asset PO"
         actions={
           <div className="flex items-center gap-2">
             {canEditHeader && (

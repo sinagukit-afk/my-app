@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
@@ -129,15 +128,11 @@ export default async function InventoryItemDetailPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/dashboard/inventory/monitoring" className="text-sm text-(--color-primary) hover:underline">
-          ← Inventory Monitoring
-        </Link>
-      </div>
-
       <PageHeader
         title={itemName}
         description={[variant.sku, category?.name, storeRow?.name ?? "—"].filter(Boolean).join(" · ")}
+        backHref="/dashboard/inventory/monitoring"
+        backLabel="Back to Inventory"
       />
 
       {movementsError && (

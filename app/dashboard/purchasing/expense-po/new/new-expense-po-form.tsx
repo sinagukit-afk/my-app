@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useRegisterUnsavedChanges } from "@/lib/hooks/use-unsaved-changes";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
@@ -60,6 +61,11 @@ export function NewExpensePurchaseOrderForm({ suppliers, categories }: Props) {
   const [shippingFee, setShippingFee] = useState("0");
   const [note, setNote] = useState("");
   const { aiFilledKeys, markFilled, clear: clearAiField } = useAiFilledKeys();
+
+  const initialSnapshot = useRef(JSON.stringify({ rows, supplierId, orderDate, shippingFee, note }));
+  const isDirty =
+    JSON.stringify({ rows, supplierId, orderDate, shippingFee, note }) !== initialSnapshot.current;
+  useRegisterUnsavedChanges(isDirty);
 
   function updateRow(rowId: string, patch: Partial<ItemRow>) {
     setRows((prev) => prev.map((r) => (r.rowId === rowId ? { ...r, ...patch } : r)));
@@ -168,7 +174,9 @@ export function NewExpensePurchaseOrderForm({ suppliers, categories }: Props) {
     startTransition(async () => {
       const res = await createExpensePurchaseOrder(formData);
       if (res.success) {
-        router.push(`/dashboard/purchasing/expense-po/${res.reference}`);
+        // replace, not push: a successful save should drop this form out of history so
+        // browser Back doesn't return the user to the (now stale) create form.
+        router.replace(`/dashboard/purchasing/expense-po/${res.reference}`);
       } else {
         setError(res.error);
       }
@@ -184,7 +192,12 @@ export function NewExpensePurchaseOrderForm({ suppliers, categories }: Props) {
 
   return (
     <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6">
-      <PageHeader title="New Expense PO" description="Request approval to purchase an operating expense before buying." />
+      <PageHeader
+        title="New Expense PO"
+        description="Request approval to purchase an operating expense before buying."
+        backHref="/dashboard/purchasing/expense-po"
+        backLabel="Back to Expense PO"
+      />
 
       <AutoFillPanel schema={supplierInvoiceSchema} dropdownOptions={dropdownOptions} onExtracted={handleExtracted} />
 

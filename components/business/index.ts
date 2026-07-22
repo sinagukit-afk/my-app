@@ -5,5 +5,4 @@ export * from "./search-bar";
 export * from "./filter-bar";
 export * from "./notification-bell";
 export * from "./user-menu";
-export * from "./breadcrumb";
 export * from "./data-toolbar";

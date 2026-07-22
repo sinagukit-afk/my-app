@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useRegisterUnsavedChanges } from "@/lib/hooks/use-unsaved-changes";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
@@ -94,6 +95,14 @@ export function NewPurchaseOrderForm({ suppliers, variantOptions }: Props) {
   const [shippingFee, setShippingFee] = useState("0");
   const [note, setNote] = useState("");
   const { aiFilledKeys, markFilled, clear: clearAiField } = useAiFilledKeys();
+
+  const isDirty =
+    supplierId !== "" ||
+    shippingFee !== "0" ||
+    note !== "" ||
+    rows.length > 1 ||
+    rows.some((r) => r.variantId !== "" || r.quantity !== "1" || r.lineCost !== "");
+  useRegisterUnsavedChanges(isDirty);
 
   function updateRow(rowId: string, patch: Partial<ItemRow>) {
     setRows((prev) => prev.map((r) => (r.rowId === rowId ? { ...r, ...patch } : r)));
@@ -219,7 +228,9 @@ export function NewPurchaseOrderForm({ suppliers, variantOptions }: Props) {
     startTransition(async () => {
       const res = await createPurchaseOrderWithItems(formData);
       if (res.success) {
-        router.push(`/dashboard/purchasing/inventory-po/${res.reference}`);
+        // replace, not push: a successful save should drop this form out of history so
+        // browser Back doesn't return the user to the (now stale) create form.
+        router.replace(`/dashboard/purchasing/inventory-po/${res.reference}`);
       } else {
         setError(res.error);
       }
@@ -228,7 +239,12 @@ export function NewPurchaseOrderForm({ suppliers, variantOptions }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <PageHeader title="New Purchase Order" description="Set up the order header and its line items in one step." />
+      <PageHeader
+        title="New Purchase Order"
+        description="Set up the order header and its line items in one step."
+        backHref="/dashboard/purchasing/inventory-po"
+        backLabel="Back to Inventory PO"
+      />
 
       <AutoFillPanel schema={inventoryPurchaseSchema} dropdownOptions={dropdownOptions} onExtracted={handleExtracted} />
 

@@ -112,6 +112,8 @@ export function OnHoldOrderDetail({ data }: { data: OnHoldOrderData }) {
       <PageHeader
         title={data.orderNumber}
         description={`Order Date ${formatDate(data.createdAt)} · Target Date ${formatDate(data.targetDate)}`}
+        backHref="/dashboard/orders/on-hold"
+        backLabel="Back to On Hold"
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {data.canResume && (

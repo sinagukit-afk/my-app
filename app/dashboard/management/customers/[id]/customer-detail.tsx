@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -87,14 +86,9 @@ export function CustomerDetail({ customer, sources, history, canWrite }: Props) 
       <PageHeader
         title={customer.name}
         description={`${customer.customer_code} — Customer profile, linked accounts, and order history.`}
-        actions={
-          <div className="flex gap-2">
-            <Link href="/dashboard/management/customers">
-              <Button variant="secondary">Back to Customers</Button>
-            </Link>
-            {canWrite && <Button onClick={() => setEditOpen(true)}>Edit Customer</Button>}
-          </div>
-        }
+        backHref="/dashboard/management/customers"
+        backLabel="Back to Customers"
+        actions={canWrite && <Button onClick={() => setEditOpen(true)}>Edit Customer</Button>}
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

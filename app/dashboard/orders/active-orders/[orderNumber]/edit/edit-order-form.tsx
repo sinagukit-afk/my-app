@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useRegisterUnsavedChanges } from "@/lib/hooks/use-unsaved-changes";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
@@ -50,6 +51,10 @@ export function EditOrderForm({
   const [rows, setRows] = useState<OrderLineRow[]>(initialRows);
   const [error, setError] = useState<string | null>(null);
 
+  const initialSnapshot = useRef(JSON.stringify({ rows }));
+  const isDirty = JSON.stringify({ rows }) !== initialSnapshot.current;
+  useRegisterUnsavedChanges(isDirty);
+
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -67,7 +72,9 @@ export function EditOrderForm({
     startTransition(async () => {
       const res = await adjustOrderItems(orderId, formData);
       if (res.success) {
-        router.push("/dashboard/orders/active-orders");
+        // replace, not push: a successful save should drop this edit form out of history so
+        // browser Back doesn't return the user to the (now stale) edit form.
+        router.replace("/dashboard/orders/active-orders");
       } else {
         setError(res.error);
       }
@@ -79,6 +86,8 @@ export function EditOrderForm({
       <PageHeader
         title="Edit Order"
         description="Change the customer, notes, or line items. Stock is automatically reserved or released to match."
+        backHref="/dashboard/orders/active-orders"
+        backLabel="Back to Orders"
       />
 
       <Card>

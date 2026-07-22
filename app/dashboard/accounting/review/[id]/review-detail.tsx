@@ -221,11 +221,8 @@ export function ReviewDetail({ draft, accounts }: Props) {
       <PageHeader
         title="Review Draft"
         description={draft.description}
-        actions={
-          <Link href="/dashboard/accounting/review">
-            <Button variant="secondary">Back to Review</Button>
-          </Link>
-        }
+        backHref="/dashboard/accounting/review"
+        backLabel="Back to Review"
       />
 
       <Card className="max-w-3xl">

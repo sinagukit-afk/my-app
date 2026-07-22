@@ -17,7 +17,12 @@ export default async function NewAssetPurchaseOrderPage() {
   if (!["admin", "manager"].includes(role)) {
     return (
       <div>
-        <PageHeader title="New Asset PO" description="Request approval to purchase a fixed asset." />
+        <PageHeader
+          title="New Asset PO"
+          description="Request approval to purchase a fixed asset."
+          backHref="/dashboard/purchasing/asset-po"
+          backLabel="Back to Asset PO"
+        />
         <Card className="max-w-lg">
           <CardContent className="p-4 text-sm text-(--color-text-muted)">
             Creating a purchase order is restricted to Admin and Manager roles. Contact an administrator if

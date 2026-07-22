@@ -210,6 +210,8 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
       <PageHeader
         title={data.orderNumber}
         description={`Order Date ${formatDate(data.createdAt)} · Target Date ${formatDate(data.targetDate)}`}
+        backHref="/dashboard/orders/active-orders"
+        backLabel="Back to Orders"
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {data.canEdit && (

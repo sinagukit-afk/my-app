@@ -150,15 +150,11 @@ export function InventoryPOPaymentDetail({ po, lines, payments, remainingBalance
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/dashboard/finance/supplier-payments" className="text-sm text-(--color-primary) hover:underline">
-          ← Supplier Payment
-        </Link>
-      </div>
-
       <PageHeader
         title={po.reference}
         description={po.supplier_name ?? undefined}
+        backHref="/dashboard/finance/supplier-payments"
+        backLabel="Back to Supplier Payments"
         actions={canShowPay ? <Button onClick={() => setPayOpen(true)}>Log Payment</Button> : undefined}
       />
 

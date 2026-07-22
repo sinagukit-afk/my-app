@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -65,13 +64,11 @@ export default async function ReceivePurchaseOrderPage({ params }: { params: Pro
 
   return (
     <div className="space-y-6">
-      <Link href="/dashboard/purchasing/receiving" className="text-sm text-(--color-primary) hover:underline">
-        ← Receiving
-      </Link>
-
       <PageHeader
         title={po.reference}
         description={`Supplier: ${supplier?.name ?? "Unknown supplier"} — status: ${po.status}`}
+        backHref="/dashboard/purchasing/receiving"
+        backLabel="Back to Receiving"
       />
 
       {po.status !== "sent" && po.status !== "partial" && (

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -129,11 +129,8 @@ export function ScheduleDetail({ detail, history, canWrite }: Props) {
       <PageHeader
         title={detail.name}
         description={detail.type === "prepaid" ? "Prepaid expense amortization schedule" : "Fixed asset depreciation schedule"}
-        actions={
-          <Link href="/dashboard/finance/expense-schedule">
-            <Button variant="secondary">Back to Expense Schedule</Button>
-          </Link>
-        }
+        backHref="/dashboard/finance/expense-schedule"
+        backLabel="Back to Expense Schedule"
       />
 
       <Card className="max-w-3xl">

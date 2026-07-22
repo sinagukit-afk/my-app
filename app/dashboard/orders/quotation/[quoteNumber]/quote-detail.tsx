@@ -127,6 +127,8 @@ export function QuoteDetail({ data, logs }: { data: QuoteDetailData; logs: Activ
       <PageHeader
         title={data.quoteNumber}
         description={`Quote Date ${formatDate(data.quoteDate)} · Valid Until ${formatDate(data.validUntil)}`}
+        backHref="/dashboard/orders/quotation"
+        backLabel="Back to Quotation"
         actions={
           <div className="flex items-center gap-2">
             <Link href={`/dashboard/orders/quotation/${data.quoteNumber}/view`}>

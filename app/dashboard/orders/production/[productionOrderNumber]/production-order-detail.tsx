@@ -139,6 +139,8 @@ export function ProductionOrderDetail({ data, logs }: { data: ProductionOrderDet
       <PageHeader
         title={data.productionOrderNumber}
         description={`Created ${formatDate(data.createdAt)}`}
+        backHref="/dashboard/orders/production"
+        backLabel="Back to Production"
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {data.canStart && (

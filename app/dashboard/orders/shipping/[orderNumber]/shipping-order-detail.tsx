@@ -43,6 +43,8 @@ export function ShippingOrderDetail({ data }: { data: ShippingOrderData }) {
       <PageHeader
         title={data.orderNumber}
         description="Shipping information for this order."
+        backHref="/dashboard/orders/shipping"
+        backLabel="Back to Shipping"
         actions={
           <Link
             href={`/dashboard/orders/active-orders/${data.orderNumber}`}
