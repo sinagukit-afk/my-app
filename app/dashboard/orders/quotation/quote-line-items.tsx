@@ -74,13 +74,13 @@ export function modifierGroupsForItem(itemId: string | undefined, groups: Modifi
   return groups.filter((g) => g.itemId === itemId);
 }
 
-export function resolveLineDiscount(row: QuoteLineRow, discounts: DiscountOption[]): number {
+export function resolveLineDiscount(row: QuoteLineRow, discounts: DiscountOption[], modTotal = 0): number {
   if (!row.discountId) return 0;
   const d = discounts.find((x) => x.id === row.discountId);
   if (!d) return 0;
   const qty = Number(row.quantity) || 0;
   const price = Number(row.unitPrice) || 0;
-  const lineSubtotal = qty * price;
+  const lineSubtotal = qty * (price + modTotal);
   switch (d.discountType) {
     case "FIXED_PERCENT":
       return (lineSubtotal * (Number(d.percentage) || 0)) / 100;
@@ -115,7 +115,7 @@ export function lineTotal(
   const qty = Number(row.quantity) || 0;
   const price = Number(row.unitPrice) || 0;
   const modTotal = modifierTotalPerUnit(row, variant?.itemId, groups);
-  const discount = resolveLineDiscount(row, discounts);
+  const discount = resolveLineDiscount(row, discounts, modTotal);
   return Math.max(0, qty * (price + modTotal) - discount);
 }
 
@@ -144,6 +144,7 @@ export function resolveQuoteLines(
           };
         })
         .filter((m): m is NonNullable<typeof m> => m !== null);
+      const modTotal = modifierTotalPerUnit(r, variant?.itemId, groups);
 
       return {
         variant_id: r.variantId,
@@ -152,7 +153,7 @@ export function resolveQuoteLines(
         quantity: Number(r.quantity) || 0,
         unit_price: Number(r.unitPrice) || 0,
         discount_id: r.discountId || null,
-        line_discount: resolveLineDiscount(r, discounts),
+        line_discount: resolveLineDiscount(r, discounts, modTotal),
         modifiers,
       };
     });
