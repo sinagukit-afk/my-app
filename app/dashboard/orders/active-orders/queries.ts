@@ -22,7 +22,7 @@ export async function fetchOrderRows(
   let query = supabase
     .from("orders")
     .select(
-      "id, order_number, status, total_money, created_at, target_date, customers(name), order_items(quantity), order_payments(amount)"
+      "id, order_number, status, total_money, created_at, order_date, target_date, customers(name), order_items(quantity), order_payments(amount)"
     );
 
   if (from) query = query.gte("created_at", `${from}T00:00:00`);
@@ -50,7 +50,7 @@ export async function fetchOrderRows(
     return {
       orderNumber: o.order_number,
       customerName: customer?.name ?? null,
-      orderDate: o.created_at.slice(0, 10),
+      orderDate: o.order_date,
       targetDate: o.target_date,
       status: o.status,
       totalItems: (o.order_items ?? []).reduce((sum, it) => sum + Number(it.quantity), 0),

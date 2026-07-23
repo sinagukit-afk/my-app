@@ -28,7 +28,7 @@ export default async function ConfirmedOrderDetailPage({
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, order_number, status, note, target_date, created_at, same_as_customer, receiver_name, receiver_phone, receiver_address_line1, receiver_barangay, receiver_city, receiver_province, total_discount, total_money, customers(name, phone_number, email, address_line1, barangay, city, province), order_items(id, item_name_snapshot, sku_snapshot, quantity, unit_price, line_discount, reserved_qty, order_item_modifiers(name_snapshot, price_snapshot))"
+      "id, order_number, status, note, order_date, target_date, created_at, same_as_customer, receiver_name, receiver_phone, receiver_address_line1, receiver_barangay, receiver_city, receiver_province, total_discount, total_money, customers(name, phone_number, email, address_line1, barangay, city, province), order_items(id, item_name_snapshot, sku_snapshot, quantity, unit_price, line_discount, reserved_qty, order_item_modifiers(name_snapshot, price_snapshot))"
     )
     .eq("order_number", orderNumber)
     .single();
@@ -65,6 +65,7 @@ export default async function ConfirmedOrderDetailPage({
     orderNumber: order.order_number,
     status: order.status,
     note: order.note,
+    orderDate: order.order_date,
     createdAt: order.created_at,
     targetDate: order.target_date,
     sameAsCustomer: order.same_as_customer,

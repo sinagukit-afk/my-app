@@ -25,7 +25,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, order_number, status, note, target_date, created_at, subtotal, total_discount, total_tax, total_money, payment_closed_at, payment_close_note, tip_amount, payment_closed_by_profile:profiles!orders_payment_closed_by_fkey(full_name, email), customers(id, name, phone_number, email, address_line1, barangay, city, province), order_items(id, item_name_snapshot, sku_snapshot, quantity, unit_price, line_discount, reserved_qty, completed_qty, order_item_modifiers(name_snapshot, price_snapshot), production_orders(production_order_number, status, quantity, completed_qty))"
+      "id, order_number, status, note, order_date, target_date, created_at, subtotal, total_discount, total_tax, total_money, payment_closed_at, payment_close_note, tip_amount, payment_closed_by_profile:profiles!orders_payment_closed_by_fkey(full_name, email), customers(id, name, phone_number, email, address_line1, barangay, city, province), order_items(id, item_name_snapshot, sku_snapshot, quantity, unit_price, line_discount, reserved_qty, completed_qty, order_item_modifiers(name_snapshot, price_snapshot), production_orders(production_order_number, status, quantity, completed_qty))"
     )
     .eq("order_number", orderNumber)
     .single();
@@ -132,6 +132,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
     orderNumber: order.order_number,
     status: order.status,
     note: order.note,
+    orderDate: order.order_date,
     targetDate: order.target_date,
     createdAt: order.created_at,
     subtotal: Number(order.subtotal),

@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { TextArea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { adjustOrderItems } from "../../actions";
 import {
@@ -25,6 +26,8 @@ type Props = {
   status: string;
   customerId: string | null;
   note: string | null;
+  orderDate: string;
+  targetDate: string;
   initialRows: OrderLineRow[];
   customers: CustomerOption[];
   variantOptions: VariantOption[];
@@ -37,6 +40,8 @@ export function EditOrderForm({
   status,
   customerId,
   note,
+  orderDate,
+  targetDate,
   initialRows,
   customers,
   variantOptions,
@@ -49,16 +54,23 @@ export function EditOrderForm({
   // may still change (per ORDER-6's editable-until-Production-Completed matrix).
   const itemsLocked = status === "production_completed";
   const [rows, setRows] = useState<OrderLineRow[]>(initialRows);
+  const [orderDateValue, setOrderDateValue] = useState(orderDate);
+  const [targetDateValue, setTargetDateValue] = useState(targetDate);
   const [error, setError] = useState<string | null>(null);
 
-  const initialSnapshot = useRef(JSON.stringify({ rows }));
-  const isDirty = JSON.stringify({ rows }) !== initialSnapshot.current;
+  const initialSnapshot = useRef(JSON.stringify({ rows, orderDateValue, targetDateValue }));
+  const isDirty = JSON.stringify({ rows, orderDateValue, targetDateValue }) !== initialSnapshot.current;
   useRegisterUnsavedChanges(isDirty);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     const formData = new FormData(e.currentTarget);
+
+    if (!targetDateValue) {
+      setError("Target date is required.");
+      return;
+    }
 
     const newItems = resolveOrderLines(rows, variantOptions, discounts, modifierGroups);
 
@@ -68,6 +80,8 @@ export function EditOrderForm({
     }
 
     formData.set("items_json", JSON.stringify(newItems));
+    formData.set("order_date", orderDateValue);
+    formData.set("target_date", targetDateValue);
 
     startTransition(async () => {
       const res = await adjustOrderItems(orderId, formData);
@@ -102,6 +116,18 @@ export function EditOrderForm({
             defaultValue={customerId ?? ""}
             options={customers.map((c) => ({ value: c.id, label: c.name }))}
           />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <DatePicker
+              label="Order Date"
+              value={orderDateValue}
+              onChange={(e) => setOrderDateValue(e.target.value)}
+            />
+            <DatePicker
+              label="Target Date"
+              value={targetDateValue}
+              onChange={(e) => setTargetDateValue(e.target.value)}
+            />
+          </div>
           <TextArea label="Notes" name="note" rows={2} defaultValue={note ?? ""} />
         </CardContent>
       </Card>

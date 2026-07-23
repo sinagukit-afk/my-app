@@ -25,6 +25,7 @@ export type PaymentOrderData = {
   id: string;
   orderNumber: string;
   status: string;
+  orderDate: string;
   targetDate: string;
   createdAt: string;
   fulfillmentMethod: string | null;
@@ -100,7 +101,7 @@ export function PaymentOrderDetail({ data, logs }: { data: PaymentOrderData; log
           )}
           <div className="flex justify-between text-(--color-text-muted)">
             <span>Order Date</span>
-            <span className="text-(--color-text)">{formatDate(data.createdAt)}</span>
+            <span className="text-(--color-text)">{formatDate(data.orderDate)}</span>
           </div>
           <div className="flex justify-between text-(--color-text-muted)">
             <span>Target Date</span>

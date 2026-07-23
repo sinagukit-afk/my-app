@@ -75,6 +75,7 @@ export function NewOrderForm({ customers, variantOptions, discounts, modifierGro
     }
 
     formData.set("items_json", JSON.stringify(newItems));
+    formData.set("order_date", orderDate);
     formData.set("target_date", targetDate);
 
     startTransition(async () => {

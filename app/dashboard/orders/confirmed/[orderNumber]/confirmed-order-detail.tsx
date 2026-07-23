@@ -42,6 +42,7 @@ export type ConfirmedOrderData = {
   orderNumber: string;
   status: string;
   note: string | null;
+  orderDate: string;
   createdAt: string;
   targetDate: string;
   sameAsCustomer: boolean;
@@ -158,7 +159,7 @@ export function ConfirmedOrderDetail({ data, logs }: { data: ConfirmedOrderData;
     <div className="space-y-6">
       <PageHeader
         title={data.orderNumber}
-        description={`Order Date ${formatDate(data.createdAt)} · Target Date ${formatDate(data.targetDate)}`}
+        description={`Order Date ${formatDate(data.orderDate)} · Target Date ${formatDate(data.targetDate)}`}
         backHref="/dashboard/orders/confirmed"
         backLabel="Back to Confirmed"
         actions={

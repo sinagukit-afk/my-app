@@ -47,6 +47,7 @@ export type OnHoldOrderData = {
   orderNumber: string;
   status: string;
   note: string | null;
+  orderDate: string;
   targetDate: string;
   createdAt: string;
   totalDiscount: number;
@@ -111,7 +112,7 @@ export function OnHoldOrderDetail({ data }: { data: OnHoldOrderData }) {
     <div className="space-y-6">
       <PageHeader
         title={data.orderNumber}
-        description={`Order Date ${formatDate(data.createdAt)} · Target Date ${formatDate(data.targetDate)}`}
+        description={`Order Date ${formatDate(data.orderDate)} · Target Date ${formatDate(data.targetDate)}`}
         backHref="/dashboard/orders/on-hold"
         backLabel="Back to On Hold"
         actions={

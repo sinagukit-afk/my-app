@@ -22,7 +22,7 @@ export default async function PaymentOrdersPage({ searchParams }: { searchParams
   let query = supabase
     .from("orders")
     .select(
-      "id, order_number, status, total_money, total_tax, created_at, customers(name), order_payments(amount), order_shipments(shipping_cost, shipping_fee_charged, status)"
+      "id, order_number, status, total_money, total_tax, created_at, order_date, customers(name), order_payments(amount), order_shipments(shipping_cost, shipping_fee_charged, status)"
     );
 
   if (from) query = query.gte("created_at", `${from}T00:00:00`);
@@ -51,7 +51,7 @@ export default async function PaymentOrdersPage({ searchParams }: { searchParams
         orderNumber: o.order_number,
         customerName: customer?.name ?? null,
         status: o.status,
-        orderDate: o.created_at.slice(0, 10),
+        orderDate: o.order_date,
         totalMoney,
         shippingFeeTotal,
         hasPendingShippingFee,

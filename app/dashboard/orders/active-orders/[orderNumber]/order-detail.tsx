@@ -55,6 +55,7 @@ export type OrderDetailData = {
   orderNumber: string;
   status: string;
   note: string | null;
+  orderDate: string;
   targetDate: string;
   createdAt: string;
   subtotal: number;
@@ -209,7 +210,7 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
     <div className="space-y-6">
       <PageHeader
         title={data.orderNumber}
-        description={`Order Date ${formatDate(data.createdAt)} · Target Date ${formatDate(data.targetDate)}`}
+        description={`Order Date ${formatDate(data.orderDate)} · Target Date ${formatDate(data.targetDate)}`}
         backHref="/dashboard/orders/active-orders"
         backLabel="Back to Orders"
         actions={

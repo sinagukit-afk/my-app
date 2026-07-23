@@ -12,7 +12,7 @@ export default async function CancelledOrdersPage() {
   const { data, error } = await supabase
     .from("orders")
     .select(
-      "id, order_number, created_at, updated_at, total_money, customers(name), order_items(item_name_snapshot, quantity)"
+      "id, order_number, created_at, order_date, updated_at, total_money, customers(name), order_items(item_name_snapshot, quantity)"
     )
     .eq("status", "cancelled")
     .order("updated_at", { ascending: false });
@@ -38,7 +38,7 @@ export default async function CancelledOrdersPage() {
     return {
       orderNumber: o.order_number,
       customerName: customer?.name ?? null,
-      orderDate: o.created_at.slice(0, 10),
+      orderDate: o.order_date,
       cancelledAt: o.updated_at,
       totalMoney: Number(o.total_money),
       items: (o.order_items ?? []).map((it) => `(${Number(it.quantity)}) ${it.item_name_snapshot ?? ""}`),

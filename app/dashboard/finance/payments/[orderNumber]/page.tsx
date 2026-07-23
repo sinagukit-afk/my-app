@@ -24,7 +24,7 @@ export default async function PaymentOrderPage({ params }: { params: Promise<{ o
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, order_number, status, target_date, created_at, fulfillment_method, total_money, total_tax, payment_closed_at, payment_close_note, tip_amount, payment_closed_by_profile:profiles!orders_payment_closed_by_fkey(full_name, email), customers(name, phone_number, email, address_line1, barangay, city, province), order_items(id, quantity)"
+      "id, order_number, status, order_date, target_date, created_at, fulfillment_method, total_money, total_tax, payment_closed_at, payment_close_note, tip_amount, payment_closed_by_profile:profiles!orders_payment_closed_by_fkey(full_name, email), customers(name, phone_number, email, address_line1, barangay, city, province), order_items(id, quantity)"
     )
     .eq("order_number", orderNumber)
     .single();
@@ -88,6 +88,7 @@ export default async function PaymentOrderPage({ params }: { params: Promise<{ o
     id: order.id,
     orderNumber: order.order_number,
     status: order.status,
+    orderDate: order.order_date,
     targetDate: order.target_date,
     createdAt: order.created_at,
     fulfillmentMethod: order.fulfillment_method,

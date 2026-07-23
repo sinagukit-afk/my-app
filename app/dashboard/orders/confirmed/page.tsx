@@ -26,7 +26,7 @@ export default async function ConfirmedOrdersPage({ searchParams }: { searchPara
   let query = supabase
     .from("orders")
     .select(
-      "id, order_number, created_at, target_date, customers(name), order_items(item_name_snapshot, quantity)"
+      "id, order_number, created_at, order_date, target_date, customers(name), order_items(item_name_snapshot, quantity)"
     )
     .eq("status", "confirmed");
 
@@ -53,7 +53,7 @@ export default async function ConfirmedOrdersPage({ searchParams }: { searchPara
     return {
       orderNumber: o.order_number,
       customerName: customer?.name ?? null,
-      orderDate: o.created_at.slice(0, 10),
+      orderDate: o.order_date,
       targetDate: o.target_date,
       items: (o.order_items ?? []).map((it) => `(${Number(it.quantity)}) ${it.item_name_snapshot ?? ""}`),
       lastActivity: lastActivityByOrder.get(o.id) ?? "—",

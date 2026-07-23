@@ -33,6 +33,7 @@ export async function createOrder(formData: FormData): Promise<ActionResult> {
   const note = (formData.get('note') as string)?.trim() || null
   const same_as_customer = formData.get('same_as_customer') !== 'false'
   const receiver_name = (formData.get('receiver_name') as string)?.trim() || null
+  const order_date = (formData.get('order_date') as string) || null
   const target_date = formData.get('target_date') as string
   const fulfillment_method = (formData.get('fulfillment_method') as string) || null
 
@@ -60,6 +61,7 @@ export async function createOrder(formData: FormData): Promise<ActionResult> {
   const { data, error } = await supabase.rpc('create_order', {
     p_lines: validItems,
     p_target_date: target_date,
+    p_order_date: order_date,
     p_customer_id: customer_id,
     p_note: note,
     p_same_as_customer: same_as_customer,
@@ -90,6 +92,8 @@ export async function adjustOrderItems(orderId: string, formData: FormData): Pro
   const same_as_customer = formData.get('same_as_customer') !== 'false'
   const receiver_name = (formData.get('receiver_name') as string)?.trim() || null
   const fulfillment_method = (formData.get('fulfillment_method') as string) || null
+  const order_date = (formData.get('order_date') as string) || null
+  const target_date = (formData.get('target_date') as string) || null
 
   if (!same_as_customer && !receiver_name) {
     return { success: false, error: 'Receiver name is required when shipping to someone other than the customer.' }
@@ -111,6 +115,8 @@ export async function adjustOrderItems(orderId: string, formData: FormData): Pro
   const { error } = await supabase.rpc('adjust_order_items', {
     p_order_id: orderId,
     p_lines: validItems,
+    p_order_date: order_date,
+    p_target_date: target_date,
     p_customer_id: customer_id,
     p_note: note,
     p_same_as_customer: same_as_customer,

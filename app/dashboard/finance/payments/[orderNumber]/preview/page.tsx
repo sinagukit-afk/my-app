@@ -30,7 +30,7 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, order_number, status, created_at, total_money, total_tax, subtotal, total_discount, store_id, created_by, customers(name, phone_number, address_line1, barangay, city, province), order_items(id, item_name_snapshot, sku_snapshot, quantity, unit_price, line_discount, order_item_modifiers(name_snapshot, price_snapshot)), preparer:profiles!orders_created_by_fkey(full_name, function_title)"
+      "id, order_number, status, created_at, order_date, total_money, total_tax, subtotal, total_discount, store_id, created_by, customers(name, phone_number, address_line1, barangay, city, province), order_items(id, item_name_snapshot, sku_snapshot, quantity, unit_price, line_discount, order_item_modifiers(name_snapshot, price_snapshot)), preparer:profiles!orders_created_by_fkey(full_name, function_title)"
     )
     .eq("order_number", orderNumber)
     .single();
@@ -108,7 +108,7 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
             </div>
             <div>
               <p className="text-xs uppercase text-(--color-text-muted)">Order Date</p>
-              <p className="text-sm text-(--color-text)">{order.created_at.slice(0, 10)}</p>
+              <p className="text-sm text-(--color-text)">{order.order_date}</p>
             </div>
             <div>
               <p className="text-xs uppercase text-(--color-text-muted)">Payment Status</p>
