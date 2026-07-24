@@ -53,6 +53,7 @@ export default async function DashboardLayout({
     { data: dueDepreciationAssets },
     { data: depreciationEntries },
     { data: trackedStockData },
+    { count: webQuoteRequestsCount },
   ] = await Promise.all([
     supabase
       .from("purchase_orders")
@@ -160,6 +161,10 @@ export default async function DashboardLayout({
       .eq("track_stock", true)
       .is("deleted_at", null)
       .is("item_variants.deleted_at", null),
+    supabase
+      .from("web_quote_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "new"),
   ]);
 
   const ordersShippingCount = (shipmentsNotDeliveredCount ?? 0) + (ordersReadyForShippingCount ?? 0);
@@ -234,6 +239,7 @@ export default async function DashboardLayout({
         expenseScheduleDue: expenseScheduleDueCount,
         accountingReview: accountingReviewCount ?? 0,
         inventoryAttention: inventoryAttentionCount,
+        webQuoteRequests: webQuoteRequestsCount ?? 0,
       }}
     >
       {children}

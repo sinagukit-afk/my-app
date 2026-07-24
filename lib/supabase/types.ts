@@ -3879,6 +3879,7 @@ export type Database = {
           answer: string
           category: string | null
           created_at: string
+          deleted_at: string | null
           id: string
           published: boolean
           question: string
@@ -3889,6 +3890,7 @@ export type Database = {
           answer: string
           category?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
           published?: boolean
           question: string
@@ -3899,10 +3901,112 @@ export type Database = {
           answer?: string
           category?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
           published?: boolean
           question?: string
           sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      web_productmodifier: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          id: string
+          modifier_name: string
+          price_modifier: number
+          product_id: string
+          published: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          modifier_name: string
+          price_modifier?: number
+          product_id: string
+          published?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          modifier_name?: string
+          price_modifier?: number
+          product_id?: string
+          published?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "web_productmodifier_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "web_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      web_products: {
+        Row: {
+          category: string | null
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          id: string
+          lead_time_standard: string
+          moq: number
+          name: string
+          pricing_notes: string | null
+          published: boolean
+          rush_option: string | null
+          slug: string
+          sort_order: number
+          starting_price: number
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          lead_time_standard?: string
+          moq: number
+          name: string
+          pricing_notes?: string | null
+          published?: boolean
+          rush_option?: string | null
+          slug: string
+          sort_order?: number
+          starting_price: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          lead_time_standard?: string
+          moq?: number
+          name?: string
+          pricing_notes?: string | null
+          published?: boolean
+          rush_option?: string | null
+          slug?: string
+          sort_order?: number
+          starting_price?: number
           updated_at?: string
         }
         Relationships: []
@@ -3975,6 +4079,7 @@ export type Database = {
           author_role: string | null
           avatar_url: string | null
           created_at: string
+          deleted_at: string | null
           id: string
           published: boolean
           quote: string
@@ -3987,6 +4092,7 @@ export type Database = {
           author_role?: string | null
           avatar_url?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
           published?: boolean
           quote: string
@@ -3999,6 +4105,7 @@ export type Database = {
           author_role?: string | null
           avatar_url?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
           published?: boolean
           quote?: string

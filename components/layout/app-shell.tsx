@@ -25,7 +25,8 @@ type NavCountKey =
   | "supplierPayment"
   | "expenseScheduleDue"
   | "accountingReview"
-  | "inventoryAttention";
+  | "inventoryAttention"
+  | "webQuoteRequests";
 
 type NavLeaf = {
   kind: "item";
@@ -178,6 +179,24 @@ const NAV: NavEntry[] = [
   },
   {
     kind: "group",
+    label: "Marketing",
+    icon: MegaphoneIcon,
+    roles: ["admin", "manager"],
+    children: [
+      { kind: "item", label: "Quote Requests", href: "/dashboard/marketing/quote-requests", icon: MegaphoneIcon, countKey: "webQuoteRequests" },
+      {
+        kind: "subgroup",
+        label: "Website Content",
+        children: [
+          { kind: "item", label: "Products", href: "/dashboard/marketing/products", icon: MegaphoneIcon },
+          { kind: "item", label: "FAQs", href: "/dashboard/marketing/faqs", icon: MegaphoneIcon },
+          { kind: "item", label: "Testimonials", href: "/dashboard/marketing/testimonials", icon: MegaphoneIcon },
+        ],
+      },
+    ],
+  },
+  {
+    kind: "group",
     label: "Settings",
     icon: ClipboardIcon,
     children: [
@@ -284,6 +303,15 @@ function ChartIcon({ className }: { className?: string }) {
   );
 }
 
+function MegaphoneIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M13.5 2.5v11L5 10.5H3a1.5 1.5 0 01-1.5-1.5V7A1.5 1.5 0 013 5.5h2l8.5-3z" />
+      <path d="M5 10.5V14h2.5l-.75-3.5" />
+    </svg>
+  );
+}
+
 function SettingsIcon({ className }: { className?: string }) {
   return (
     <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -363,6 +391,7 @@ const CRUMB_LABELS: Record<string, string> = {
   "profit-loss": "Profit & Loss",
   "items-for-review": "Items for Review",
   "product-bom": "Product BOM",
+  faqs: "FAQs",
 };
 
 /** Intermediate route segments with no page.tsx behind them — rendered as text, never links. */
@@ -373,6 +402,7 @@ const NON_ROUTABLE_PATHS = new Set([
   "/dashboard/accounting/financial-settings",
   "/dashboard/finance/supplier-payments/incoming",
   "/dashboard/finance/supplier-payments/inventory-po",
+  "/dashboard/marketing",
 ]);
 
 function crumbLabel(seg: string): string {
