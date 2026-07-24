@@ -353,6 +353,39 @@ three open Analytics reports — the sidebar item itself is still
 visible to everyone since the Analytics nav group has no per-item
 role filter, only the page content is gated.
 
+## Marketing
+
+*New top-level nav group as of MKT-1 (2026-07-24, `DECISIONS.md` D051) —
+admin/manager only (matches every `web_*` write policy, the Finance/
+Accounting tier, not the general convention). Manages the five `web_*`
+tables that back the public site **sinagukit.com**; previously no ERP
+UI existed for any of them. "No connection to other ERP data yet" per
+Sinag — `web_quote_requests.converted_quote_id → quotes.id` is the only
+cross-FK and is deliberately left unwired. See `PROGRESS-MARKETING.md`.*
+
+🟩 Quote Requests (`/dashboard/marketing/quote-requests`) — inbound
+"Request a Quote" leads from the website, read-only + status workflow
+(`new → contacted → closed`). Nav badge counts `status='new'`. Detail
+page shows contact/customization fields + a linked-quote card. Does not
+create ERP quotes (`status='converted'`/`converted_quote_id` reserved
+for a future conversion flow). Lead PII is not anon-readable (no anon
+SELECT policy). See `PROGRESS-MARKETING.md` MKT-2.
+🟩 Products (`/dashboard/marketing/products`) — public catalog CRUD
+(name, unique slug, category, starting price, MOQ, lead time, rush,
+pricing notes), publish toggle, archive/restore (`deleted_at`).
+Per-product modifiers (`web_productmodifier`, design/customization
+add-ons with a price delta) edit **inline on the product detail page**
+(Product BOM pattern), not their own nav entry. See
+`PROGRESS-MARKETING.md` MKT-3.
+🟩 FAQs (`/dashboard/marketing/faqs`) — CRUD over `web_faqs`, status +
+category filters, publish toggle, archive/restore. Some answers carry
+raw HTML for the website; rendered escaped here by design. See
+`PROGRESS-MARKETING.md` MKT-4.
+🟩 Testimonials (`/dashboard/marketing/testimonials`) — CRUD over
+`web_testimonials` (author, role, quote, optional 1–5 rating, avatar
+URL), publish toggle, archive/restore. See `PROGRESS-MARKETING.md`
+MKT-4.
+
 ## Administration
 
 🟩 Users — invite, edit (name/role), deactivate/reactivate

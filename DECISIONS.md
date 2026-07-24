@@ -1413,3 +1413,80 @@ from Sinag, same session as D049.
   seed from its real `sku_category`/`sku` (`SIM`/`SIM-0012`) without
   triggering a fresh preview fetch. `tsc --noEmit` clean throughout. No
   console or server errors observed across the full verification pass.
+
+## D051
+
+**Marketing module: a dedicated ERP nav group over the five website
+(`web_*`) tables, with the sole ERP-data FK deliberately left unwired
+(2026-07-24).** Explicit request from Sinag — *"I have these tables
+connected on my website. Now I want a dedicated Nav panel on the app.
+This is my Marketing data, no connection yet to other ERP data."*
+Shipped in commit `7555259`; full build log in `PROGRESS-MARKETING.md`.
+
+- **New top-level "Marketing" nav group, admin/manager only.** Placed
+  between Analytics and Settings. Gated to admin/manager (not the
+  general admin/manager/encoder convention) because every write policy
+  on all five `web_*` tables is admin/manager — this is the
+  Finance/Accounting whole-category tier, applied here for the same
+  reason. Gated at all three layers (RLS, `NavGroup.roles`, and a
+  page-level `canManageMarketing()` in `app/dashboard/marketing/access.ts`).
+  Structure: **Quote Requests** (leaf + nav badge on `status='new'`) and
+  a **Website Content** subgroup (Products, FAQs, Testimonials).
+- **`web_quote_requests.converted_quote_id → quotes.id` left unwired,
+  per Sinag's "no connection yet" framing.** This is the *only* FK from
+  any marketing table into ERP data and is unused (0 converted). The
+  lead inbox is read-only + a status workflow (`new → contacted →
+  closed`); `status='converted'` is **not** an offered transition and
+  the server action refuses to set it, and refuses to move any request
+  that already has a `converted_quote_id` (that row's status is owned by
+  its quote). The value is reserved for a future conversion flow that
+  would create a `public.quotes` row and populate the FK — likely a
+  customer match-or-create decision + an RPC. Chosen over building
+  conversion now (out of scope) or a manual FK-link picker (would set a
+  link with no backing quote logic).
+- **Content vs. operational split.** The four content tables
+  (`web_products`, `web_productmodifier`, `web_faqs`,
+  `web_testimonials`) are flat CRUD with a publish toggle +
+  archive/restore. `web_quote_requests` is an operational inbox, so it
+  gets a detail page + status workflow instead. Modifiers
+  (`web_productmodifier`, per-product child, `ON DELETE CASCADE`) edit
+  inline on the product detail page (Product BOM / MGMT-3 pattern), not
+  their own nav entry.
+- **Migration `marketing_tables_soft_delete_and_rls_hardening`
+  (SinagUkitData, via MCP — no local file).** Added `deleted_at` to the
+  four content tables and baked `deleted_at IS NULL` into their SELECT
+  policies (anon + authenticated), so an archived row is unreachable
+  from the public site even if a website query forgets the filter — the
+  admin/manager branch stays unfiltered so archived rows stay
+  restorable in the ERP.
+- **Closed a real RLS insert gap found during MKT-0 audit:**
+  `web_products_ins` / `web_productmodifier_ins` had `WITH CHECK (true)`,
+  letting any authenticated user (incl. `viewer`/`cashier`) insert into
+  the public catalog while UPDATE/DELETE were correctly admin/manager.
+  Now admin/manager, matching the other two content tables. Verified
+  empirically post-migration via `set local role anon` that lead PII in
+  `web_quote_requests` stays unreadable (0 rows — no anon SELECT policy)
+  and archived-row filtering works.
+- These `web_*` tables have **no `updated_at` trigger** (unlike most of
+  this schema) — every marketing server action stamps `updated_at` by
+  hand. `lib/supabase/types.ts` was stale (missing `web_products`/
+  `web_productmodifier` entirely) and was hand-patched, not regenerated.
+
+## D052
+
+**A `"use server"` file may only export async functions — a const
+export passes `tsc` but 500s at runtime (2026-07-24).** Caught during
+D051 verification: `SETTABLE_STATUSES` (a `const … as const` array) was
+exported from the Marketing quote-requests `actions.ts`, and every visit
+to the quote-request detail page threw *"A 'use server' file can only
+export async functions, found object"* — but `npx tsc --noEmit` passed
+clean, because the error only surfaces when the route's server-action
+loader module evaluates. Fixed by moving the constant to a plain sibling
+`statuses.ts`. Type-only exports (`export type ActionResult`) are fine —
+they're erased before the loader sees them, which is why the existing
+`actions.ts` files across the repo get away with them. **Rule: keep
+shared runtime constants a server-action file needs in a plain sibling
+module, and always run `npx next build` (not just `tsc`) before treating
+a new server-action module as verified** — `next build` catches this
+class of error, `tsc` does not. See
+`feedback_use_server_only_async_exports` memory.
