@@ -392,6 +392,8 @@ const CRUMB_LABELS: Record<string, string> = {
   "items-for-review": "Items for Review",
   "product-bom": "Product BOM",
   faqs: "FAQs",
+  review: "Pending Review",
+  journal: "Journal Entries",
 };
 
 /** Intermediate route segments with no page.tsx behind them — rendered as text, never links. */
