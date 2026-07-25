@@ -55,7 +55,7 @@ export default async function ConfirmedOrderDetailPage({
 
   const customer = firstOf(order.customers);
 
-  const canAdvance = role === "admin" && order.status === "confirmed";
+  const canAdvance = ["admin", "manager"].includes(role) && order.status === "confirmed";
   const canOverrideReservedQty = ["admin", "manager", "encoder"].includes(role) && order.status === "confirmed";
   const canCancel = role === "admin" && order.status === "confirmed";
   const canHold = role === "admin" && order.status === "confirmed";

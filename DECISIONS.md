@@ -1490,3 +1490,34 @@ module, and always run `npx next build` (not just `tsc`) before treating
 a new server-action module as verified** — `next build` catches this
 class of error, `tsc` does not. See
 `feedback_use_server_only_async_exports` memory.
+
+## D053
+
+**Widened "Start Production" and "Complete Production Order" from
+admin-only to admin/manager (2026-07-25).** D028 gated Completed Qty
+entry (and the later PS-2/PS-3 `start_production()`/
+`complete_production_order()` RPCs it evolved into) to admin-only,
+explicitly leaving "widening to admin+manager … as an explicit,
+separate follow-up if still wanted." Sinag has now asked for that
+follow-up from the Roles admin page. Changed both `SECURITY DEFINER`
+RPCs' internal role check (`v_role <> 'admin'` →
+`v_role not in ('admin','manager')`) via `CREATE OR REPLACE FUNCTION`
+(same signature, no new overload) and mirrored it in the three
+UI-side gates that read `current_user_role()`-equivalent page props:
+`canAdvance` on both the Confirmed and Active Orders detail pages, and
+`canComplete` on the Production Order detail page.
+`start_production_order()` (per-Production-Order "Start", moving
+`not_started → wip`) and `cancel_production_order()` were already
+admin/manager/encoder and needed no change — only the order-level
+"Start Production" (Confirmed → In Production) and per-Production-Order
+"Mark as Complete" were admin-only. Verified the new role gate directly
+against the RPCs pre-deploy via a rolled-back `set local
+request.jwt.claims` transaction against an existing manager profile
+(`manager@sinagukit.demo`), per this project's established RLS-testing
+convention — both calls passed the role check and failed only on the
+placeholder UUID not existing, confirming the gate change without any
+live side effects. The Roles admin page's Permission Matrix and role
+cards (`app/dashboard/administration/roles/page.tsx`) were updated to
+match — that page is a hand-maintained static summary of live RLS/RPC
+behavior, not a generated one, so it drifts if a role-gate change like
+this doesn't also update it by hand.

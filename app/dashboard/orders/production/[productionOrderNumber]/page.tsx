@@ -91,7 +91,7 @@ export default async function ProductionOrderDetailPage({
   const isActive = status === "not_started" || status === "wip" || status === "partially_completed";
 
   const canStart = isWritableRole && status === "not_started";
-  const canComplete = role === "admin" && isActive;
+  const canComplete = ["admin", "manager"].includes(role) && isActive;
   const canAddCompletedQty = isWritableRole && (status === "wip" || status === "partially_completed");
   const canCancel = isWritableRole && isActive;
 

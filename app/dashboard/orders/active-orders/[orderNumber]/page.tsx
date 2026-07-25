@@ -109,7 +109,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ or
   const canEdit =
     ["admin", "manager", "encoder"].includes(role) &&
     ["confirmed", "in_production", "partially_completed", "production_completed"].includes(order.status);
-  const canAdvance = role === "admin" && order.status === "confirmed";
+  const canAdvance = ["admin", "manager"].includes(role) && order.status === "confirmed";
   const canOverrideReservedQty = ["admin", "manager", "encoder"].includes(role) && order.status === "confirmed";
   const canAddPayment = ["admin", "manager", "encoder"].includes(role) && order.status !== "cancelled";
   const canClosePayment = ["admin", "manager", "encoder"].includes(role) && order.status !== "cancelled";

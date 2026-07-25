@@ -19,7 +19,7 @@ const ROLE_DEFS: {
       "Manage users & roles (invite, edit, deactivate)",
       "Full create, edit, and delete on business records",
       "View all activity logs (every user)",
-      "Only role that can advance orders past Confirmed (Start/Complete Production)",
+      "Can advance orders past Confirmed and complete Production Orders",
     ],
     badge: "danger",
   },
@@ -31,7 +31,7 @@ const ROLE_DEFS: {
       "Create & edit suppliers, purchase orders, quotes, orders",
       "Delete suppliers and purchase orders",
       "View all activity logs (every user)",
-      "Cannot manage users/roles or advance production past Confirmed",
+      "Can advance orders past Confirmed and complete Production Orders",
     ],
     badge: "warning",
   },
@@ -86,7 +86,7 @@ const MATRIX: { capability: string; allowed: Record<(typeof MATRIX_ROLES)[number
   },
   {
     capability: "Start / Complete Production",
-    allowed: { admin: true, manager: false, encoder: false, cashier: false, viewer: false },
+    allowed: { admin: true, manager: true, encoder: false, cashier: false, viewer: false },
   },
   {
     capability: "View all Activity Logs (not just own)",
