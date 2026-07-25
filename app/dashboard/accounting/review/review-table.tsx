@@ -21,6 +21,7 @@ export type ReviewRow = {
 export const EVENT_TYPE_LABELS: Record<string, string> = {
   sale_recognized: "Sale Recognized",
   cogs: "COGS",
+  shipment_shipping_cost: "Shipping",
   purchase_received: "Purchase Received",
   manual_incoming: "Manual Incoming",
   inventory_adjustment_gain: "Inventory Adjustment (Gain)",
