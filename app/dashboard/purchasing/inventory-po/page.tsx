@@ -22,7 +22,7 @@ export default async function PurchaseOrdersPage({ searchParams }: { searchParam
   let query = supabase
     .from("purchase_orders")
     .select(
-      "id, reference, status, order_date, expected_date, total, suppliers(name), purchase_order_items(id)"
+      "id, reference, status, order_date, expected_date, total, platform_source, suppliers(name), purchase_order_items(id)"
     )
     .eq("po_type", "inventory");
   if (from) query = query.gte("order_date", from);
@@ -41,6 +41,7 @@ export default async function PurchaseOrdersPage({ searchParams }: { searchParam
       total: po.total,
       supplier_name: supplier?.name ?? "Unknown supplier",
       item_count: po.purchase_order_items?.length ?? 0,
+      platform_source: po.platform_source,
     };
   });
 

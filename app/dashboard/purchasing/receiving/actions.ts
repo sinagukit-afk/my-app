@@ -28,8 +28,10 @@ export async function createManualIncomingWithItems(formData: FormData): Promise
   const date_received = (formData.get('date_received') as string)?.trim()
   const notes = (formData.get('notes') as string)?.trim() || null
   const shipping_fee = Number(formData.get('shipping_fee') ?? 0) || 0
+  const platform_source = (formData.get('platform_source') as string)?.trim() || null
 
   if (!date_received) return { success: false, error: 'Date received is required.' }
+  if (!platform_source) return { success: false, error: 'Select a platform source.' }
 
   let items: NewIncomingItemInput[] = []
   try {
@@ -65,6 +67,7 @@ export async function createManualIncomingWithItems(formData: FormData): Promise
       date_received,
       supplier_id,
       supplier: supplierText,
+      platform_source,
       source: 'manual',
       received_by: user.id,
       received_by_email: user.email ?? null,

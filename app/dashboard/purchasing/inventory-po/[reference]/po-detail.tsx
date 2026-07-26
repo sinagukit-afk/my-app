@@ -24,6 +24,7 @@ import { Select } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { ItemForm, type VariantOption } from "./item-form";
+import { PLATFORM_SOURCE_OPTIONS, platformSourceLabel } from "../../platform-source";
 import {
   updatePurchaseOrderHeader,
   setPurchaseOrderStatus,
@@ -45,6 +46,7 @@ export type PurchaseOrderDetailData = {
   note: string | null;
   supplier_id: string;
   supplier_name: string;
+  platform_source: string | null;
 };
 
 export type PurchaseOrderItemRow = {
@@ -233,7 +235,7 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
     <div className="space-y-6">
       <PageHeader
         title={po.reference}
-        description={`Supplier: ${po.supplier_name}`}
+        description={`Supplier: ${po.supplier_name} · Platform: ${platformSourceLabel(po.platform_source)}`}
         backHref="/dashboard/purchasing/inventory-po"
         backLabel="Back to Inventory PO"
         actions={
@@ -374,13 +376,23 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
                 <DialogDescription>Update this order&apos;s header details.</DialogDescription>
               </DialogHeader>
 
-              <Select
-                label="Supplier"
-                name="supplier_id"
-                defaultValue={po.supplier_id}
-                options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
-                required
-              />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Select
+                  label="Supplier"
+                  name="supplier_id"
+                  defaultValue={po.supplier_id}
+                  options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+                  required
+                />
+                <Select
+                  label="Platform Source"
+                  name="platform_source"
+                  placeholder="Select a platform…"
+                  defaultValue={po.platform_source ?? ""}
+                  options={PLATFORM_SOURCE_OPTIONS}
+                  required
+                />
+              </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <DatePicker label="Order Date" name="order_date" defaultValue={po.order_date} required />
                 <DatePicker label="Expected Date" name="expected_date" defaultValue={po.expected_date ?? ""} />

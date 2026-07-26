@@ -24,7 +24,7 @@ export default async function AssetPurchaseOrderPage({ params }: { params: Param
   const { data: po, error } = await supabase
     .from("purchase_orders")
     .select(
-      "id, reference, status, order_date, expected_date, subtotal, shipping_fee, discount_amount, total, note, supplier_id, suppliers(name)"
+      "id, reference, status, order_date, expected_date, subtotal, shipping_fee, discount_amount, total, note, supplier_id, platform_source, suppliers(name)"
     )
     .eq("reference", reference)
     .eq("po_type", "asset")
@@ -61,6 +61,7 @@ export default async function AssetPurchaseOrderPage({ params }: { params: Param
     note: po.note,
     supplier_id: po.supplier_id,
     supplier_name: supplier?.name ?? "—",
+    platform_source: po.platform_source,
   };
 
   const items: AssetPOItemRow[] = (itemsData ?? []).map((it) => {

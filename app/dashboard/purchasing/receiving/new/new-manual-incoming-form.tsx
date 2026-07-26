@@ -22,6 +22,7 @@ import { manualIncomingSchema } from "@/lib/ai-autofill/schemas";
 import { toIsoDate } from "@/lib/ai-autofill/normalize-date";
 import type { DropdownOptionsByField, ExtractionResult } from "@/lib/ai-autofill/types";
 import { formatCurrency, roundMoney } from "@/lib/utils/format";
+import { PLATFORM_SOURCE_OPTIONS } from "../../platform-source";
 
 export type VariantOption = {
   id: string;
@@ -93,14 +94,18 @@ export function NewManualIncomingForm({ suppliers, variantOptions }: Props) {
   const [costWarningNotice, setCostWarningNotice] = useState<string | null>(null);
 
   const [supplierId, setSupplierId] = useState("");
+  const [platformSource, setPlatformSource] = useState("");
   const [dateReceived, setDateReceived] = useState(new Date().toISOString().slice(0, 10));
   const [shippingFee, setShippingFee] = useState("0");
   const [note, setNote] = useState("");
   const { aiFilledKeys, markFilled, clear: clearAiField } = useAiFilledKeys();
 
-  const initialSnapshot = useRef(JSON.stringify({ rows, supplierId, dateReceived, shippingFee, note }));
+  const initialSnapshot = useRef(
+    JSON.stringify({ rows, supplierId, platformSource, dateReceived, shippingFee, note })
+  );
   const isDirty =
-    JSON.stringify({ rows, supplierId, dateReceived, shippingFee, note }) !== initialSnapshot.current;
+    JSON.stringify({ rows, supplierId, platformSource, dateReceived, shippingFee, note }) !==
+    initialSnapshot.current;
   useRegisterUnsavedChanges(isDirty);
 
   function updateRow(rowId: string, patch: Partial<ItemRow>) {
@@ -271,7 +276,7 @@ export function NewManualIncomingForm({ suppliers, variantOptions }: Props) {
           <CardTitle>Receipt Details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <AiFieldHighlight active={aiFilledKeys.has("supplier_id")}>
               <Select
                 label="Supplier (optional)"
@@ -285,6 +290,17 @@ export function NewManualIncomingForm({ suppliers, variantOptions }: Props) {
                 options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
               />
             </AiFieldHighlight>
+            <Select
+              label="Platform Source"
+              name="platform_source"
+              placeholder="Select a platform…"
+              value={platformSource}
+              onChange={(e) => setPlatformSource(e.target.value)}
+              options={PLATFORM_SOURCE_OPTIONS}
+              required
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <AiFieldHighlight active={aiFilledKeys.has("date_received")}>
               <DatePicker
                 label="Date Received"

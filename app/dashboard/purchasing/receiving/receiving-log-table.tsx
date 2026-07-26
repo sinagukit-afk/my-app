@@ -7,6 +7,7 @@ import { FilterBar } from "@/components/business/filter-bar";
 import { DateRangeFilter } from "@/components/business/date-range-filter";
 import { formatDate } from "@/lib/utils/format-date";
 import { formatQty, formatCurrency } from "@/lib/utils/format";
+import { platformSourceLabel } from "../platform-source";
 
 export type ReceivingLogRow = {
   id: string;
@@ -24,6 +25,7 @@ export type ReceivingLogRow = {
   notes: string | null;
   received_by_email: string | null;
   payment_status: "unpaid" | "partial" | "paid";
+  platform_source: string | null;
 };
 
 const PAYMENT_STATUS_VARIANT: Record<ReceivingLogRow["payment_status"], "danger" | "warning" | "success"> = {
@@ -127,6 +129,16 @@ export function ReceivingLogTable({ data, from, to }: Props) {
       render: (value) =>
         value ? (
           <span>{String(value)}</span>
+        ) : (
+          <span className="text-(--color-text-subtle)">—</span>
+        ),
+    },
+    {
+      key: "platform_source",
+      header: "Platform",
+      render: (value) =>
+        value ? (
+          <span>{platformSourceLabel(value as string)}</span>
         ) : (
           <span className="text-(--color-text-subtle)">—</span>
         ),

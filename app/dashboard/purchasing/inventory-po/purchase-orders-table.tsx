@@ -11,6 +11,7 @@ import { FilterBar } from "@/components/business/filter-bar";
 import { DateRangeFilter } from "@/components/business/date-range-filter";
 import { formatDate } from "@/lib/utils/format-date";
 import { formatCurrency } from "@/lib/utils/format";
+import { platformSourceLabel } from "../platform-source";
 
 export type PurchaseOrderRow = {
   id: string;
@@ -21,6 +22,7 @@ export type PurchaseOrderRow = {
   total: number;
   supplier_name: string;
   item_count: number;
+  platform_source: string | null;
 };
 
 type Props = {
@@ -70,6 +72,12 @@ export function PurchaseOrdersTable({ data, canWrite, from, to }: Props) {
       key: "supplier_name",
       header: "Supplier",
       sortable: true,
+    },
+    {
+      key: "platform_source",
+      header: "Platform",
+      sortable: true,
+      render: (value) => platformSourceLabel(value as string | null),
     },
     {
       key: "status",

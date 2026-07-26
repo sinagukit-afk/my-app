@@ -31,7 +31,7 @@ export default async function ReceivingPage({ searchParams }: { searchParams: Se
   let logQuery = supabase
     .from("incoming_items")
     .select(
-      "id, reference, date_received, item_name_snapshot, variant_id, quantity, unit_price, total_price, shipping_fee, supplier_id, supplier, notes, received_by_email, payment_status, item_variants(option1_value, option2_value), suppliers(name), purchase_orders(reference)"
+      "id, reference, date_received, item_name_snapshot, variant_id, quantity, unit_price, total_price, shipping_fee, supplier_id, supplier, platform_source, notes, received_by_email, payment_status, item_variants(option1_value, option2_value), suppliers(name), purchase_orders(reference)"
     );
   if (from) logQuery = logQuery.gte("date_received", from);
   if (to) logQuery = logQuery.lte("date_received", to);
@@ -97,6 +97,7 @@ export default async function ReceivingPage({ searchParams }: { searchParams: Se
       notes: row.notes ?? null,
       received_by_email: row.received_by_email ?? null,
       payment_status: row.payment_status,
+      platform_source: row.platform_source,
     };
   });
 

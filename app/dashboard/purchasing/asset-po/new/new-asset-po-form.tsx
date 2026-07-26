@@ -22,6 +22,7 @@ import { supplierInvoiceSchema } from "@/lib/ai-autofill/schemas";
 import { toIsoDate } from "@/lib/ai-autofill/normalize-date";
 import type { DropdownOptionsByField, ExtractionResult } from "@/lib/ai-autofill/types";
 import { formatCurrency } from "@/lib/utils/format";
+import { PLATFORM_SOURCE_OPTIONS } from "../../platform-source";
 
 type SupplierOption = { id: string; name: string };
 type CategoryOption = { id: string; name: string };
@@ -57,14 +58,17 @@ export function NewAssetPurchaseOrderForm({ suppliers, categories }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const [supplierId, setSupplierId] = useState("");
+  const [platformSource, setPlatformSource] = useState("");
   const [orderDate, setOrderDate] = useState(new Date().toISOString().slice(0, 10));
   const [shippingFee, setShippingFee] = useState("0");
   const [note, setNote] = useState("");
   const { aiFilledKeys, markFilled, clear: clearAiField } = useAiFilledKeys();
 
-  const initialSnapshot = useRef(JSON.stringify({ rows, supplierId, orderDate, shippingFee, note }));
+  const initialSnapshot = useRef(
+    JSON.stringify({ rows, supplierId, platformSource, orderDate, shippingFee, note })
+  );
   const isDirty =
-    JSON.stringify({ rows, supplierId, orderDate, shippingFee, note }) !== initialSnapshot.current;
+    JSON.stringify({ rows, supplierId, platformSource, orderDate, shippingFee, note }) !== initialSnapshot.current;
   useRegisterUnsavedChanges(isDirty);
 
   function updateRow(rowId: string, patch: Partial<ItemRow>) {
@@ -206,19 +210,30 @@ export function NewAssetPurchaseOrderForm({ suppliers, categories }: Props) {
           <CardTitle>Order Details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <AiFieldHighlight active={aiFilledKeys.has("supplier_id")}>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <AiFieldHighlight active={aiFilledKeys.has("supplier_id")}>
+              <Select
+                label="Supplier (optional)"
+                name="supplier_id"
+                placeholder="Select a supplier…"
+                value={supplierId}
+                onChange={(e) => {
+                  setSupplierId(e.target.value);
+                  clearAiField("supplier_id");
+                }}
+                options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+              />
+            </AiFieldHighlight>
             <Select
-              label="Supplier (optional)"
-              name="supplier_id"
-              placeholder="Select a supplier…"
-              value={supplierId}
-              onChange={(e) => {
-                setSupplierId(e.target.value);
-                clearAiField("supplier_id");
-              }}
-              options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+              label="Platform Source"
+              name="platform_source"
+              placeholder="Select a platform…"
+              value={platformSource}
+              onChange={(e) => setPlatformSource(e.target.value)}
+              options={PLATFORM_SOURCE_OPTIONS}
+              required
             />
-          </AiFieldHighlight>
+          </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <AiFieldHighlight active={aiFilledKeys.has("order_date")}>
               <DatePicker

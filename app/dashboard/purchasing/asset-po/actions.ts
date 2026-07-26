@@ -26,6 +26,9 @@ export async function createAssetPurchaseOrder(formData: FormData): Promise<Crea
   const expected_date = (formData.get('expected_date') as string)?.trim() || null
   const shipping_fee = Number(formData.get('shipping_fee') ?? 0) || 0
   const note = (formData.get('note') as string)?.trim() || null
+  const platform_source = (formData.get('platform_source') as string)?.trim() || null
+
+  if (!platform_source) return { success: false, error: 'Select a platform source.' }
 
   let items: NewItemInput[] = []
   try {
@@ -51,7 +54,16 @@ export async function createAssetPurchaseOrder(formData: FormData): Promise<Crea
 
   const { data: po, error } = await supabase
     .from('purchase_orders')
-    .insert({ po_type: 'asset', supplier_id, order_date, expected_date, shipping_fee, note, created_by: user?.id ?? null })
+    .insert({
+      po_type: 'asset',
+      supplier_id,
+      order_date,
+      expected_date,
+      shipping_fee,
+      note,
+      platform_source,
+      created_by: user?.id ?? null,
+    })
     .select('id, reference')
     .single()
 
@@ -88,6 +100,9 @@ export async function updateAssetPurchaseOrderHeader(
   const expected_date = (formData.get('expected_date') as string)?.trim() || null
   const shipping_fee = Number(formData.get('shipping_fee') ?? 0) || 0
   const note = (formData.get('note') as string)?.trim() || null
+  const platform_source = (formData.get('platform_source') as string)?.trim() || null
+
+  if (!platform_source) return { success: false, error: 'Select a platform source.' }
 
   const supabase = await createClient()
 
@@ -103,7 +118,7 @@ export async function updateAssetPurchaseOrderHeader(
 
   const { error } = await supabase
     .from('purchase_orders')
-    .update({ supplier_id, order_date, expected_date, shipping_fee, total, note })
+    .update({ supplier_id, order_date, expected_date, shipping_fee, total, note, platform_source })
     .eq('id', id)
 
   if (error) return { success: false, error: error.message }

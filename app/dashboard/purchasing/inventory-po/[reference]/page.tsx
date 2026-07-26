@@ -26,7 +26,7 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
   const { data: po, error } = await supabase
     .from("purchase_orders")
     .select(
-      "id, reference, status, payment_status, order_date, expected_date, subtotal, shipping_fee, discount_amount, total, note, supplier_id, suppliers(name)"
+      "id, reference, status, payment_status, order_date, expected_date, subtotal, shipping_fee, discount_amount, total, note, supplier_id, platform_source, suppliers(name)"
     )
     .eq("reference", reference)
     .single();
@@ -98,6 +98,7 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
     note: po.note,
     supplier_id: po.supplier_id,
     supplier_name: supplier?.name ?? "Unknown supplier",
+    platform_source: po.platform_source,
   };
 
   return (
