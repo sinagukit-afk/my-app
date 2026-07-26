@@ -453,3 +453,58 @@ sortable columns, or `rowHref`.
 draft→sent→cancel lifecycle test), cancelled Inventory PO `SPO26-0719-0012` (Open POs
 table rowHref/formatDate test), cancelled Asset PO `SPO26-0719-0013` (discount-clamp +
 useful-life-validation test).
+
+## PUR-5 — Platform Source field (Inventory/Expense/Asset PO + Manual Incoming) + Supplier-select blank-option fix ✅ DONE
+
+**2026-07-26.** Commit `90adca8`, pushed to `origin/main`. User-requested field to track
+which sales channel a purchase was made through, plus a bug fix surfaced while building it.
+
+**Ask (Sinag):** add a "Platform Source" dropdown (Shopee / Lazada / FB Page / FB
+Marketplace / Physical Store / Others) to Inventory PO's New Purchase Order screen, then
+"do the same" on Expense PO and Asset PO, then "update also the manual log incoming."
+Also fix a pre-existing bug flagged along the way: the Expense/Asset PO Edit dialog's
+optional Supplier `<select>` had no blank placeholder option, so editing a PO that was
+created with no supplier silently pre-selected the first supplier in the list — saving
+without touching that field would incorrectly assign one.
+
+**Schema (2 additive migrations, both nullable `text` + `CHECK (... = ANY (ARRAY[...]))`
+against the same 6-value set — same pattern as `purchase_orders.status`/`payment_status`):**
+- `purchase_orders.platform_source` — shared by all three `po_type`s (`inventory`/
+  `expense`/`asset`), since it's one physical table.
+- `incoming_items.platform_source` — separate column on the separate table Manual
+  Incoming actually writes to (no shared header row there, one column per line item,
+  same as `supplier_id`/`notes`/`date_received`).
+
+**App changes:**
+- `app/dashboard/purchasing/platform-source.ts` (new, plain module — not in any
+  `actions.ts`, per the standing "use server = async exports only" rule) — the shared
+  `PLATFORM_SOURCE_OPTIONS` list and `platformSourceLabel()` helper, imported by all four
+  surfaces below. Originally written inside `inventory-po/` for the first-requested
+  screen, then hoisted up to `purchasing/` once Expense/Asset PO needed it too.
+- **Inventory PO** (`new-po-form.tsx`, `[reference]/po-detail.tsx` incl. Edit dialog,
+  `purchase-orders-table.tsx`) — required field, next to Supplier.
+- **Expense PO** / **Asset PO** (identical file shape) — same required field; placed next
+  to the existing optional Supplier field. Edit dialog's Supplier `<select>` gained
+  `placeholder="Select a supplier…"` in the same pass as the Platform field (the fix
+  above) — both PO types shared the same missing-placeholder bug since they're
+  near-duplicate files.
+- **Manual Incoming** (`receiving/new/new-manual-incoming-form.tsx`, `receiving/actions.ts`,
+  `receiving-log-table.tsx`) — same required field on the create form; shown as a new
+  "Platform" column in the Receiving Log (blank for PO-sourced rows, which don't carry a
+  platform — only Manual writes this column).
+- List tables for all three PO types plus the Receiving Log each gained a sortable
+  "Platform" column.
+
+**Verification (browser preview, Claude admin test account):** for each of the four
+surfaces (Inventory PO, Expense PO, Asset PO, Manual Incoming) — created a real record
+with a platform selected, confirmed the value persisted via direct SQL, confirmed it
+displayed correctly on the detail/log view and the list table, then edited it to a
+different platform via the Edit dialog (PO types only) and confirmed the update
+persisted. Separately verified the Supplier-select fix: created an Expense PO and an
+Asset PO with no supplier, opened Edit, confirmed the Supplier field now shows the blank
+"Select a supplier…" placeholder as selected (not the first real supplier), saved without
+touching it, and confirmed `supplier_id` stayed `null` in the DB for both. All test
+purchase orders/incoming items/inventory movements created during verification were
+deleted afterward (including reversing the one stock-level bump from the Manual Incoming
+test) — no residue left in the test database. `npx tsc --noEmit` clean throughout;
+`get_advisors(security)` showed no new findings on either touched table.
