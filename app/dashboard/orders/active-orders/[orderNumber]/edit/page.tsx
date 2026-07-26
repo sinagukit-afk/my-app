@@ -22,7 +22,7 @@ export default async function EditOrderPage({ params }: { params: Promise<{ orde
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id, status, customer_id, note, order_date, target_date")
+    .select("id, status, customer_id, note, order_date, target_date, order_source")
     .eq("order_number", orderNumber)
     .single();
 
@@ -115,6 +115,7 @@ export default async function EditOrderPage({ params }: { params: Promise<{ orde
       note={order.note}
       orderDate={order.order_date}
       targetDate={order.target_date}
+      orderSource={order.order_source}
       initialRows={initialRows}
       customers={customers}
       variantOptions={variantOptions}

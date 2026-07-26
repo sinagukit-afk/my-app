@@ -19,7 +19,7 @@ export default async function EditQuotePage({ params }: { params: Promise<{ quot
 
   const { data: quote } = await supabase
     .from("quotes")
-    .select("id, status, valid_until, customer_id, note, quote_date, created_by")
+    .select("id, status, valid_until, customer_id, note, quote_date, order_source, created_by")
     .eq("quote_number", quoteNumber)
     .single();
 
@@ -110,6 +110,7 @@ export default async function EditQuotePage({ params }: { params: Promise<{ quot
       note={quote.note}
       quoteDate={quote.quote_date}
       validUntil={quote.valid_until}
+      orderSource={quote.order_source}
       initialRows={initialRows}
       customers={customers}
       variantOptions={variantOptions}

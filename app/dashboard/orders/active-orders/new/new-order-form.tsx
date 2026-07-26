@@ -10,6 +10,7 @@ import { TextArea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { createOrder } from "../actions";
+import { ORDER_SOURCE_OPTIONS } from "../../order-source";
 import {
   OrderLineItemsEditor,
   emptyOrderRow,
@@ -106,12 +107,21 @@ export function NewOrderForm({ customers, variantOptions, discounts, modifierGro
           <CardTitle>Order Details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Select
-            label="Customer"
-            name="customer_id"
-            placeholder="Walk-in customer"
-            options={customers.map((c) => ({ value: c.id, label: c.name }))}
-          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Select
+              label="Customer"
+              name="customer_id"
+              placeholder="Walk-in customer"
+              options={customers.map((c) => ({ value: c.id, label: c.name }))}
+            />
+            <Select
+              label="Order Source"
+              name="order_source"
+              placeholder="Select a source…"
+              options={ORDER_SOURCE_OPTIONS}
+              required
+            />
+          </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <DatePicker label="Order Date" value={orderDate} onChange={(e) => handleOrderDateChange(e.target.value)} />
             <DatePicker label="Target Date" value={targetDate} onChange={(e) => handleTargetDateChange(e.target.value)} />

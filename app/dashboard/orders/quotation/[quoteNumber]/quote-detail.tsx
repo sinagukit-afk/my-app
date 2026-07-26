@@ -21,6 +21,7 @@ import {
 import { convertQuote, cancelQuote } from "../actions";
 import { formatDate, formatDateTime } from "@/lib/utils/format-date";
 import { formatCurrency } from "@/lib/utils/format";
+import { orderSourceLabel } from "../../order-source";
 
 export type QuoteDetailItem = {
   id: string;
@@ -39,6 +40,7 @@ export type QuoteDetailData = {
   effectiveStatus: string;
   quoteDate: string;
   validUntil: string;
+  orderSource: string | null;
   note: string | null;
   cancellationReason: string | null;
   cancelledAt: string | null;
@@ -126,7 +128,7 @@ export function QuoteDetail({ data, logs }: { data: QuoteDetailData; logs: Activ
     <div className="space-y-6">
       <PageHeader
         title={data.quoteNumber}
-        description={`Quote Date ${formatDate(data.quoteDate)} · Valid Until ${formatDate(data.validUntil)}`}
+        description={`Quote Date ${formatDate(data.quoteDate)} · Valid Until ${formatDate(data.validUntil)} · Source: ${orderSourceLabel(data.orderSource)}`}
         backHref="/dashboard/orders/quotation"
         backLabel="Back to Quotation"
         actions={

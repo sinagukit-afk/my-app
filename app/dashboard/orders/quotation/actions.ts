@@ -15,7 +15,8 @@ function readQuoteFields(formData: FormData) {
   const note = (formData.get('note') as string)?.trim() || null
   const quote_date = (formData.get('quote_date') as string) || new Date().toISOString().slice(0, 10)
   const valid_until = (formData.get('valid_until') as string) || null
-  return { customer_id, note, quote_date, valid_until }
+  const order_source = (formData.get('order_source') as string)?.trim() || null
+  return { customer_id, note, quote_date, valid_until, order_source }
 }
 
 function readItems(formData: FormData): ResolvedQuoteLine[] {
@@ -79,7 +80,7 @@ async function insertItemsAndModifiers(
 }
 
 export async function createQuoteWithItems(formData: FormData): Promise<CreateResult> {
-  const { customer_id, note, quote_date, valid_until } = readQuoteFields(formData)
+  const { customer_id, note, quote_date, valid_until, order_source } = readQuoteFields(formData)
   const items = readItems(formData)
 
   if (items.length === 0) {
@@ -87,6 +88,9 @@ export async function createQuoteWithItems(formData: FormData): Promise<CreateRe
   }
   if (!valid_until) {
     return { success: false, error: 'Valid Until date is required.' }
+  }
+  if (!order_source) {
+    return { success: false, error: 'Select an order source.' }
   }
 
   const { subtotal, total_discount } = computeTotals(items)
@@ -104,6 +108,7 @@ export async function createQuoteWithItems(formData: FormData): Promise<CreateRe
       note,
       quote_date,
       valid_until,
+      order_source,
       subtotal,
       total_discount,
       total_tax: 0,
@@ -133,7 +138,7 @@ export async function createQuoteWithItems(formData: FormData): Promise<CreateRe
 }
 
 export async function updateQuoteWithItems(quoteId: string, formData: FormData): Promise<ActionResult> {
-  const { customer_id, note, quote_date, valid_until } = readQuoteFields(formData)
+  const { customer_id, note, quote_date, valid_until, order_source } = readQuoteFields(formData)
   const items = readItems(formData)
 
   if (items.length === 0) {
@@ -141,6 +146,9 @@ export async function updateQuoteWithItems(quoteId: string, formData: FormData):
   }
   if (!valid_until) {
     return { success: false, error: 'Valid Until date is required.' }
+  }
+  if (!order_source) {
+    return { success: false, error: 'Select an order source.' }
   }
 
   const { subtotal, total_discount } = computeTotals(items)
@@ -199,7 +207,17 @@ export async function updateQuoteWithItems(quoteId: string, formData: FormData):
 
   const { error: updateError } = await supabase
     .from('quotes')
-    .update({ customer_id, note, quote_date, valid_until, subtotal, total_discount, total_money: subtotal, updated_at: new Date().toISOString() })
+    .update({
+      customer_id,
+      note,
+      quote_date,
+      valid_until,
+      order_source,
+      subtotal,
+      total_discount,
+      total_money: subtotal,
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', quoteId)
 
   if (updateError) return { success: false, error: updateError.message }

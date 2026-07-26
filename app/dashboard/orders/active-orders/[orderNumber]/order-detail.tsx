@@ -35,6 +35,7 @@ import {
 import { OrderPayments, type OrderPaymentRow } from "./order-payments";
 import { formatDate, formatDateTime } from "@/lib/utils/format-date";
 import { formatCurrency } from "@/lib/utils/format";
+import { orderSourceLabel } from "../../order-source";
 
 export type OrderDetailItem = {
   id: string;
@@ -57,6 +58,7 @@ export type OrderDetailData = {
   note: string | null;
   orderDate: string;
   targetDate: string;
+  orderSource: string | null;
   createdAt: string;
   subtotal: number;
   totalDiscount: number;
@@ -210,7 +212,7 @@ export function OrderDetail({ data, logs }: { data: OrderDetailData; logs: Activ
     <div className="space-y-6">
       <PageHeader
         title={data.orderNumber}
-        description={`Order Date ${formatDate(data.orderDate)} · Target Date ${formatDate(data.targetDate)}`}
+        description={`Order Date ${formatDate(data.orderDate)} · Target Date ${formatDate(data.targetDate)} · Source: ${orderSourceLabel(data.orderSource)}`}
         backHref="/dashboard/orders/active-orders"
         backLabel="Back to Orders"
         actions={

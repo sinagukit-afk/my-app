@@ -36,9 +36,14 @@ export async function createOrder(formData: FormData): Promise<ActionResult> {
   const order_date = (formData.get('order_date') as string) || null
   const target_date = formData.get('target_date') as string
   const fulfillment_method = (formData.get('fulfillment_method') as string) || null
+  const order_source = (formData.get('order_source') as string)?.trim() || null
 
   if (!target_date) {
     return { success: false, error: 'Target date is required.' }
+  }
+
+  if (!order_source) {
+    return { success: false, error: 'Select an order source.' }
   }
 
   if (!same_as_customer && !receiver_name) {
@@ -77,6 +82,7 @@ export async function createOrder(formData: FormData): Promise<ActionResult> {
       ? null
       : (formData.get('receiver_postal_code') as string)?.trim() || null,
     p_fulfillment_method: fulfillment_method,
+    p_order_source: order_source,
   })
 
   if (error) return { success: false, error: error.message }
@@ -94,6 +100,11 @@ export async function adjustOrderItems(orderId: string, formData: FormData): Pro
   const fulfillment_method = (formData.get('fulfillment_method') as string) || null
   const order_date = (formData.get('order_date') as string) || null
   const target_date = (formData.get('target_date') as string) || null
+  const order_source = (formData.get('order_source') as string)?.trim() || null
+
+  if (!order_source) {
+    return { success: false, error: 'Select an order source.' }
+  }
 
   if (!same_as_customer && !receiver_name) {
     return { success: false, error: 'Receiver name is required when shipping to someone other than the customer.' }
@@ -132,6 +143,7 @@ export async function adjustOrderItems(orderId: string, formData: FormData): Pro
       ? null
       : (formData.get('receiver_postal_code') as string)?.trim() || null,
     p_fulfillment_method: fulfillment_method,
+    p_order_source: order_source,
   })
 
   if (error) return { success: false, error: error.message }

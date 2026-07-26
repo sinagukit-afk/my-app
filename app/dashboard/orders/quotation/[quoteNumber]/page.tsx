@@ -24,7 +24,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ qu
   const { data: quote } = await supabase
     .from("quotes")
     .select(
-      "id, quote_number, status, quote_date, valid_until, note, cancellation_reason, cancelled_at, created_by, converted_order_id, converted_at, subtotal, total_discount, total_money, customers(id, name, phone_number, email, address_line1, barangay, city, province), quote_items(id, item_name_snapshot, sku_snapshot, quantity, unit_price, discount_id, line_discount, quote_item_modifiers(name_snapshot, price_snapshot))"
+      "id, quote_number, status, quote_date, valid_until, note, order_source, cancellation_reason, cancelled_at, created_by, converted_order_id, converted_at, subtotal, total_discount, total_money, customers(id, name, phone_number, email, address_line1, barangay, city, province), quote_items(id, item_name_snapshot, sku_snapshot, quantity, unit_price, discount_id, line_discount, quote_item_modifiers(name_snapshot, price_snapshot))"
     )
     .eq("quote_number", quoteNumber)
     .single();
@@ -72,6 +72,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ qu
     effectiveStatus,
     quoteDate: quote.quote_date,
     validUntil: quote.valid_until,
+    orderSource: quote.order_source,
     note: quote.note,
     cancellationReason: quote.cancellation_reason,
     cancelledAt: quote.cancelled_at,
