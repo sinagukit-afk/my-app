@@ -508,3 +508,54 @@ purchase orders/incoming items/inventory movements created during verification w
 deleted afterward (including reversing the one stock-level bump from the Manual Incoming
 test) — no residue left in the test database. `npx tsc --noEmit` clean throughout;
 `get_advisors(security)` showed no new findings on either touched table.
+
+## PUR-6 — Fixed duplicate-key crash on New Purchase Order (`purchase_orders_reference_key`) ✅ DONE
+
+**2026-07-26.** DB-only fix (Supabase migrations `fix_purchase_order_reference_gap_bug` +
+`fix_remaining_number_generator_gap_bugs`), applied directly to the project's Supabase
+instance via MCP — no local `supabase/migrations/` folder exists in this repo, so there is
+no app-code diff/commit for this entry.
+
+**Bug (Sinag-reported):** submitting "Create Purchase Order" on Inventory PO's New PO
+screen failed with `duplicate key value violates unique constraint
+"purchase_orders_reference_key"`.
+
+**Root cause:** `set_purchase_order_reference()` (the `BEFORE INSERT` trigger that assigns
+`SPOYY-MMDD-####`) computed the next sequence number as `count(*) + 1` of existing rows
+matching the year prefix, instead of the actual highest sequence number in use. Any
+`purchase_orders` row deletion — via the page's own Delete action, or the automatic
+rollback in `createPurchaseOrderWithItems()` ([actions.ts:80-83](app/dashboard/purchasing/inventory-po/actions.ts:80))
+when the line-item insert fails — shrinks the row count without freeing the number,
+so the next insert recomputes a sequence that collides with a row still on record. Live
+data confirmed the mechanism exactly: only one 2026 row existed (`SPO26-0726-0002`,
+implying an earlier `...-0001` had been deleted), so the next create attempt computed
+`count(1)+1 = 2` and tried to re-insert `SPO26-0726-0002` — the exact collision in the
+error message.
+
+**Fix:** all 9 `count(*) + 1`-style number/reference generators in the schema shared this
+same flaw, so all were patched the same way — derive `next_seq` from
+`coalesce(max(substring(<col> from '(\d+)$')::int), 0) + 1` instead of a row count, so a
+gap from a deleted row can no longer cause a re-collision. Each function's exact
+attributes (table/column/date-source, `SECURITY DEFINER` presence) were preserved as-is:
+`set_purchase_order_reference` (`purchase_orders.reference`, this bug),
+`set_quote_number` (`quotes.quote_number`, see `PROGRESS-QUOTES.md`),
+`set_order_number` (`orders.order_number`),
+`set_incoming_item_reference` (`incoming_items.reference`, see RECV-1 above),
+`set_shipment_number` (`order_shipments.shipment_number`, see `PROGRESS-PRODUCTION-SHIPPING.md`),
+`set_opex_expense_number` (`opex_expenses.expense_number`),
+`set_journal_number` (`journal_entries.journal_number`, see `PROGRESS-ACCOUNTING.md`),
+`set_production_order_number` (`production_orders.production_order_number`),
+`set_receipt_internal_reference` (`receipts.internal_reference`, keyed off
+`new.receipt_date` rather than `now()` — preserved).
+
+**Verification:**
+- SQL: a rolled-back test insert against `purchase_orders` produced `SPO26-0726-0003`
+  (correctly skipping past the still-existing `0002` row) both before and after fixing an
+  unrelated test-only `platform_source` value mismatch.
+- `get_advisors(security)`: none of the 9 patched functions appear in the output — no new
+  `search_path`/definer-related findings introduced by the fix.
+- Browser (Claude admin test account, live dev server): filled out and submitted a real
+  New Purchase Order (Supplier "E-gosyo", Platform "FB Page", 1 line item — Itm-Ref Magnet
+  Beechwood ATM ×1 @ ₱14). Saved successfully as `SPO26-0726-0003` with no error, appeared
+  correctly in the Inventory PO list and its own detail page. Left in place as labeled real
+  verification data, consistent with this project's standing convention — not deleted.
