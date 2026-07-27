@@ -16,7 +16,7 @@ export default async function NewPurchaseOrderPage() {
   const role = profile?.role ?? "";
   const canWrite = ["admin", "manager", "encoder"].includes(role);
 
-  if (!canWrite) redirect("/dashboard/purchasing/inventory-po");
+  if (!canWrite) redirect("/dashboard/purchasing/purchase-orders");
 
   const { data: supplierData } = await supabase
     .from("suppliers")

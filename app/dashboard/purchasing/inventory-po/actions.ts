@@ -7,6 +7,7 @@ export type ActionResult = { success: true } | { success: false; error: string }
 export type CreateResult = { success: true; reference: string } | { success: false; error: string }
 
 const LIST_PATH = '/dashboard/purchasing/inventory-po'
+const PURCHASE_ORDERS_LIST_PATH = '/dashboard/purchasing/purchase-orders'
 
 function detailPath(reference: string) {
   return `${LIST_PATH}/${reference}`
@@ -82,7 +83,7 @@ export async function createPurchaseOrderWithItems(formData: FormData): Promise<
     return { success: false, error: itemsError.message }
   }
 
-  revalidatePath(LIST_PATH)
+  revalidatePath(PURCHASE_ORDERS_LIST_PATH)
   return { success: true, reference: po.reference }
 }
 
@@ -121,7 +122,7 @@ export async function updatePurchaseOrderHeader(
   if (error) return { success: false, error: error.message }
 
   revalidatePath(detailPath(reference))
-  revalidatePath(LIST_PATH)
+  revalidatePath(PURCHASE_ORDERS_LIST_PATH)
   return { success: true }
 }
 
@@ -158,7 +159,7 @@ export async function setPurchaseOrderStatus(
   if (error) return { success: false, error: error.message }
 
   revalidatePath(detailPath(reference))
-  revalidatePath(LIST_PATH)
+  revalidatePath(PURCHASE_ORDERS_LIST_PATH)
   revalidatePath('/dashboard/purchasing/receiving')
   return { success: true }
 }
@@ -177,7 +178,7 @@ export async function deletePurchaseOrder(id: string): Promise<ActionResult> {
     return { success: false, error: error.message }
   }
 
-  revalidatePath(LIST_PATH)
+  revalidatePath(PURCHASE_ORDERS_LIST_PATH)
   return { success: true }
 }
 
@@ -212,7 +213,7 @@ export async function addPurchaseOrderItem(
   if (error) return { success: false, error: error.message }
 
   revalidatePath(detailPath(reference))
-  revalidatePath(LIST_PATH)
+  revalidatePath(PURCHASE_ORDERS_LIST_PATH)
   return { success: true }
 }
 
@@ -227,6 +228,6 @@ export async function removePurchaseOrderItem(
   if (error) return { success: false, error: error.message }
 
   revalidatePath(detailPath(reference))
-  revalidatePath(LIST_PATH)
+  revalidatePath(PURCHASE_ORDERS_LIST_PATH)
   return { success: true }
 }

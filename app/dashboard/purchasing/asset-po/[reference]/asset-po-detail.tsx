@@ -232,7 +232,7 @@ export function AssetPODetail({ po, items, suppliers, categories, canWrite, canD
     startTransition(async () => {
       const res = await deleteAssetPurchaseOrder(po.id);
       if (res.success) {
-        router.push("/dashboard/purchasing/asset-po");
+        router.push("/dashboard/purchasing/purchase-orders");
       } else {
         setDeleteError(res.error);
       }
@@ -286,8 +286,8 @@ export function AssetPODetail({ po, items, suppliers, categories, canWrite, canD
       <PageHeader
         title={po.reference}
         description={`Supplier: ${po.supplier_name} · Platform: ${platformSourceLabel(po.platform_source)}`}
-        backHref="/dashboard/purchasing/asset-po"
-        backLabel="Back to Asset PO"
+        backHref="/dashboard/purchasing/purchase-orders"
+        backLabel="Back to Purchase Orders"
         actions={
           <div className="flex items-center gap-2">
             {canEditHeader && (

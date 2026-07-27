@@ -245,8 +245,8 @@ export function NewPurchaseOrderForm({ suppliers, variantOptions }: Props) {
       <PageHeader
         title="New Purchase Order"
         description="Set up the order header and its line items in one step."
-        backHref="/dashboard/purchasing/inventory-po"
-        backLabel="Back to Inventory PO"
+        backHref="/dashboard/purchasing/purchase-orders"
+        backLabel="Back to Purchase Orders"
       />
 
       <AutoFillPanel schema={inventoryPurchaseSchema} dropdownOptions={dropdownOptions} onExtracted={handleExtracted} />

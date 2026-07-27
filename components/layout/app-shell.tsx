@@ -12,8 +12,6 @@ import { BackForwardNav } from "@/components/layout/back-forward-nav";
 type NavCountKey =
   | "purchaseOrders"
   | "receiving"
-  | "expensePOs"
-  | "assetPOs"
   | "itemsForReview"
   | "ordersActive"
   | "ordersQuotation"
@@ -91,15 +89,7 @@ const NAV: NavEntry[] = [
     label: "Purchasing",
     icon: BoxIcon,
     children: [
-      {
-        kind: "subgroup",
-        label: "Purchase Orders",
-        children: [
-          { kind: "item", label: "Inventory", href: "/dashboard/purchasing/inventory-po", icon: BoxIcon, countKey: "purchaseOrders" },
-          { kind: "item", label: "Expense", href: "/dashboard/purchasing/expense-po", icon: BoxIcon, countKey: "expensePOs" },
-          { kind: "item", label: "Asset", href: "/dashboard/purchasing/asset-po", icon: BoxIcon, countKey: "assetPOs" },
-        ],
-      },
+      { kind: "item", label: "Purchase Orders", href: "/dashboard/purchasing/purchase-orders", icon: BoxIcon, countKey: "purchaseOrders" },
       { kind: "item", label: "Receiving", href: "/dashboard/purchasing/receiving", icon: BoxIcon, countKey: "receiving" },
     ],
   },

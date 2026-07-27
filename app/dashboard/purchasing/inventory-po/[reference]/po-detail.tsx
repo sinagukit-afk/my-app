@@ -172,7 +172,7 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
     startTransition(async () => {
       const res = await deletePurchaseOrder(po.id);
       if (res.success) {
-        router.push("/dashboard/purchasing/inventory-po");
+        router.push("/dashboard/purchasing/purchase-orders");
       } else {
         setDeleteError(res.error);
       }
@@ -236,8 +236,8 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
       <PageHeader
         title={po.reference}
         description={`Supplier: ${po.supplier_name} · Platform: ${platformSourceLabel(po.platform_source)}`}
-        backHref="/dashboard/purchasing/inventory-po"
-        backLabel="Back to Inventory PO"
+        backHref="/dashboard/purchasing/purchase-orders"
+        backLabel="Back to Purchase Orders"
         actions={
           <div className="flex items-center gap-2">
             {canEditHeader && (

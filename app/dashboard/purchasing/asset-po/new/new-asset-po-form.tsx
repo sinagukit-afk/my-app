@@ -199,8 +199,8 @@ export function NewAssetPurchaseOrderForm({ suppliers, categories }: Props) {
       <PageHeader
         title="New Asset PO"
         description="Request approval to purchase a fixed asset before buying."
-        backHref="/dashboard/purchasing/asset-po"
-        backLabel="Back to Asset PO"
+        backHref="/dashboard/purchasing/purchase-orders"
+        backLabel="Back to Purchase Orders"
       />
 
       <AutoFillPanel schema={supplierInvoiceSchema} dropdownOptions={dropdownOptions} onExtracted={handleExtracted} />

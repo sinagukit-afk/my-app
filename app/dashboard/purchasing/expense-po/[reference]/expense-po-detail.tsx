@@ -202,7 +202,7 @@ export function ExpensePODetail({ po, items, suppliers, categories, canWrite, ca
     startTransition(async () => {
       const res = await deleteExpensePurchaseOrder(po.id);
       if (res.success) {
-        router.push("/dashboard/purchasing/expense-po");
+        router.push("/dashboard/purchasing/purchase-orders");
       } else {
         setDeleteError(res.error);
       }
@@ -256,8 +256,8 @@ export function ExpensePODetail({ po, items, suppliers, categories, canWrite, ca
       <PageHeader
         title={po.reference}
         description={`Supplier: ${po.supplier_name} · Platform: ${platformSourceLabel(po.platform_source)}`}
-        backHref="/dashboard/purchasing/expense-po"
-        backLabel="Back to Expense PO"
+        backHref="/dashboard/purchasing/purchase-orders"
+        backLabel="Back to Purchase Orders"
         actions={
           <div className="flex items-center gap-2">
             {canEditHeader && (

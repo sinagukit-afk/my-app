@@ -7,6 +7,7 @@ export type ActionResult = { success: true } | { success: false; error: string }
 export type CreateResult = { success: true; reference: string } | { success: false; error: string }
 
 const LIST_PATH = '/dashboard/purchasing/expense-po'
+const PURCHASE_ORDERS_LIST_PATH = '/dashboard/purchasing/purchase-orders'
 
 function detailPath(reference: string) {
   return `${LIST_PATH}/${reference}`
@@ -86,7 +87,7 @@ export async function createExpensePurchaseOrder(formData: FormData): Promise<Cr
     return { success: false, error: itemsError.message }
   }
 
-  revalidatePath(LIST_PATH)
+  revalidatePath(PURCHASE_ORDERS_LIST_PATH)
   return { success: true, reference: po.reference }
 }
 
@@ -124,7 +125,7 @@ export async function updateExpensePurchaseOrderHeader(
   if (error) return { success: false, error: error.message }
 
   revalidatePath(detailPath(reference))
-  revalidatePath(LIST_PATH)
+  revalidatePath(PURCHASE_ORDERS_LIST_PATH)
   return { success: true }
 }
 
@@ -161,7 +162,7 @@ export async function setExpensePurchaseOrderStatus(
   if (error) return { success: false, error: error.message }
 
   revalidatePath(detailPath(reference))
-  revalidatePath(LIST_PATH)
+  revalidatePath(PURCHASE_ORDERS_LIST_PATH)
   return { success: true }
 }
 
@@ -179,7 +180,7 @@ export async function deleteExpensePurchaseOrder(id: string): Promise<ActionResu
     return { success: false, error: error.message }
   }
 
-  revalidatePath(LIST_PATH)
+  revalidatePath(PURCHASE_ORDERS_LIST_PATH)
   return { success: true }
 }
 
@@ -217,7 +218,7 @@ export async function addExpensePurchaseOrderItem(
   if (error) return { success: false, error: error.message }
 
   revalidatePath(detailPath(reference))
-  revalidatePath(LIST_PATH)
+  revalidatePath(PURCHASE_ORDERS_LIST_PATH)
   return { success: true }
 }
 
@@ -232,7 +233,7 @@ export async function removeExpensePurchaseOrderItem(
   if (error) return { success: false, error: error.message }
 
   revalidatePath(detailPath(reference))
-  revalidatePath(LIST_PATH)
+  revalidatePath(PURCHASE_ORDERS_LIST_PATH)
   return { success: true }
 }
 
@@ -250,7 +251,7 @@ export async function receiveExpensePurchaseOrder(
   if (error) return { success: false, error: error.message }
 
   revalidatePath(detailPath(reference))
-  revalidatePath(LIST_PATH)
+  revalidatePath(PURCHASE_ORDERS_LIST_PATH)
   revalidatePath('/dashboard/finance/expenses')
   return { success: true }
 }

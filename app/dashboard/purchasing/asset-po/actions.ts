@@ -7,6 +7,7 @@ export type ActionResult = { success: true } | { success: false; error: string }
 export type CreateResult = { success: true; reference: string } | { success: false; error: string }
 
 const LIST_PATH = '/dashboard/purchasing/asset-po'
+const PURCHASE_ORDERS_LIST_PATH = '/dashboard/purchasing/purchase-orders'
 
 function detailPath(reference: string) {
   return `${LIST_PATH}/${reference}`
@@ -86,7 +87,7 @@ export async function createAssetPurchaseOrder(formData: FormData): Promise<Crea
     return { success: false, error: itemsError.message }
   }
 
-  revalidatePath(LIST_PATH)
+  revalidatePath(PURCHASE_ORDERS_LIST_PATH)
   return { success: true, reference: po.reference }
 }
 
@@ -124,7 +125,7 @@ export async function updateAssetPurchaseOrderHeader(
   if (error) return { success: false, error: error.message }
 
   revalidatePath(detailPath(reference))
-  revalidatePath(LIST_PATH)
+  revalidatePath(PURCHASE_ORDERS_LIST_PATH)
   return { success: true }
 }
 
@@ -161,7 +162,7 @@ export async function setAssetPurchaseOrderStatus(
   if (error) return { success: false, error: error.message }
 
   revalidatePath(detailPath(reference))
-  revalidatePath(LIST_PATH)
+  revalidatePath(PURCHASE_ORDERS_LIST_PATH)
   return { success: true }
 }
 
@@ -179,7 +180,7 @@ export async function deleteAssetPurchaseOrder(id: string): Promise<ActionResult
     return { success: false, error: error.message }
   }
 
-  revalidatePath(LIST_PATH)
+  revalidatePath(PURCHASE_ORDERS_LIST_PATH)
   return { success: true }
 }
 
@@ -217,7 +218,7 @@ export async function addAssetPurchaseOrderItem(
   if (error) return { success: false, error: error.message }
 
   revalidatePath(detailPath(reference))
-  revalidatePath(LIST_PATH)
+  revalidatePath(PURCHASE_ORDERS_LIST_PATH)
   return { success: true }
 }
 
@@ -232,7 +233,7 @@ export async function removeAssetPurchaseOrderItem(
   if (error) return { success: false, error: error.message }
 
   revalidatePath(detailPath(reference))
-  revalidatePath(LIST_PATH)
+  revalidatePath(PURCHASE_ORDERS_LIST_PATH)
   return { success: true }
 }
 
@@ -252,7 +253,7 @@ export async function receiveAssetPurchaseOrder(
   if (error) return { success: false, error: error.message }
 
   revalidatePath(detailPath(reference))
-  revalidatePath(LIST_PATH)
+  revalidatePath(PURCHASE_ORDERS_LIST_PATH)
   revalidatePath('/dashboard/finance/fixed-assets')
   return { success: true }
 }

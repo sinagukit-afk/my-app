@@ -219,10 +219,8 @@ export default async function DashboardLayout({
       userRole={profile?.role ?? undefined}
       signOutAction={logout}
       navCounts={{
-        purchaseOrders: purchaseOrdersCount ?? 0,
+        purchaseOrders: (purchaseOrdersCount ?? 0) + (expensePOsCount ?? 0) + (assetPOsCount ?? 0),
         receiving: receivingCount ?? 0,
-        expensePOs: expensePOsCount ?? 0,
-        assetPOs: assetPOsCount ?? 0,
         itemsForReview: itemsForReviewCount ?? 0,
         ordersActive: ordersActiveCount ?? 0,
         ordersQuotation: ordersQuotationCount ?? 0,

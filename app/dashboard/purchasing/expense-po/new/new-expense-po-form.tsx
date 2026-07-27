@@ -199,8 +199,8 @@ export function NewExpensePurchaseOrderForm({ suppliers, categories }: Props) {
       <PageHeader
         title="New Expense PO"
         description="Request approval to purchase an operating expense before buying."
-        backHref="/dashboard/purchasing/expense-po"
-        backLabel="Back to Expense PO"
+        backHref="/dashboard/purchasing/purchase-orders"
+        backLabel="Back to Purchase Orders"
       />
 
       <AutoFillPanel schema={supplierInvoiceSchema} dropdownOptions={dropdownOptions} onExtracted={handleExtracted} />

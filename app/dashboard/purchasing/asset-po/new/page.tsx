@@ -20,8 +20,8 @@ export default async function NewAssetPurchaseOrderPage() {
         <PageHeader
           title="New Asset PO"
           description="Request approval to purchase a fixed asset."
-          backHref="/dashboard/purchasing/asset-po"
-          backLabel="Back to Asset PO"
+          backHref="/dashboard/purchasing/purchase-orders"
+          backLabel="Back to Purchase Orders"
         />
         <Card className="max-w-lg">
           <CardContent className="p-4 text-sm text-(--color-text-muted)">
