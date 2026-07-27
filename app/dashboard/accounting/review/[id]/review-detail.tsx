@@ -209,7 +209,7 @@ export function ReviewDetail({ draft, accounts }: Props) {
       const res = await rejectDraft(draft.id, rejectReason);
       if (res.success) {
         setRejectOpen(false);
-        router.push("/dashboard/accounting/review");
+        router.push("/dashboard/accounting/journal");
       } else {
         setRejectError(res.error);
       }
@@ -221,8 +221,8 @@ export function ReviewDetail({ draft, accounts }: Props) {
       <PageHeader
         title="Review Draft"
         description={draft.description}
-        backHref="/dashboard/accounting/review"
-        backLabel="Back to Review"
+        backHref="/dashboard/accounting/journal"
+        backLabel="Back to Journal"
       />
 
       <Card className="max-w-3xl">

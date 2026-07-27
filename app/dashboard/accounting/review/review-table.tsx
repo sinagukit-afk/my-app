@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
-import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
 import { FilterBar } from "@/components/business/filter-bar";
 import { formatDate } from "@/lib/utils/format-date";
+import { QtyTile } from "./qty-tile";
 
 export type ReviewRow = {
   id: string;
@@ -60,11 +61,43 @@ type Props = {
   data: ReviewRow[];
 };
 
+const DEFAULT_STATUS_FILTER = "pending_review";
+
 export function ReviewTable({ data }: Props) {
   const router = useRouter();
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState(DEFAULT_STATUS_FILTER);
+  const [eventTypeFilter, setEventTypeFilter] = useState("");
 
-  const filteredData = statusFilter ? data.filter((row) => row.status === statusFilter) : data;
+  // Tiles always summarize the pending-review bucket itself, independent of the
+  // status dropdown above, so counts stay stable while switching between tiles.
+  const eventTypeSummary = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const row of data) {
+      if (row.status !== "pending_review") continue;
+      counts.set(row.event_type, (counts.get(row.event_type) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .map(([eventType, count]) => ({ eventType, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [data]);
+
+  function toggleEventTypeFilter(eventType: string) {
+    setEventTypeFilter((current) => (current === eventType ? "" : eventType));
+    setStatusFilter(DEFAULT_STATUS_FILTER);
+  }
+
+  function clearAllFilters() {
+    setStatusFilter(DEFAULT_STATUS_FILTER);
+    setEventTypeFilter("");
+  }
+
+  const filtersActive = statusFilter !== DEFAULT_STATUS_FILTER || eventTypeFilter !== "";
+
+  const filteredData = data.filter((row) => {
+    if (statusFilter && row.status !== statusFilter) return false;
+    if (eventTypeFilter && row.event_type !== eventTypeFilter) return false;
+    return true;
+  });
 
   const columns: Column<ReviewRow>[] = [
     {
@@ -123,16 +156,38 @@ export function ReviewTable({ data }: Props) {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="Pending Review"
-        description="Draft journal entries auto-generated from business events. Edit if needed, then approve to post them to the Journal."
-      />
+      <div>
+        <h2 className="text-lg font-semibold text-(--color-text)">Pending Review</h2>
+        <p className="mt-1 text-sm text-(--color-text-muted)">
+          Draft journal entries auto-generated from business events. Edit if needed, then approve to post them to the Journal.
+        </p>
+      </div>
 
-      <FilterBar options={STATUS_FILTER_OPTIONS} value={statusFilter} onChange={setStatusFilter} />
+      {eventTypeSummary.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {eventTypeSummary.map(({ eventType, count }) => (
+            <QtyTile
+              key={eventType}
+              label={EVENT_TYPE_LABELS[eventType] ?? eventType}
+              value={count.toLocaleString("en-PH")}
+              onClick={() => toggleEventTypeFilter(eventType)}
+              active={eventTypeFilter === eventType}
+            />
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <FilterBar options={STATUS_FILTER_OPTIONS} value={statusFilter} onChange={setStatusFilter} />
+        <Button type="button" variant="ghost" size="sm" onClick={clearAllFilters} disabled={!filtersActive}>
+          Clear All Filters
+        </Button>
+      </div>
 
       <DataTable
         columns={columns}
         data={filteredData}
+        pageSize={5}
         searchPlaceholder="Search drafts…"
         emptyMessage="No draft journal entries"
         emptyDescription="Drafts appear automatically as sales, purchases, and stock adjustments happen."

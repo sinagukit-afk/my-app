@@ -6,7 +6,8 @@ import { revalidatePath } from 'next/cache'
 export type ActionResult = { success: true } | { success: false; error: string }
 export type PostActionResult = { success: true; entryId: string } | { success: false; error: string }
 
-const LIST_PATH = '/dashboard/accounting/review'
+const DETAIL_BASE_PATH = '/dashboard/accounting/review'
+const LIST_PATH = '/dashboard/accounting/journal'
 
 export type DraftLineInput = {
   account_number: string
@@ -60,7 +61,7 @@ export async function saveDraft(
 
   if (error) return { success: false, error: friendlyError(error) }
 
-  revalidatePath(`${LIST_PATH}/${draftId}`)
+  revalidatePath(`${DETAIL_BASE_PATH}/${draftId}`)
   revalidatePath(LIST_PATH)
   return { success: true }
 }
@@ -73,9 +74,8 @@ export async function approveDraft(draftId: string): Promise<PostActionResult> {
 
   if (error) return { success: false, error: friendlyError(error) }
 
-  revalidatePath(`${LIST_PATH}/${draftId}`)
+  revalidatePath(`${DETAIL_BASE_PATH}/${draftId}`)
   revalidatePath(LIST_PATH)
-  revalidatePath('/dashboard/accounting/journal')
   return { success: true, entryId: (data as { id: string }).id }
 }
 
@@ -88,7 +88,7 @@ export async function rejectDraft(draftId: string, reason: string): Promise<Acti
 
   if (error) return { success: false, error: friendlyError(error) }
 
-  revalidatePath(`${LIST_PATH}/${draftId}`)
+  revalidatePath(`${DETAIL_BASE_PATH}/${draftId}`)
   revalidatePath(LIST_PATH)
   return { success: true }
 }

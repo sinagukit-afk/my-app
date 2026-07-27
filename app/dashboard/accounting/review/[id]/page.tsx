@@ -21,7 +21,7 @@ export default async function ReviewDetailPage({
   const role = profile?.role ?? "";
   const hasAccess = ["admin", "manager"].includes(role);
 
-  if (!hasAccess) redirect("/dashboard/accounting/review");
+  if (!hasAccess) redirect("/dashboard/accounting/journal");
 
   const { data: draft, error } = await supabase
     .from("journal_entry_drafts")

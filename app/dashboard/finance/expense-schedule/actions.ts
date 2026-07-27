@@ -29,7 +29,7 @@ export async function generateDuePrepaidPostings(): Promise<GenerateResult> {
   if (error) return { success: false, error: friendlyError(error) }
 
   revalidatePath(LIST_PATH)
-  revalidatePath('/dashboard/accounting/review')
+  revalidatePath('/dashboard/accounting/journal')
   return { success: true, processed: (data as number) ?? 0 }
 }
 
@@ -90,6 +90,6 @@ export async function terminateSchedule(
   const result = data as { draft_id: string | null }
   revalidatePath(LIST_PATH)
   revalidatePath(detailPath(type, id))
-  revalidatePath('/dashboard/accounting/review')
+  revalidatePath('/dashboard/accounting/journal')
   return { success: true, draftId: result.draft_id }
 }

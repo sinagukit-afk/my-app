@@ -40,6 +40,6 @@ export async function logInstallmentPayment(
   if (error) return { success: false, error: friendlyError(error) }
 
   revalidatePath(LIST_PATH)
-  revalidatePath('/dashboard/accounting/review')
+  revalidatePath('/dashboard/accounting/journal')
   return { success: true }
 }

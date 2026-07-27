@@ -126,8 +126,7 @@ const NAV: NavEntry[] = [
     icon: LedgerIcon,
     roles: ["admin", "manager"],
     children: [
-      { kind: "item", label: "Pending Review", href: "/dashboard/accounting/review", icon: LedgerIcon, countKey: "accountingReview" },
-      { kind: "item", label: "Journal Entries", href: "/dashboard/accounting/journal", icon: LedgerIcon },
+      { kind: "item", label: "Journal Entries", href: "/dashboard/accounting/journal", icon: LedgerIcon, countKey: "accountingReview" },
       {
         kind: "subgroup",
         label: "Reports",

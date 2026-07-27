@@ -5,7 +5,6 @@ import Link from "next/link";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PageHeader } from "@/components/ui/page-header";
 import { formatDate } from "@/lib/utils/format-date";
 
 export type JournalRow = {
@@ -103,17 +102,20 @@ export function JournalTable({ data }: Props) {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="Journal Entries"
-        description="Every posted double-entry transaction. Each entry balances — total debits equal total credits."
-        actions={
-          <Button onClick={() => router.push("/dashboard/accounting/journal/new")}>New Journal Entry</Button>
-        }
-      />
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-(--color-text)">Posted Entries</h2>
+          <p className="mt-1 text-sm text-(--color-text-muted)">
+            Every posted double-entry transaction. Each entry balances — total debits equal total credits.
+          </p>
+        </div>
+        <Button onClick={() => router.push("/dashboard/accounting/journal/new")}>New Journal Entry</Button>
+      </div>
 
       <DataTable
         columns={columns}
         data={data}
+        pageSize={50}
         searchPlaceholder="Search entries…"
         emptyMessage="No journal entries yet"
         emptyDescription="Post your first entry to start the ledger."
