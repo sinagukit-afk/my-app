@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { FilterBar } from "@/components/business/filter-bar";
 import { DateRangeFilter } from "@/components/business/date-range-filter";
 import { formatDate } from "@/lib/utils/format-date";
 import { formatCurrency } from "@/lib/utils/format";
+import { QtyTile } from "./qty-tile";
 
 export type OrderItemLine = {
   name: string;
@@ -58,6 +59,18 @@ const PAYMENT_STATUS_FILTER_OPTIONS = [
   { label: "Overpaid", value: "Overpaid" },
 ];
 
+type StatusTile = "open" | "on_hold" | "completed" | "cancelled";
+
+// Buckets the full order-status enum (see order-list-table.tsx's STATUS_VARIANT) into
+// the 4 tiles the user wants — everything mid-workflow (confirmed through delivered)
+// counts as "Open".
+function statusTile(status: string): StatusTile {
+  if (status === "on_hold") return "on_hold";
+  if (status === "completed") return "completed";
+  if (status === "cancelled") return "cancelled";
+  return "open";
+}
+
 type Props = {
   data: OrderRow[];
   from: string;
@@ -67,10 +80,27 @@ type Props = {
 export function PaymentOrdersTable({ data, from, to }: Props) {
   const router = useRouter();
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("");
+  const [tileFilter, setTileFilter] = useState<StatusTile | "">("");
 
-  const filteredData = paymentStatusFilter
-    ? data.filter((row) => row.paymentStatus === paymentStatusFilter)
-    : data;
+  function toggleTileFilter(value: StatusTile) {
+    setTileFilter((current) => (current === value ? "" : value));
+  }
+
+  const summary = useMemo(
+    () => ({
+      open: data.filter((r) => statusTile(r.status) === "open").length,
+      onHold: data.filter((r) => statusTile(r.status) === "on_hold").length,
+      completed: data.filter((r) => statusTile(r.status) === "completed").length,
+      cancelled: data.filter((r) => statusTile(r.status) === "cancelled").length,
+    }),
+    [data]
+  );
+
+  const filteredData = data.filter((row) => {
+    if (paymentStatusFilter && row.paymentStatus !== paymentStatusFilter) return false;
+    if (tileFilter && statusTile(row.status) !== tileFilter) return false;
+    return true;
+  });
 
   const columns: Column<OrderRow>[] = [
     {
@@ -169,6 +199,37 @@ export function PaymentOrdersTable({ data, from, to }: Props) {
         title="Customer Payment"
         description="Orders from confirmation through completion. Click a row to record or review payments."
       />
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <QtyTile
+          label="Open"
+          value={summary.open.toLocaleString("en-PH")}
+          variant="default"
+          onClick={() => toggleTileFilter("open")}
+          active={tileFilter === "open"}
+        />
+        <QtyTile
+          label="On Hold"
+          value={summary.onHold.toLocaleString("en-PH")}
+          variant="neutral"
+          onClick={() => toggleTileFilter("on_hold")}
+          active={tileFilter === "on_hold"}
+        />
+        <QtyTile
+          label="Completed"
+          value={summary.completed.toLocaleString("en-PH")}
+          variant="success"
+          onClick={() => toggleTileFilter("completed")}
+          active={tileFilter === "completed"}
+        />
+        <QtyTile
+          label="Cancelled"
+          value={summary.cancelled.toLocaleString("en-PH")}
+          variant="danger"
+          onClick={() => toggleTileFilter("cancelled")}
+          active={tileFilter === "cancelled"}
+        />
+      </div>
 
       <div className="flex flex-wrap items-end justify-between gap-3">
         <DateRangeFilter from={from} to={to} />
