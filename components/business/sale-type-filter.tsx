@@ -4,25 +4,35 @@ import type { ChangeEvent } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Select } from "@/components/ui/select";
 
-/** URL-driven (?year=) single-year picker for whole-year dashboard views. Preserves other params. */
-export function YearFilter({ year, years }: { year: number; years: number[] }) {
+/** URL-driven (?source=) Order Source picker. Preserves other params (e.g. ?year=). */
+export function SaleTypeFilter({
+  source,
+  options,
+}: {
+  source: string;
+  options: { value: string; label: string }[];
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   function handleChange(e: ChangeEvent<HTMLSelectElement>) {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("year", e.target.value);
+    if (e.target.value) {
+      params.set("source", e.target.value);
+    } else {
+      params.delete("source");
+    }
     router.push(`${pathname}?${params.toString()}`);
   }
 
   return (
     <Select
-      aria-label="Year"
-      value={String(year)}
+      aria-label="Sale Type"
+      value={source}
       onChange={handleChange}
-      options={years.map((y) => ({ value: String(y), label: String(y) }))}
-      className="w-28"
+      options={[{ value: "", label: "All Sources" }, ...options]}
+      className="w-44"
     />
   );
 }

@@ -261,6 +261,15 @@ Stock-change pattern to follow everywhere: upsert `inventory_levels` (on conflic
 - Verification: `npm run build` passes with zero TypeScript errors. Browser-verified via the Claude Code test account against real order data (no test data added — the 2 existing completed orders from Phase 21 verification, ₱1,750.00 combined): KPI cards, both bar charts, and the item table all rendered correct real values (Total Revenue ₱1,750.00 / 2 orders, 32 units, ₱875.00 avg, 2 SKUs; table correctly topped by "Pro-Hairbrush, Medium no Box" at ₱1,480.00). Confirmed the date-range filter round-trips correctly: "This Month" kept the same data (order falls within June 30–July 30 range), "Last Month" correctly zeroed out all KPIs and rendered both charts' "No data in range" empty state. No console errors.
 - Notes for next phase: Sales are bucketed by calendar day unconditionally (no weekly/monthly rollup for wide ranges) — fine at this app's current order volume; revisit the `BarChart`'s `maxLabels` axis-thinning if a future phase needs a coarser bucket for year-long ranges. `BarChart` and the reused `DateRangeFilter` are both intentionally generic so Phase 23 (Inventory Report) and Phase 25 (Financial Report, which explicitly must reuse Phase 22's sales queries) can drop them in directly.
 
+**Correction 2026-07-27:** the line-revenue formula (`quantity * unit_price - line_discount`)
+omitted per-unit modifier price add-ons (`order_item_modifiers.price_snapshot`), undercounting
+Total Revenue on any order with a paid modifier — caught while fixing the same bug on the new
+Sales Dashboard (`DECISIONS.md` D054), where Sinag cross-checked a dashboard figure against a
+printed order invoice. Fixed to `quantity * (unit_price + modifierTotal) - line_discount`, the
+same formula `create_order()`'s own totals-recompute and the Payment Preview invoice use.
+Financial Report (Phase 25) is unaffected — it sums `orders.total_money` directly rather than
+recomputing from `order_items`, so it already included modifiers correctly.
+
 ### Phase 23 — Analytics: Inventory Report — 2026-07-02
 - **Preflight:** Confirmed via `list_tables` that `inventory_levels`/`inventory_movements` schema is unchanged (same columns as Phase 12/17 reference: `in_stock`, `low_stock_threshold`, `movement_type`, `quantity_change`, `occurred_at`, etc.). Confirmed `app/dashboard/analytics/inventory-report/page.tsx` was still a literal "Coming Soon" stub, matching `MODULE_STATUS.md`'s ⬜ badge — no mismatch. `get_advisors` showed only pre-existing warnings. Confirmed the Analytics nav group has no `roles` restriction (same as Phase 22's Sales Report), so this report is open to any authenticated user — no access gate was added.
 - **What was built:** `app/dashboard/analytics/inventory-report/page.tsx` rewritten from the stub into a Server Component, read-only, no new tables/RPCs/write actions:
@@ -345,6 +354,20 @@ Stock-change pattern to follow everywhere: upsert `inventory_levels` (on conflic
 - Key files/locations: `app/dashboard/analytics/sales-dashboard/page.tsx`, `components/business/{donut-chart,grouped-bar-chart,ranked-bar-list,year-filter}.tsx`, `lib/utils/chart-colors.ts`, `lib/supabase/types.ts` (regenerated for the two new RPC types), new nav entry in `components/layout/app-shell.tsx`.
 - Verification: `tsc --noEmit` clean, `npm run test` (9/9) passed. Browser-verified live against real order/journal data — KPI cards, monthly Sales & Gross Profit chart, Top Products/Revenue by Category ranked lists all rendered with the new brand gold/green chart colors and no console errors.
 - Notes for next phase: This page currently reads `--chart-cat-1` for its "Sales"/primary series — any future change to that slot (e.g. for CVD re-validation) affects this page too, not just the older Analytics reports.
+
+**Correction 2026-07-27:** the ledger-tied KPI choice above is superseded — Sinag asked for
+this page to reflect live operational sales instead, since a dedicated accounting dashboard
+tied to the ledger is now planned as a separate page. Total Sale/Total Profit/Profit % are
+now computed directly from `order_items` (cost resolved from `item_variants.cost`, or
+BOM-expanded via `item_components` for composite/build-to-order items, which carry no cost
+of their own); the two ledger RPCs are unused but left in the database. Sale Type is wired to
+`orders.order_source` (a real `?source=` filter scoping every widget on the page, not the
+static placeholder). A new "Not Yet Collected" card lists currently Unpaid/Partially Paid
+orders, independent of the page's Year/Sale Type filters. Full rationale in `DECISIONS.md`
+D054. Sinag caught a real bug post-ship by cross-checking against a printed order invoice:
+line revenue omitted per-unit modifier price add-ons, undercounting Total Sale by ₱6,780
+across 6 of 9 live orders and flipping Top Product — fixed to include `order_item_modifiers`,
+same formula `create_order()` and the Payment Preview already use.
 
 ### Fix — Error and not-found boundary pages — 2026-07-22
 - What changed: Added a root-level 404 (`app/not-found.tsx`, for URLs outside `/dashboard`), a minimal `app/global-error.tsx` (last-resort fallback for failures in the root layout itself — no `ThemeProvider`/`AppShell` available at that point, so it supplies its own `<html>`/`<body>`), and a dashboard-scoped 404/error pair (`app/dashboard/not-found.tsx`, `app/dashboard/error.tsx`) that render inside `AppShell` for routes under `/dashboard`. None of these existed before — unhandled errors previously fell through to Next's default unstyled pages.

@@ -31,7 +31,7 @@ export default async function SalesReportPage({ searchParams }: { searchParams: 
   let ordersQuery = supabase
     .from("orders")
     .select(
-      "id, created_at, order_items(quantity, unit_price, line_discount, item_name_snapshot, item_variants(item_id, items(category_id, categories(name))))"
+      "id, created_at, order_items(quantity, unit_price, line_discount, item_name_snapshot, item_variants(item_id, items(category_id, categories(name))), order_item_modifiers(price_snapshot))"
     )
     .in("status", REVENUE_STATUSES);
 
@@ -51,7 +51,12 @@ export default async function SalesReportPage({ searchParams }: { searchParams: 
   for (const order of orders) {
     const date = order.created_at.slice(0, 10);
     for (const line of order.order_items ?? []) {
-      const lineRevenue = Number(line.quantity) * Number(line.unit_price) - Number(line.line_discount);
+      const modifierTotal = (line.order_item_modifiers ?? []).reduce(
+        (sum, m) => sum + Number(m.price_snapshot),
+        0
+      );
+      const lineRevenue =
+        Number(line.quantity) * (Number(line.unit_price) + modifierTotal) - Number(line.line_discount);
       totalRevenue += lineRevenue;
       totalUnits += Number(line.quantity);
 

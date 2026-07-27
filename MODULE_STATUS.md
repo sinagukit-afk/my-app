@@ -352,6 +352,13 @@ Restricted to Admin/Manager (matching Finance), unlike the other
 three open Analytics reports — the sidebar item itself is still
 visible to everyone since the Analytics nav group has no per-item
 role filter, only the page content is gated.
+🟩 Sales Dashboard — KPI cards (Total Sale/Total Profit/Profit %),
+Top Product/Category, monthly Sales & Gross Profit chart, Payment
+Mode donut, Top Products/Revenue by Category ranked lists, and a
+Not Yet Collected (Unpaid/Partially Paid orders) table. Year and
+Sale Type (`orders.order_source`) filters. All figures computed
+directly from order/payment records, no ledger dependency — see
+`DECISIONS.md` D054. Restricted to Admin/Manager.
 
 ## Marketing
 

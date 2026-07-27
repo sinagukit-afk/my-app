@@ -898,6 +898,7 @@ export type Database = {
           notes: string | null
           order_id: string | null
           payment_status: string
+          platform_source: string | null
           purchase_order_id: string | null
           quantity: number
           received_by: string
@@ -927,6 +928,7 @@ export type Database = {
           notes?: string | null
           order_id?: string | null
           payment_status?: string
+          platform_source?: string | null
           purchase_order_id?: string | null
           quantity: number
           received_by: string
@@ -956,6 +958,7 @@ export type Database = {
           notes?: string | null
           order_id?: string | null
           payment_status?: string
+          platform_source?: string | null
           purchase_order_id?: string | null
           quantity?: number
           received_by?: string
@@ -1773,12 +1776,13 @@ export type Database = {
           entry_date: string
           event_type: string
           id: string
+          order_id: string | null
           posted_journal_entry_id: string | null
           posting_date: string
           review_note: string | null
           reviewed_at: string | null
           reviewed_by: string | null
-          source_event_id: string
+          source_event_id: string | null
           status: string
           updated_at: string
         }
@@ -1788,12 +1792,13 @@ export type Database = {
           entry_date?: string
           event_type: string
           id?: string
+          order_id?: string | null
           posted_journal_entry_id?: string | null
           posting_date: string
           review_note?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
-          source_event_id: string
+          source_event_id?: string | null
           status?: string
           updated_at?: string
         }
@@ -1803,16 +1808,24 @@ export type Database = {
           entry_date?: string
           event_type?: string
           id?: string
+          order_id?: string | null
           posted_journal_entry_id?: string | null
           posting_date?: string
           review_note?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
-          source_event_id?: string
+          source_event_id?: string | null
           status?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "journal_entry_drafts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "journal_entry_drafts_posted_journal_entry_id_fkey"
             columns: ["posted_journal_entry_id"]
@@ -2357,7 +2370,9 @@ export type Database = {
           loyverse_receipt_number: string | null
           note: string | null
           on_hold_previous_status: string | null
+          order_date: string
           order_number: string
+          order_source: string | null
           payment_close_note: string | null
           payment_closed_at: string | null
           payment_closed_by: string | null
@@ -2393,7 +2408,9 @@ export type Database = {
           loyverse_receipt_number?: string | null
           note?: string | null
           on_hold_previous_status?: string | null
+          order_date?: string
           order_number: string
+          order_source?: string | null
           payment_close_note?: string | null
           payment_closed_at?: string | null
           payment_closed_by?: string | null
@@ -2429,7 +2446,9 @@ export type Database = {
           loyverse_receipt_number?: string | null
           note?: string | null
           on_hold_previous_status?: string | null
+          order_date?: string
           order_number?: string
+          order_source?: string | null
           payment_close_note?: string | null
           payment_closed_at?: string | null
           payment_closed_by?: string | null
@@ -3009,6 +3028,7 @@ export type Database = {
           note: string | null
           order_date: string
           payment_status: string
+          platform_source: string | null
           po_type: string
           reference: string
           shipping_fee: number
@@ -3028,6 +3048,7 @@ export type Database = {
           note?: string | null
           order_date?: string
           payment_status?: string
+          platform_source?: string | null
           po_type?: string
           reference: string
           shipping_fee?: number
@@ -3047,6 +3068,7 @@ export type Database = {
           note?: string | null
           order_date?: string
           payment_status?: string
+          platform_source?: string | null
           po_type?: string
           reference?: string
           shipping_fee?: number
@@ -3238,6 +3260,7 @@ export type Database = {
           customer_id: string | null
           id: string
           note: string | null
+          order_source: string | null
           quote_date: string
           quote_number: string
           status: string
@@ -3261,6 +3284,7 @@ export type Database = {
           customer_id?: string | null
           id?: string
           note?: string | null
+          order_source?: string | null
           quote_date?: string
           quote_number: string
           status?: string
@@ -3284,6 +3308,7 @@ export type Database = {
           customer_id?: string | null
           id?: string
           note?: string | null
+          order_source?: string | null
           quote_date?: string
           quote_number?: string
           status?: string
@@ -4235,6 +4260,10 @@ export type Database = {
           qty_taken: number
         }[]
       }
+      _is_order_fully_shipped: {
+        Args: { p_order_id: string }
+        Returns: boolean
+      }
       _record_expense_with_treatment: {
         Args: {
           p_amount: number
@@ -4317,7 +4346,9 @@ export type Database = {
           p_fulfillment_method?: string
           p_lines: Json
           p_note?: string
+          p_order_date?: string
           p_order_id: string
+          p_order_source?: string
           p_receiver_address_line1?: string
           p_receiver_barangay?: string
           p_receiver_city?: string
@@ -4326,6 +4357,7 @@ export type Database = {
           p_receiver_postal_code?: string
           p_receiver_province?: string
           p_same_as_customer?: boolean
+          p_target_date?: string
         }
         Returns: {
           created_at: string
@@ -4337,7 +4369,9 @@ export type Database = {
           loyverse_receipt_number: string | null
           note: string | null
           on_hold_previous_status: string | null
+          order_date: string
           order_number: string
+          order_source: string | null
           payment_close_note: string | null
           payment_closed_at: string | null
           payment_closed_by: string | null
@@ -4462,7 +4496,9 @@ export type Database = {
           loyverse_receipt_number: string | null
           note: string | null
           on_hold_previous_status: string | null
+          order_date: string
           order_number: string
+          order_source: string | null
           payment_close_note: string | null
           payment_closed_at: string | null
           payment_closed_by: string | null
@@ -4531,7 +4567,9 @@ export type Database = {
           loyverse_receipt_number: string | null
           note: string | null
           on_hold_previous_status: string | null
+          order_date: string
           order_number: string
+          order_source: string | null
           payment_close_note: string | null
           payment_closed_at: string | null
           payment_closed_by: string | null
@@ -4600,7 +4638,9 @@ export type Database = {
           loyverse_receipt_number: string | null
           note: string | null
           on_hold_previous_status: string | null
+          order_date: string
           order_number: string
+          order_source: string | null
           payment_close_note: string | null
           payment_closed_at: string | null
           payment_closed_by: string | null
@@ -4639,6 +4679,8 @@ export type Database = {
           p_fulfillment_method?: string
           p_lines: Json
           p_note?: string
+          p_order_date?: string
+          p_order_source?: string
           p_receiver_address_line1?: string
           p_receiver_barangay?: string
           p_receiver_city?: string
@@ -4659,7 +4701,9 @@ export type Database = {
           loyverse_receipt_number: string | null
           note: string | null
           on_hold_previous_status: string | null
+          order_date: string
           order_number: string
+          order_source: string | null
           payment_close_note: string | null
           payment_closed_at: string | null
           payment_closed_by: string | null
@@ -4861,7 +4905,9 @@ export type Database = {
           loyverse_receipt_number: string | null
           note: string | null
           on_hold_previous_status: string | null
+          order_date: string
           order_number: string
+          order_source: string | null
           payment_close_note: string | null
           payment_closed_at: string | null
           payment_closed_by: string | null
@@ -4942,7 +4988,9 @@ export type Database = {
           loyverse_receipt_number: string | null
           note: string | null
           on_hold_previous_status: string | null
+          order_date: string
           order_number: string
+          order_source: string | null
           payment_close_note: string | null
           payment_closed_at: string | null
           payment_closed_by: string | null
@@ -4987,7 +5035,9 @@ export type Database = {
           loyverse_receipt_number: string | null
           note: string | null
           on_hold_previous_status: string | null
+          order_date: string
           order_number: string
+          order_source: string | null
           payment_close_note: string | null
           payment_closed_at: string | null
           payment_closed_by: string | null
@@ -5032,7 +5082,9 @@ export type Database = {
           loyverse_receipt_number: string | null
           note: string | null
           on_hold_previous_status: string | null
+          order_date: string
           order_number: string
+          order_source: string | null
           payment_close_note: string | null
           payment_closed_at: string | null
           payment_closed_by: string | null
@@ -5183,7 +5235,9 @@ export type Database = {
           loyverse_receipt_number: string | null
           note: string | null
           on_hold_previous_status: string | null
+          order_date: string
           order_number: string
+          order_source: string | null
           payment_close_note: string | null
           payment_closed_at: string | null
           payment_closed_by: string | null
@@ -5288,12 +5342,13 @@ export type Database = {
           entry_date: string
           event_type: string
           id: string
+          order_id: string | null
           posted_journal_entry_id: string | null
           posting_date: string
           review_note: string | null
           reviewed_at: string | null
           reviewed_by: string | null
-          source_event_id: string
+          source_event_id: string | null
           status: string
           updated_at: string
         }
@@ -5351,7 +5406,9 @@ export type Database = {
           loyverse_receipt_number: string | null
           note: string | null
           on_hold_previous_status: string | null
+          order_date: string
           order_number: string
+          order_source: string | null
           payment_close_note: string | null
           payment_closed_at: string | null
           payment_closed_by: string | null
@@ -5440,7 +5497,9 @@ export type Database = {
           loyverse_receipt_number: string | null
           note: string | null
           on_hold_previous_status: string | null
+          order_date: string
           order_number: string
+          order_source: string | null
           payment_close_note: string | null
           payment_closed_at: string | null
           payment_closed_by: string | null
@@ -5485,7 +5544,9 @@ export type Database = {
           loyverse_receipt_number: string | null
           note: string | null
           on_hold_previous_status: string | null
+          order_date: string
           order_number: string
+          order_source: string | null
           payment_close_note: string | null
           payment_closed_at: string | null
           payment_closed_by: string | null
@@ -5591,7 +5652,9 @@ export type Database = {
           loyverse_receipt_number: string | null
           note: string | null
           on_hold_previous_status: string | null
+          order_date: string
           order_number: string
+          order_source: string | null
           payment_close_note: string | null
           payment_closed_at: string | null
           payment_closed_by: string | null
@@ -5652,12 +5715,13 @@ export type Database = {
           entry_date: string
           event_type: string
           id: string
+          order_id: string | null
           posted_journal_entry_id: string | null
           posting_date: string
           review_note: string | null
           reviewed_at: string | null
           reviewed_by: string | null
-          source_event_id: string
+          source_event_id: string | null
           status: string
           updated_at: string
         }

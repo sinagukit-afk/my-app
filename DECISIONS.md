@@ -1521,3 +1521,74 @@ cards (`app/dashboard/administration/roles/page.tsx`) were updated to
 match — that page is a hand-maintained static summary of live RLS/RPC
 behavior, not a generated one, so it drifts if a role-gate change like
 this doesn't also update it by hand.
+
+## D054
+
+**Sales Dashboard moved off ledger-tied KPIs to live order/payment data; Sale Type wired to
+Order Source; new Not Yet Collected table (2026-07-27).** Sinag's explicit request, reversing
+the ledger-tied choice Phase 27 made (`PROGRESS.md`, memory
+`project_sales_dashboard_2026_07_21`) — a dedicated accounting dashboard tied to the ledger is
+now planned as a separate page, so this one should reflect live operational sales instead.
+
+- **Total Sale/Total Profit/Profit %** are now summed directly from `order_items` (same
+  revenue basis as Top Products/Revenue by Category) instead of calling
+  `get_gross_profit_summary`/`get_monthly_gross_profit`. Those two RPCs are left in the
+  database, unused, per this project's additive-migrations convention — no other caller
+  existed.
+- **Cost basis, build-time finding:** a flat `item_variants.cost` lookup was tried first and
+  produced a **100% margin on nearly every real order** — checked live via SQL before
+  shipping, not assumed. Reason: this business's dominant category ("Product Customize") is
+  entirely composite/build-to-order items (D021), which carry no cost of their own —
+  `item_variants.cost` is `NULL` and the real cost lives on their BOM (`item_components`).
+  Sinag confirmed BOM-expansion over shipping the flat number with unknowns merely flagged:
+  cost is now resolved as the item's own `cost` if set, else the sum of
+  `component.cost × quantity_ratio` over `item_components`, recursed for nested composites
+  and capped at depth 3 (matching D021's own nesting cap) as a cycle guard. This is a
+  current-cost estimate, not a point-in-time snapshot at time of sale (no `cost_at_sale`
+  column exists on `order_items`, unlike `receipt_line_items`) — called out in the page's
+  footnote.
+- **Sale Type** now reads `orders.order_source` (added by commit `6707608`, previously
+  undocumented anywhere in this file/`BUSINESS_RULES.md`) instead of the static
+  Direct/Online/Wholesaler placeholder — a `Select`-driven `?source=` URL filter (new
+  `components/business/sale-type-filter.tsx`, matching the existing Filters-Must-Be-Dropdowns
+  convention, not a button row), scoping every widget on the page consistently: KPIs, Top
+  Product/Category, the monthly chart, Payment Mode, and both ranked lists. Payment Mode
+  needed `order_payments` joined to `orders(order_source)` — it previously queried
+  `order_payments` with no order join at all, so it wasn't scoped by anything order-level.
+  `YearFilter` was generalized to merge into existing search params (via `useSearchParams`)
+  instead of overwriting the whole query string, so `?year=`/`?source=` coexist; it has only
+  ever been used on this one page, so this was safe to change in place.
+- **New "Not Yet Collected" card** — a live list of orders whose derived Payment Status
+  (same `totalPaid` vs `total_money + total_tax + dispatched shipping fee` convention as
+  Finance > Customer Payment) is `Unpaid` or `Partially Paid`, excluding cancelled orders.
+  Deliberately **independent of the Year/Sale Type filters** — an outstanding balance doesn't
+  stop mattering when the year flips or when viewing a single sales channel — capped to the
+  top 10 by remaining balance with a link to the full list at
+  `/dashboard/finance/payments`.
+- **Unrelated staleness gap fixed in passing:** `lib/supabase/types.ts` had never been
+  regenerated since `order_source`/`platform_source` shipped (commits `6707608`, `90adca8`)
+  — neither column existed in the generated types at all. Regenerated via the Supabase MCP
+  tool before writing the new `order_source`-filtered queries, per the same convention D036
+  already established (new columns must be reflected in generated types before code depends
+  on them directly).
+- Year dropdown's option list now derives from `orders.created_at` instead of
+  `journal_entries.entry_date`, consistent with dropping the ledger dependency entirely.
+- Access stays **admin/manager-only**, unchanged — the access-denied copy was reworded to
+  drop the "ties into Accounting's ledger" framing (no longer true) but the role gate itself
+  wasn't loosened; order-level revenue/profit and AR data are still treated as sensitive
+  business data, matching Financial Report's gating.
+- **Bug caught by Sinag post-ship, fixed same session — on both this page and the
+  pre-existing Sales Report (Phase 22):** line revenue omitted per-unit modifier price
+  add-ons (`order_item_modifiers.price_snapshot`) entirely — computed as
+  `quantity × unit_price − line_discount`, missing the `+ modifierTotal` term that
+  `create_order()`'s own totals recompute and the Payment Preview invoice both already use.
+  Caught because a real order's dashboard figure (₱15,000) didn't match its own printed
+  invoice (₱20,000, matching `orders.total_money`) — traced to a "Keychain: 2 Faces
+  Logo/Caricature" modifier worth ₱10/unit that both pages silently dropped. Fixed both to
+  `quantity × (unit_price + modifierTotal) − line_discount`, the same formula used
+  everywhere else in the app. Re-verified against the live 2026 dataset: both pages' Total
+  Sale/Total Revenue now sum to exactly `sum(orders.total_money)` (₱39,743.00) for the 9
+  in-scope orders, confirmed via direct SQL — it previously undercounted by ₱6,780 across 6
+  of the 9 orders that carry a modifier, and flipped which product ranked #1. Financial
+  Report (Phase 25) was checked and is unaffected — it sums `orders.total_money` directly
+  rather than recomputing from `order_items`.

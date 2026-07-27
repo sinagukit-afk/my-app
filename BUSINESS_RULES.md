@@ -44,6 +44,7 @@ Status Flow: Confirmed → In Production → (Partially Completed | Production C
 -   Confirmed and In Production orders **can be edited** (customer, notes, line items) via the `adjust_order_items` RPC. It diffs old vs. new BOM-expanded quantities per variant, blocks the whole edit if any variant would go short, and posts one `inventory_movements` row per changed variant (negative for a net deduction, positive for a net return).
 -   Confirmed orders' Reserved Qty can be manually overridden via `override_reserved_qty()` (admin/manager/encoder) — status-gated to `confirmed` only.
 -   `orders`/`order_items` have **no rollup trigger** (unlike `purchase_orders`). Any code path that changes order line items must explicitly recompute `subtotal`/`total_discount`/`total_money` — it will not happen automatically.
+-   A line's true unit price is `order_items.unit_price` **plus** the sum of its `order_item_modifiers.price_snapshot` — modifiers are a separate joined table, not a column on `order_items`. `create_order()`'s totals recompute and the Payment Preview invoice both include this; any report/dashboard that recomputes revenue from `order_items` directly must too, or it will silently undercount every line with a paid modifier (found 2026-07-27 on both Sales Dashboard and Sales Report — see `DECISIONS.md` D054).
 
 ## Production Orders
 
