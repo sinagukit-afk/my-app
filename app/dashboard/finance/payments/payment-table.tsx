@@ -1,12 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { FilterBar } from "@/components/business/filter-bar";
-import { DateRangeFilter } from "@/components/business/date-range-filter";
+import { MonthFilter } from "@/components/business/month-filter";
+import { YearFilter } from "@/components/business/year-filter";
 import { formatDate } from "@/lib/utils/format-date";
 import { formatCurrency } from "@/lib/utils/format";
 import { QtyTile } from "./qty-tile";
@@ -73,18 +75,28 @@ function statusTile(status: string): StatusTile {
 
 type Props = {
   data: OrderRow[];
-  from: string;
-  to: string;
+  year: number;
+  month: number;
+  years: number[];
 };
 
-export function PaymentOrdersTable({ data, from, to }: Props) {
+export function PaymentOrdersTable({ data, year, month, years }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("");
   const [tileFilter, setTileFilter] = useState<StatusTile | "">("");
 
   function toggleTileFilter(value: StatusTile) {
     setTileFilter((current) => (current === value ? "" : value));
   }
+
+  function clearAllFilters() {
+    setPaymentStatusFilter("");
+    setTileFilter("");
+    router.push(pathname);
+  }
+
+  const filtersActive = paymentStatusFilter !== "" || tileFilter !== "" || month !== 0 || year !== new Date().getUTCFullYear();
 
   const summary = useMemo(
     () => ({
@@ -198,6 +210,12 @@ export function PaymentOrdersTable({ data, from, to }: Props) {
       <PageHeader
         title="Customer Payment"
         description="Orders from confirmation through completion. Click a row to record or review payments."
+        actions={
+          <div className="flex items-center gap-2">
+            <MonthFilter month={month ? String(month) : ""} />
+            <YearFilter year={year} years={years} />
+          </div>
+        }
       />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -231,13 +249,19 @@ export function PaymentOrdersTable({ data, from, to }: Props) {
         />
       </div>
 
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <DateRangeFilter from={from} to={to} />
-        <FilterBar
-          options={PAYMENT_STATUS_FILTER_OPTIONS}
-          value={paymentStatusFilter}
-          onChange={setPaymentStatusFilter}
-        />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm font-medium text-(--color-text-muted)">Payment Status</span>
+          <FilterBar
+            options={PAYMENT_STATUS_FILTER_OPTIONS}
+            value={paymentStatusFilter}
+            onChange={setPaymentStatusFilter}
+            aria-label="Payment Status"
+          />
+        </div>
+        <Button type="button" variant="ghost" size="sm" onClick={clearAllFilters} disabled={!filtersActive}>
+          Clear All Filters
+        </Button>
       </div>
 
       <DataTable

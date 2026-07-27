@@ -13,22 +13,35 @@ function paymentStatus(totalPaid: number, totalDue: number): OrderRow["paymentSt
   return "Paid";
 }
 
-type SearchParams = Promise<{ from?: string; to?: string }>;
+type SearchParams = Promise<{ year?: string; month?: string }>;
 
 export default async function PaymentOrdersPage({ searchParams }: { searchParams: SearchParams }) {
-  const { from = "", to = "" } = await searchParams;
+  const { year: yearParam, month: monthParam } = await searchParams;
   const supabase = await createClient();
 
-  let query = supabase
-    .from("orders")
-    .select(
-      "id, order_number, status, total_money, total_tax, created_at, order_date, customers(name), order_payments(amount), order_shipments(shipping_cost, shipping_fee_charged, status), order_items(item_name_snapshot, sku_snapshot, quantity)"
-    );
+  const currentYear = new Date().getUTCFullYear();
+  const year = Number(yearParam) || currentYear;
+  const month = Number(monthParam) || 0;
+  const periodStart = month ? `${year}-${String(month).padStart(2, "0")}-01` : `${year}-01-01`;
+  const periodEnd = month
+    ? new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10)
+    : `${year}-12-31`;
 
-  if (from) query = query.gte("created_at", `${from}T00:00:00`);
-  if (to) query = query.lte("created_at", `${to}T23:59:59.999`);
+  const [{ data: orderYearsRaw }, { data, error }] = await Promise.all([
+    supabase.from("orders").select("created_at"),
+    supabase
+      .from("orders")
+      .select(
+        "id, order_number, status, total_money, total_tax, created_at, order_date, customers(name), order_payments(amount), order_shipments(shipping_cost, shipping_fee_charged, status), order_items(item_name_snapshot, sku_snapshot, quantity)"
+      )
+      .gte("created_at", `${periodStart}T00:00:00`)
+      .lte("created_at", `${periodEnd}T23:59:59.999`)
+      .order("created_at", { ascending: false }),
+  ]);
 
-  const { data, error } = await query.order("created_at", { ascending: false });
+  const years = Array.from(
+    new Set([currentYear, ...((orderYearsRaw ?? []).map((r) => new Date(r.created_at).getUTCFullYear()))])
+  ).sort((a, b) => b - a);
 
   const rows: OrderRow[] = (data ?? [])
     .map((o) => {
@@ -76,7 +89,7 @@ export default async function PaymentOrdersPage({ searchParams }: { searchParams
       {error && (
         <p className="text-sm text-(--color-danger)">Failed to load orders: {error.message}</p>
       )}
-      <PaymentOrdersTable data={rows} from={from} to={to} />
+      <PaymentOrdersTable data={rows} year={year} month={month} years={years} />
     </div>
   );
 }
