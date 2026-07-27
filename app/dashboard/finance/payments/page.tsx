@@ -22,7 +22,7 @@ export default async function PaymentOrdersPage({ searchParams }: { searchParams
   let query = supabase
     .from("orders")
     .select(
-      "id, order_number, status, total_money, total_tax, created_at, order_date, customers(name), order_payments(amount), order_shipments(shipping_cost, shipping_fee_charged, status)"
+      "id, order_number, status, total_money, total_tax, created_at, order_date, customers(name), order_payments(amount), order_shipments(shipping_cost, shipping_fee_charged, status), order_items(item_name_snapshot, sku_snapshot, quantity)"
     );
 
   if (from) query = query.gte("created_at", `${from}T00:00:00`);
@@ -47,6 +47,11 @@ export default async function PaymentOrdersPage({ searchParams }: { searchParams
       );
       const totalDue = totalMoney + totalTax + shippingFeeTotal;
       const totalPaid = (o.order_payments ?? []).reduce((sum, p) => sum + Number(p.amount), 0);
+      const items = (o.order_items ?? []).map((it) => ({
+        name: it.item_name_snapshot,
+        sku: it.sku_snapshot,
+        quantity: Number(it.quantity),
+      }));
       return {
         orderNumber: o.order_number,
         customerName: customer?.name ?? null,
@@ -58,6 +63,7 @@ export default async function PaymentOrdersPage({ searchParams }: { searchParams
         totalPaid,
         remainingBalance: totalDue - totalPaid,
         paymentStatus: paymentStatus(totalPaid, totalDue),
+        items,
       };
     })
     // Cancelled orders are dropped from this work queue — unless money was already

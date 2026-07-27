@@ -10,6 +10,12 @@ import { DateRangeFilter } from "@/components/business/date-range-filter";
 import { formatDate } from "@/lib/utils/format-date";
 import { formatCurrency } from "@/lib/utils/format";
 
+export type OrderItemLine = {
+  name: string;
+  sku: string | null;
+  quantity: number;
+};
+
 export type OrderRow = {
   orderNumber: string;
   customerName: string | null;
@@ -21,6 +27,7 @@ export type OrderRow = {
   totalPaid: number;
   remainingBalance: number;
   paymentStatus: "Unpaid" | "Partially Paid" | "Paid" | "Overpaid";
+  items: OrderItemLine[];
 };
 
 const STATUS_VARIANT: Record<string, "success" | "default" | "danger" | "warning" | "neutral"> = {
@@ -70,6 +77,21 @@ export function PaymentOrdersTable({ data, from, to }: Props) {
       key: "orderNumber",
       header: "Order No.",
       sortable: true,
+      render: (value, row) => (
+        <div>
+          <span className="text-(--color-text)">{value as string}</span>
+          {row.items.length > 0 && (
+            <div className="mt-0.5 space-y-0.5">
+              {row.items.map((it, i) => (
+                <p key={i} className="text-xs text-(--color-text-muted)">
+                  {it.name}
+                  {it.sku ? ` (${it.sku})` : ""} × {it.quantity}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+      ),
     },
     {
       key: "customerName",
@@ -160,10 +182,12 @@ export function PaymentOrdersTable({ data, from, to }: Props) {
       <DataTable
         columns={columns}
         data={filteredData}
+        pageSize={50}
         searchPlaceholder="Search orders…"
         emptyMessage="No orders to display"
         emptyDescription="Confirmed orders will appear here until they are completed."
         onRowClick={(row) => router.push(`/dashboard/finance/payments/${row.orderNumber}`)}
+        exportFilename="customer-payments"
       />
     </div>
   );

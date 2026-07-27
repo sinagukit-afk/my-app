@@ -43,7 +43,7 @@ export default async function DashboardLayout({
     { count: ordersProductionCount },
     { count: shipmentsNotDeliveredCount },
     { count: ordersReadyForShippingCount },
-    { data: paymentOrders },
+    { count: ordersPaymentCount },
     { count: accountingReviewCount },
     { count: expensePayableCount },
     { count: assetPayableCount },
@@ -118,8 +118,9 @@ export default async function DashboardLayout({
       .eq("status", "ready_for_shipping"),
     supabase
       .from("orders")
-      .select("total_money, order_payments(amount)")
-      .neq("status", "cancelled"),
+      .select("id", { count: "exact", head: true })
+      .neq("status", "cancelled")
+      .is("payment_closed_at", null),
     supabase
       .from("journal_entry_drafts")
       .select("id", { count: "exact", head: true })
@@ -168,11 +169,6 @@ export default async function DashboardLayout({
   ]);
 
   const ordersShippingCount = (shipmentsNotDeliveredCount ?? 0) + (ordersReadyForShippingCount ?? 0);
-
-  const ordersPaymentCount = (paymentOrders ?? []).filter((o) => {
-    const totalPaid = (o.order_payments ?? []).reduce((sum, p) => sum + Number(p.amount), 0);
-    return totalPaid !== Number(o.total_money);
-  }).length;
 
   const supplierPaymentCount =
     (expensePayableCount ?? 0) +
@@ -234,7 +230,7 @@ export default async function DashboardLayout({
         ordersOnHold: ordersOnHoldCount ?? 0,
         ordersProduction: ordersProductionCount ?? 0,
         ordersShipping: ordersShippingCount ?? 0,
-        ordersPayment: ordersPaymentCount,
+        ordersPayment: ordersPaymentCount ?? 0,
         supplierPayment: supplierPaymentCount,
         expenseScheduleDue: expenseScheduleDueCount,
         accountingReview: accountingReviewCount ?? 0,
