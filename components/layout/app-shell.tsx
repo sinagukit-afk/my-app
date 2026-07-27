@@ -170,8 +170,7 @@ const NAV: NavEntry[] = [
     label: "Analytics",
     icon: ChartIcon,
     children: [
-      { kind: "item", label: "Sales Dashboard", href: "/dashboard/analytics/sales-dashboard", icon: ChartIcon },
-      { kind: "item", label: "Sales", href: "/dashboard/analytics/sales-report", icon: ChartIcon },
+      { kind: "item", label: "Sales", href: "/dashboard/analytics/sales-dashboard", icon: ChartIcon },
       { kind: "item", label: "Inventory", href: "/dashboard/analytics/inventory-report", icon: ChartIcon },
       { kind: "item", label: "Production", href: "/dashboard/analytics/production-report", icon: ChartIcon },
       { kind: "item", label: "Financial", href: "/dashboard/analytics/financial-report", icon: ChartIcon },

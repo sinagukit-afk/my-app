@@ -10,7 +10,7 @@ import { RankedBarList } from "@/components/business/ranked-bar-list";
 import { GroupedBarChart, type GroupedBarDatum } from "@/components/business/grouped-bar-chart";
 import { Badge } from "@/components/ui/badge";
 import { ORDER_SOURCE_OPTIONS } from "@/app/dashboard/orders/order-source";
-import { formatCurrency } from "@/lib/utils/format";
+import { formatCurrency, formatQty } from "@/lib/utils/format";
 import { formatDate } from "@/lib/utils/format-date";
 
 type SearchParams = Promise<{ year?: string; source?: string }>;
@@ -202,6 +202,7 @@ export default async function SalesDashboardPage({ searchParams }: { searchParam
   const monthlyByNumber = new Map<number, { sales: number; profit: number }>();
   let totalSale = 0;
   let totalCost = 0;
+  let totalUnits = 0;
 
   for (const order of orders) {
     const month = new Date(order.created_at).getUTCMonth() + 1;
@@ -218,6 +219,7 @@ export default async function SalesDashboardPage({ searchParams }: { searchParam
       const lineCost = Number(line.quantity) * resolveUnitCost(line.variant_id);
       const lineProfit = lineRevenue - lineCost;
 
+      totalUnits += Number(line.quantity);
       byItem.set(line.item_name_snapshot, (byItem.get(line.item_name_snapshot) ?? 0) + lineRevenue);
 
       const item = variant ? firstOf(variant.items) : null;
@@ -236,6 +238,8 @@ export default async function SalesDashboardPage({ searchParams }: { searchParam
 
   const totalProfit = totalSale - totalCost;
   const profitPct = totalSale > 0 ? (totalProfit / totalSale) * 100 : 0;
+  const avgOrderValue = orders.length > 0 ? totalSale / orders.length : 0;
+  const itemsSoldSkus = byItem.size;
 
   const monthlyChartData: GroupedBarDatum[] = MONTH_LABELS.map((label, i) => {
     const bucket = monthlyByNumber.get(i + 1);
@@ -274,32 +278,50 @@ export default async function SalesDashboardPage({ searchParams }: { searchParam
   const topProduct = topProducts[0];
   const topCategory = categoryEntries[0];
 
-  const uncollected = (uncollectedRows ?? [])
-    .map((o) => {
-      const customer = firstOf(o.customers);
-      const totalMoney = Number(o.total_money);
-      const totalTax = Number(o.total_tax ?? 0);
-      const dispatchedShipments = (o.order_shipments ?? []).filter(
-        (s) => s.status === "shipped" || s.status === "delivered"
-      );
-      const shippingFeeTotal = dispatchedShipments.reduce((sum, s) => sum + Number(s.shipping_fee_charged ?? 0), 0);
-      const totalDue = totalMoney + totalTax + shippingFeeTotal;
-      const totalPaid = (o.order_payments ?? []).reduce((sum, p) => sum + Number(p.amount), 0);
-      return {
-        id: o.id,
-        orderNumber: o.order_number,
-        customerName: customer?.name ?? null,
-        orderDate: o.order_date,
-        totalDue,
-        totalPaid,
-        remainingBalance: totalDue - totalPaid,
-        status: paymentStatus(totalPaid, totalDue),
-      };
-    })
+  const paymentSplits = (uncollectedRows ?? []).map((o) => {
+    const customer = firstOf(o.customers);
+    const totalMoney = Number(o.total_money);
+    const totalTax = Number(o.total_tax ?? 0);
+    const dispatchedShipments = (o.order_shipments ?? []).filter(
+      (s) => s.status === "shipped" || s.status === "delivered"
+    );
+    const shippingFeeTotal = dispatchedShipments.reduce((sum, s) => sum + Number(s.shipping_fee_charged ?? 0), 0);
+    const productDue = totalMoney + totalTax;
+    const totalDue = productDue + shippingFeeTotal;
+    const totalPaid = (o.order_payments ?? []).reduce((sum, p) => sum + Number(p.amount), 0);
+    // Payments aren't recorded per product/shipping (one lump sum per order) — prorate by each
+    // order's due-amount mix. Cap the base at totalDue so an overpaid "tip" isn't counted as
+    // extra product/shipping revenue, mirroring how close_order_payment() treats overpayment.
+    const paidTowardDue = Math.min(totalPaid, totalDue);
+    return {
+      id: o.id,
+      orderNumber: o.order_number,
+      customerName: customer?.name ?? null,
+      orderDate: o.order_date,
+      totalDue,
+      totalPaid,
+      productPaid: totalDue > 0 ? paidTowardDue * (productDue / totalDue) : 0,
+      shippingPaid: totalDue > 0 ? paidTowardDue * (shippingFeeTotal / totalDue) : 0,
+      remainingBalance: totalDue - totalPaid,
+      status: paymentStatus(totalPaid, totalDue),
+    };
+  });
+
+  const totalProductCollected = paymentSplits.reduce((sum, r) => sum + r.productPaid, 0);
+  const totalShippingCollected = paymentSplits.reduce((sum, r) => sum + r.shippingPaid, 0);
+
+  const uncollected = paymentSplits
     .filter((row) => row.status === "Unpaid" || row.status === "Partially Paid")
     .sort((a, b) => b.remainingBalance - a.remainingBalance);
   const uncollectedTotal = uncollected.reduce((sum, r) => sum + r.remainingBalance, 0);
   const uncollectedTop = uncollected.slice(0, UNCOLLECTED_TOP_N);
+
+  const paymentCollectionData = [
+    { label: "Payment to Product", value: totalProductCollected },
+    { label: "Payment to Shipping", value: totalShippingCollected },
+    { label: "Uncollected", value: uncollectedTotal },
+  ];
+  const totalCollected = totalProductCollected + totalShippingCollected;
 
   const loadError = ordersError || paymentsError || uncollectedError;
 
@@ -336,6 +358,12 @@ export default async function SalesDashboardPage({ searchParams }: { searchParam
           value={`${profitPct.toFixed(1)}%`}
           trend={profitPct >= 0 ? "up" : "down"}
         />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard label="Units Sold" value={formatQty(totalUnits)} />
+        <StatCard label="Avg. Order Value" value={formatCurrency(avgOrderValue)} />
+        <StatCard label="Items Sold (SKUs)" value={itemsSoldSkus.toLocaleString("en-PH")} />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -386,17 +414,28 @@ export default async function SalesDashboardPage({ searchParams }: { searchParam
       <Card>
         <CardHeader className="flex-row items-center justify-between">
           <div>
-            <CardTitle>Not Yet Collected</CardTitle>
+            <CardTitle>Payment Collection</CardTitle>
           </div>
           <Link href="/dashboard/finance/payments" className="text-sm text-(--color-primary) hover:underline">
             View all in Customer Payment
           </Link>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
+          <DonutChart data={paymentCollectionData} valueFormatter={formatCurrency} centerLabel="Total Due" />
+          <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-(--color-text-muted)">
+            <span>
+              Total Collected: <span className="font-medium text-(--color-text)">{formatCurrency(totalCollected)}</span>
+            </span>
+            <span>
+              Uncollected: <span className="font-medium text-(--color-text)">{formatCurrency(uncollectedTotal)}</span>
+            </span>
+          </div>
+
           {uncollectedTop.length === 0 ? (
             <p className="text-sm text-(--color-text-muted)">Nothing unpaid or partially paid right now.</p>
           ) : (
             <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-(--color-text)">Outstanding Orders</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -446,14 +485,16 @@ export default async function SalesDashboardPage({ searchParams }: { searchParam
 
       <Card>
         <CardContent className="p-4 text-xs text-(--color-text-muted)">
-          Total Sale, Total Profit, and Profit % are computed directly from order and payment records
-          (same convention as the Sales Report). Total Profit uses each item&apos;s current cost — for
-          build-to-order/composite products with no cost of their own, cost is expanded from their bill of
-          materials (component costs × quantity) instead of counted as ₱0 — but this is still a current-cost
-          estimate, not a point-in-time snapshot at the time of sale, so past periods will shift if item or
-          component costs change later. A dedicated accounting dashboard tied to the ledger is planned
-          separately; this page reflects live operational sales instead. &ldquo;Not Yet Collected&rdquo; is a
-          live snapshot independent of the Year/Sale Type filters above.
+          Total Sale, Total Profit, and Profit % are computed directly from order and payment records.
+          Total Profit uses each item&apos;s current cost — for build-to-order/composite products with no
+          cost of their own, cost is expanded from their bill of materials (component costs × quantity)
+          instead of counted as ₱0 — but this is still a current-cost estimate, not a point-in-time snapshot
+          at the time of sale, so past periods will shift if item or component costs change later. A
+          dedicated accounting dashboard tied to the ledger is planned separately; this page reflects live
+          operational sales instead. &ldquo;Payment Collection&rdquo; is a live snapshot independent of the
+          Year/Sale Type filters above; since payments are recorded as one lump sum per order rather than
+          split by product/shipping, the Payment to Product and Payment to Shipping slices are prorated
+          from each order&apos;s due-amount mix, not amounts collected item-by-item.
         </CardContent>
       </Card>
     </div>
