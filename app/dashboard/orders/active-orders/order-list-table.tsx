@@ -1,27 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { DataTable, downloadCsv, type Column } from "@/components/ui/data-table";
+import { useRouter, usePathname } from "next/navigation";
+import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { FilterBar } from "@/components/business/filter-bar";
-import { DateRangeFilter } from "@/components/business/date-range-filter";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
-import { DATE_RANGE_PRESETS } from "@/lib/utils/date-range-presets";
+import { MonthFilter } from "@/components/business/month-filter";
+import { YearFilter } from "@/components/business/year-filter";
 import { formatDate } from "@/lib/utils/format-date";
 import { formatCurrency } from "@/lib/utils/format";
-import { exportOrders } from "./actions";
+import { QtyTile } from "./qty-tile";
 
 export type OrderRow = {
   orderNumber: string;
@@ -69,37 +60,61 @@ const PAYMENT_STATUS_VARIANT: Record<string, "success" | "danger" | "warning" | 
   Overpaid: "neutral",
 };
 
-const EXPORT_SCOPES = ["Current Filter", ...DATE_RANGE_PRESETS.map((p) => p.label)];
+type StatusTile = "open" | "on_hold" | "completed" | "cancelled";
 
-const EXPORT_SCOPE_DESCRIPTIONS: Record<string, string> = {
-  "Current Filter": "Exactly what's on screen now — current date range and status filter.",
-  "This Month": "All orders this month, every status.",
-  "Last Month": "All orders last month, every status.",
-  "This Year": "All orders this year, every status.",
-  "All Time": "Every order ever placed, every status.",
-};
-
-function exportSlug(scope: string) {
-  return scope.toLowerCase().replace(/\s+/g, "-");
+// Buckets the full order-status enum into the 4 tiles the user wants — everything
+// mid-workflow (confirmed through delivered) counts as "Open". Mirrors Customer
+// Payment's tile bucketing (app/dashboard/finance/payments/payment-table.tsx).
+function statusTile(status: string): StatusTile {
+  if (status === "on_hold") return "on_hold";
+  if (status === "completed") return "completed";
+  if (status === "cancelled") return "cancelled";
+  return "open";
 }
 
 type Props = {
   data: OrderRow[];
   canCreate: boolean;
-  from: string;
-  to: string;
+  year: number;
+  month: number;
+  years: number[];
   initialStatus?: string;
 };
 
-export function OrderListTable({ data, canCreate, from, to, initialStatus = "" }: Props) {
+export function OrderListTable({ data, canCreate, year, month, years, initialStatus = "" }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const [statusFilter, setStatusFilter] = useState(initialStatus);
-  const [exportOpen, setExportOpen] = useState(false);
-  const [exportScope, setExportScope] = useState(EXPORT_SCOPES[0]);
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
+  const [tileFilter, setTileFilter] = useState<StatusTile | "">("");
 
-  const filteredData = statusFilter ? data.filter((row) => row.status === statusFilter) : data;
+  function toggleTileFilter(value: StatusTile) {
+    setTileFilter((current) => (current === value ? "" : value));
+  }
+
+  function clearAllFilters() {
+    setStatusFilter("");
+    setTileFilter("");
+    router.push(pathname);
+  }
+
+  const filtersActive =
+    statusFilter !== "" || tileFilter !== "" || month !== 0 || year !== new Date().getUTCFullYear();
+
+  const summary = useMemo(
+    () => ({
+      open: data.filter((r) => statusTile(r.status) === "open").length,
+      onHold: data.filter((r) => statusTile(r.status) === "on_hold").length,
+      completed: data.filter((r) => statusTile(r.status) === "completed").length,
+      cancelled: data.filter((r) => statusTile(r.status) === "cancelled").length,
+    }),
+    [data]
+  );
+
+  const filteredData = data.filter((row) => {
+    if (statusFilter && row.status !== statusFilter) return false;
+    if (tileFilter && statusTile(row.status) !== tileFilter) return false;
+    return true;
+  });
 
   const columns: Column<OrderRow>[] = [
     {
@@ -165,32 +180,6 @@ export function OrderListTable({ data, canCreate, from, to, initialStatus = "" }
     },
   ];
 
-  async function handleExport() {
-    setExportError(null);
-    setIsExporting(true);
-    try {
-      if (exportScope === "Current Filter") {
-        downloadCsv(
-          filteredData,
-          columns,
-          `active-orders_${exportSlug(exportScope)}${from ? `_${from}` : ""}${to ? `_to_${to}` : ""}`
-        );
-      } else {
-        const preset = DATE_RANGE_PRESETS.find((p) => p.label === exportScope);
-        const range = preset ? preset.getRange() : { from: "", to: "" };
-        const { rows, error } = await exportOrders(range.from, range.to);
-        if (error) {
-          setExportError(error);
-          return;
-        }
-        downloadCsv(rows, columns, `active-orders_${exportSlug(exportScope)}`);
-      }
-      setExportOpen(false);
-    } finally {
-      setIsExporting(false);
-    }
-  }
-
   return (
     <div className="space-y-4">
       <PageHeader
@@ -198,16 +187,8 @@ export function OrderListTable({ data, canCreate, from, to, initialStatus = "" }
         description="Customer orders. Click a row to view details, edit, or move it into production."
         actions={
           <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                setExportError(null);
-                setExportOpen(true);
-              }}
-            >
-              Export to Excel
-            </Button>
+            <MonthFilter month={month ? String(month) : ""} />
+            <YearFilter year={year} years={years} />
             {canCreate && (
               <Link href="/dashboard/orders/active-orders/new">
                 <Button>New Order</Button>
@@ -217,9 +198,50 @@ export function OrderListTable({ data, canCreate, from, to, initialStatus = "" }
         }
       />
 
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <FilterBar options={STATUS_FILTER_OPTIONS} value={statusFilter} onChange={setStatusFilter} />
-        <DateRangeFilter from={from} to={to} />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <QtyTile
+          label="Open"
+          value={summary.open.toLocaleString("en-PH")}
+          variant="default"
+          onClick={() => toggleTileFilter("open")}
+          active={tileFilter === "open"}
+        />
+        <QtyTile
+          label="On Hold"
+          value={summary.onHold.toLocaleString("en-PH")}
+          variant="neutral"
+          onClick={() => toggleTileFilter("on_hold")}
+          active={tileFilter === "on_hold"}
+        />
+        <QtyTile
+          label="Completed"
+          value={summary.completed.toLocaleString("en-PH")}
+          variant="success"
+          onClick={() => toggleTileFilter("completed")}
+          active={tileFilter === "completed"}
+        />
+        <QtyTile
+          label="Cancelled"
+          value={summary.cancelled.toLocaleString("en-PH")}
+          variant="danger"
+          onClick={() => toggleTileFilter("cancelled")}
+          active={tileFilter === "cancelled"}
+        />
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm font-medium text-(--color-text-muted)">Status</span>
+          <FilterBar
+            options={STATUS_FILTER_OPTIONS}
+            value={statusFilter}
+            onChange={setStatusFilter}
+            aria-label="Status"
+          />
+        </div>
+        <Button type="button" variant="ghost" size="sm" onClick={clearAllFilters} disabled={!filtersActive}>
+          Clear All Filters
+        </Button>
       </div>
 
       <DataTable
@@ -229,48 +251,8 @@ export function OrderListTable({ data, canCreate, from, to, initialStatus = "" }
         emptyMessage="No orders found"
         emptyDescription="Confirmed quotes will appear here."
         onRowClick={(row) => router.push(`/dashboard/orders/active-orders/${row.orderNumber}`)}
+        exportFilename="active-orders"
       />
-
-      <Dialog open={exportOpen} onOpenChange={setExportOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Export Orders</DialogTitle>
-            <DialogDescription>Choose which orders to include in the exported file.</DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-2 py-2">
-            {EXPORT_SCOPES.map((scope) => (
-              <label
-                key={scope}
-                className="flex items-start gap-2.5 rounded-md border border-(--color-border) p-3 cursor-pointer transition-colors hover:bg-(--color-bg) has-[:checked]:border-(--color-primary)"
-              >
-                <input
-                  type="radio"
-                  name="export-scope"
-                  value={scope}
-                  checked={exportScope === scope}
-                  onChange={() => setExportScope(scope)}
-                  className="mt-0.5 h-4 w-4 shrink-0 accent-(--color-primary)"
-                />
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium text-(--color-text)">{scope}</span>
-                  <span className="text-xs text-(--color-text-muted)">{EXPORT_SCOPE_DESCRIPTIONS[scope]}</span>
-                </div>
-              </label>
-            ))}
-          </div>
-          {exportError && <p className="text-sm text-(--color-danger)">Failed to export: {exportError}</p>}
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="secondary">
-                Cancel
-              </Button>
-            </DialogClose>
-            <Button type="button" onClick={handleExport} disabled={isExporting}>
-              {isExporting ? "Exporting…" : "Export"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

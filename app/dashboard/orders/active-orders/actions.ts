@@ -2,8 +2,6 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { fetchOrderRows } from './queries'
-import type { OrderRow } from './order-list-table'
 import { formatCurrency } from '@/lib/utils/format'
 
 export type ActionResult =
@@ -11,10 +9,6 @@ export type ActionResult =
   | { success: false; error: string }
 
 const LIST_PATH = '/dashboard/orders/active-orders'
-
-export async function exportOrders(from: string, to: string): Promise<{ rows: OrderRow[]; error: string | null }> {
-  return fetchOrderRows(from, to)
-}
 
 export type OrderItemInput = {
   id?: string
