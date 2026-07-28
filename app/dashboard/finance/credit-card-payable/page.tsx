@@ -65,7 +65,12 @@ export default async function CreditCardPayablePage() {
     };
   });
 
-  const { data: paymentTypes } = await supabase.from("payment_types").select("id, name").order("name");
+  const { data: paymentTypes } = await supabase
+    .from("payment_types")
+    .select("id, name")
+    .eq("is_active", true)
+    .eq("is_purchasing_only", false)
+    .order("name");
   const paymentTypeOptions = (paymentTypes ?? []).map((pt) => ({ value: pt.id, label: pt.name }));
 
   return (

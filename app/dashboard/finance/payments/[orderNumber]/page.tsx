@@ -46,6 +46,7 @@ export default async function PaymentOrderPage({ params }: { params: Promise<{ o
     .from("payment_types")
     .select("id, name")
     .eq("is_active", true)
+    .eq("is_purchasing_only", false)
     .order("name");
 
   const { data: logsData } = await supabase

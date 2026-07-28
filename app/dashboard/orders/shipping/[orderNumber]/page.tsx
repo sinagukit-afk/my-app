@@ -54,6 +54,7 @@ export default async function ShippingOrderPage({ params }: { params: Promise<{ 
     .from("payment_types")
     .select("id, name")
     .eq("is_active", true)
+    .eq("is_purchasing_only", false)
     .order("name");
 
   const { data: packagingCategoryData } = await supabase

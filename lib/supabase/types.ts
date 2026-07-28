@@ -2629,6 +2629,7 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          is_purchasing_only: boolean
           loyverse_payment_type_id: string | null
           name: string
           updated_at: string
@@ -2637,6 +2638,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          is_purchasing_only?: boolean
           loyverse_payment_type_id?: string | null
           name: string
           updated_at?: string
@@ -2645,6 +2647,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          is_purchasing_only?: boolean
           loyverse_payment_type_id?: string | null
           name?: string
           updated_at?: string
