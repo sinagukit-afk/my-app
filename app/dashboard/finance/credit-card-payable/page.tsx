@@ -38,10 +38,18 @@ export default async function CreditCardPayablePage() {
     );
   }
 
-  const { data: lines } = await supabase
-    .from("journal_entry_lines")
-    .select("debit, credit, accounts!inner(account_number)")
-    .eq("accounts.account_number", "2020");
+  const { data: mapping } = await supabase
+    .from("system_account_mappings")
+    .select("account_id")
+    .eq("mapping_key", "credit_card_payable")
+    .single();
+
+  const { data: lines } = mapping?.account_id
+    ? await supabase
+        .from("journal_entry_lines")
+        .select("debit, credit")
+        .eq("account_id", mapping.account_id)
+    : { data: null };
 
   const outstandingBalance = (lines ?? []).reduce(
     (s, l) => s + Number(l.credit || 0) - Number(l.debit || 0),
