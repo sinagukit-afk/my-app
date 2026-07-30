@@ -336,6 +336,7 @@ export type Database = {
       }
       credit_card_installment_payments: {
         Row: {
+          card_payment_type_id: string
           created_at: string
           id: string
           interest_amount: number
@@ -346,6 +347,7 @@ export type Database = {
           principal_amount: number
         }
         Insert: {
+          card_payment_type_id: string
           created_at?: string
           id?: string
           interest_amount?: number
@@ -356,6 +358,7 @@ export type Database = {
           principal_amount: number
         }
         Update: {
+          card_payment_type_id?: string
           created_at?: string
           id?: string
           interest_amount?: number
@@ -366,6 +369,13 @@ export type Database = {
           principal_amount?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "credit_card_installment_payments_card_payment_type_id_fkey"
+            columns: ["card_payment_type_id"]
+            isOneToOne: false
+            referencedRelation: "payment_types"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "credit_card_installment_payments_paid_by_fkey"
             columns: ["paid_by"]
@@ -4945,6 +4955,7 @@ export type Database = {
       }
       log_credit_card_installment_payment: {
         Args: {
+          p_card_payment_type_id: string
           p_interest_amount?: number
           p_notes?: string
           p_paid_date?: string
@@ -4952,6 +4963,7 @@ export type Database = {
           p_principal_amount: number
         }
         Returns: {
+          card_payment_type_id: string
           created_at: string
           id: string
           interest_amount: number

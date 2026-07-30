@@ -6,6 +6,7 @@ import { formatDate } from "@/lib/utils/format-date";
 export type PaymentRow = {
   id: string;
   paid_date: string;
+  card_name: string;
   payment_type_name: string;
   principal_amount: number;
   interest_amount: number;
@@ -22,6 +23,11 @@ const columns: Column<PaymentRow>[] = [
     header: "Date",
     sortable: true,
     render: (value) => formatDate(value as string),
+  },
+  {
+    key: "card_name",
+    header: "Card",
+    sortable: true,
   },
   {
     key: "payment_type_name",

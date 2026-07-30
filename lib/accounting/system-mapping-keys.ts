@@ -14,7 +14,6 @@ export const SALES_MAPPING_KEYS = [
   "shipping_income",
 ] as const;
 export const PURCHASE_MAPPING_KEYS = [
-  "credit_card_payable",
   "credit_card_interest_expense",
   "shipping_in_expense",
   "supplier_discount_expense",
@@ -28,7 +27,6 @@ export const MAPPING_KEY_ACCOUNT_CATEGORY: Record<string, string> = {
   shipping_clearing: "liability",
   shipping_out_expense: "expense",
   shipping_income: "revenue",
-  credit_card_payable: "liability",
   credit_card_interest_expense: "expense",
   shipping_in_expense: "expense",
   supplier_discount_expense: "expense",

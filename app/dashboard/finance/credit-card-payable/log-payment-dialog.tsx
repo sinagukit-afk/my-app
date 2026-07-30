@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -19,19 +19,32 @@ import { TextArea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { logInstallmentPayment } from "./actions";
 
+export type CardOption = {
+  value: string;
+  label: string;
+  accountLabel: string;
+  balance: number;
+  mapped: boolean;
+};
+
 function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function peso(n: number) {
+  return `₱${Number(n).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 type Props = {
+  cards: CardOption[];
   paymentTypeOptions: SelectOption[];
-  outstandingBalance: number;
 };
 
-export function LogPaymentDialog({ paymentTypeOptions, outstandingBalance }: Props) {
+export function LogPaymentDialog({ cards, paymentTypeOptions }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [cardId, setCardId] = useState("");
   const [paymentTypeId, setPaymentTypeId] = useState("");
   const [principal, setPrincipal] = useState("");
   const [interest, setInterest] = useState("");
@@ -39,7 +52,15 @@ export function LogPaymentDialog({ paymentTypeOptions, outstandingBalance }: Pro
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  const cardOptions: SelectOption[] = useMemo(
+    () => cards.filter((c) => c.mapped).map((c) => ({ value: c.value, label: c.label })),
+    [cards]
+  );
+  const selectedCard = cards.find((c) => c.value === cardId);
+  const anyCardHasBalance = cards.some((c) => c.mapped && c.balance > 0);
+
   function reset() {
+    setCardId("");
     setPaymentTypeId("");
     setPrincipal("");
     setInterest("");
@@ -52,6 +73,7 @@ export function LogPaymentDialog({ paymentTypeOptions, outstandingBalance }: Pro
     setError(null);
     startTransition(async () => {
       const res = await logInstallmentPayment(
+        cardId,
         paymentTypeId,
         Number(principal) || 0,
         Number(interest) || 0,
@@ -68,7 +90,8 @@ export function LogPaymentDialog({ paymentTypeOptions, outstandingBalance }: Pro
     });
   }
 
-  const canSubmit = paymentTypeId && Number(principal) > 0 && !isPending && outstandingBalance > 0;
+  const canSubmit =
+    cardId && paymentTypeId && Number(principal) > 0 && !isPending && (selectedCard?.balance ?? 0) > 0;
 
   return (
     <Dialog
@@ -79,18 +102,30 @@ export function LogPaymentDialog({ paymentTypeOptions, outstandingBalance }: Pro
       }}
     >
       <DialogTrigger asChild>
-        <Button disabled={outstandingBalance <= 0}>Log Payment</Button>
+        <Button disabled={!anyCardHasBalance}>Log Payment</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Log Credit Card Installment Payment</DialogTitle>
           <DialogDescription>
-            Records a payment against the outstanding Credit Card Payable balance. This creates a draft journal
-            entry — it still needs Review &amp; Approve before it posts.
+            Records a payment against a card&apos;s outstanding Credit Card Payable balance. This creates a
+            draft journal entry — it still needs Review &amp; Approve before it posts.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
+          <Select
+            label="Card"
+            value={cardId}
+            onChange={(e) => setCardId(e.target.value)}
+            placeholder="Select a credit card…"
+            options={cardOptions}
+          />
+          {selectedCard && (
+            <p className="-mt-2 text-xs text-(--color-text-muted)">
+              Outstanding: {peso(selectedCard.balance)} ({selectedCard.accountLabel})
+            </p>
+          )}
           <Select
             label="Paid From"
             value={paymentTypeId}

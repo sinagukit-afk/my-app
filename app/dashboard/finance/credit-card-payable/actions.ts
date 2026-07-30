@@ -18,18 +18,21 @@ function friendlyError(error: { code?: string; message: string }): string {
 }
 
 export async function logInstallmentPayment(
+  cardPaymentTypeId: string,
   paymentTypeId: string,
   principalAmount: number,
   interestAmount: number,
   paidDate: string,
   notes: string
 ): Promise<ActionResult> {
+  if (!cardPaymentTypeId) return { success: false, error: 'Select a credit card.' }
   if (!paymentTypeId) return { success: false, error: 'Select a payment method.' }
   if (!(principalAmount > 0)) return { success: false, error: 'Principal amount must be greater than zero.' }
   if (interestAmount < 0) return { success: false, error: 'Interest amount cannot be negative.' }
 
   const supabase = await createClient()
   const { error } = await supabase.rpc('log_credit_card_installment_payment', {
+    p_card_payment_type_id: cardPaymentTypeId,
     p_payment_type_id: paymentTypeId,
     p_principal_amount: principalAmount,
     p_interest_amount: interestAmount,
