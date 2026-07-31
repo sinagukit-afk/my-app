@@ -23,6 +23,7 @@ export type BankAccountRow = {
   id: string;
   name: string;
   bank: string;
+  type: string;
   account_number_masked: string | null;
   gl_account_id: string;
   gl_account_label: string;
@@ -30,7 +31,13 @@ export type BankAccountRow = {
   is_active: boolean;
 };
 
-type GlAccountOption = { value: string; label: string; is_postable: boolean };
+type GlAccountOption = { value: string; label: string; is_postable: boolean; category: "asset" | "liability" };
+
+const TYPE_LABELS: Record<string, string> = {
+  saving: "Saving",
+  online_wallet: "Online Wallet",
+  credit_card: "Credit Card",
+};
 
 type Props = {
   data: BankAccountRow[];
@@ -83,6 +90,12 @@ export function BankAccountsTable({ data, glAccountOptions, canWrite }: Props) {
 
   const columns: Column<BankAccountRow>[] = [
     { key: "name", header: "Name", sortable: true },
+    {
+      key: "type",
+      header: "Type",
+      sortable: true,
+      render: (value) => <Badge variant="neutral">{TYPE_LABELS[value as string] ?? (value as string)}</Badge>,
+    },
     { key: "bank", header: "Bank", sortable: true },
     {
       key: "account_number_masked",
@@ -134,7 +147,7 @@ export function BankAccountsTable({ data, glAccountOptions, canWrite }: Props) {
     <div className="space-y-4">
       <PageHeader
         title="Bank Accounts"
-        description="Real bank/cash accounts, each linked to a Chart of Accounts asset account. Used by Payment Methods for reconciliation-ready posting."
+        description="Real bank/wallet/credit card accounts, each linked to a Chart of Accounts account. Used by Payment Methods for reconciliation-ready posting."
         actions={canWrite ? <Button onClick={openAdd}>Add Bank Account</Button> : undefined}
       />
 

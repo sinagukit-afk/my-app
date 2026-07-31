@@ -17,7 +17,7 @@ import { createBankAccount, updateBankAccount, type ActionResult } from "./actio
 import { PARENT_ACCOUNT_WARNING } from "@/lib/accounting/account-options";
 import type { BankAccountRow } from "./bank-accounts-table";
 
-type GlAccountOption = { value: string; label: string; is_postable: boolean };
+type GlAccountOption = { value: string; label: string; is_postable: boolean; category: "asset" | "liability" };
 
 type Props = {
   open: boolean;
@@ -27,18 +27,48 @@ type Props = {
   onSaved: () => void;
 };
 
+const TYPE_OPTIONS = [
+  { value: "saving", label: "Saving" },
+  { value: "online_wallet", label: "Online Wallet" },
+  { value: "credit_card", label: "Credit Card" },
+];
+
+// Which accounts.category a bank account's GL Account picker should be
+// restricted to for each type — credit cards post to a liability (the
+// card's payable account), everything else posts to an asset.
+function categoryForType(type: string): "asset" | "liability" {
+  return type === "credit_card" ? "liability" : "asset";
+}
+
 export function BankAccountForm({ open, onOpenChange, bankAccount, glAccountOptions, onSaved }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [type, setType] = useState(bankAccount?.type ?? "saving");
   const [glAccountId, setGlAccountId] = useState(bankAccount?.gl_account_id ?? "");
   const isEdit = Boolean(bankAccount);
 
   useEffect(() => {
-    if (open) setGlAccountId(bankAccount?.gl_account_id ?? "");
+    if (open) {
+      setType(bankAccount?.type ?? "saving");
+      setGlAccountId(bankAccount?.gl_account_id ?? "");
+    }
   }, [open, bankAccount]);
 
   const glAccountsByValue = useMemo(() => new Map(glAccountOptions.map((o) => [o.value, o])), [glAccountOptions]);
   const isParentAccount = glAccountId ? glAccountsByValue.get(glAccountId)?.is_postable === false : false;
+
+  const allowedCategory = categoryForType(type);
+  const filteredAccountOptions = useMemo(
+    () => glAccountOptions.filter((o) => o.category === allowedCategory),
+    [glAccountOptions, allowedCategory]
+  );
+
+  function handleTypeChange(next: string) {
+    setType(next);
+    if (glAccountId && glAccountsByValue.get(glAccountId)?.category !== categoryForType(next)) {
+      setGlAccountId("");
+    }
+  }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -86,6 +116,15 @@ export function BankAccountForm({ open, onOpenChange, bankAccount, glAccountOpti
             autoFocus
           />
 
+          <Select
+            label="Type"
+            name="type"
+            options={TYPE_OPTIONS}
+            value={type}
+            onChange={(e) => handleTypeChange(e.target.value)}
+            required
+          />
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
               label="Bank"
@@ -106,14 +145,16 @@ export function BankAccountForm({ open, onOpenChange, bankAccount, glAccountOpti
             label="GL Account"
             name="gl_account_id"
             placeholder="Select an account…"
-            options={glAccountOptions}
+            options={filteredAccountOptions}
             value={glAccountId}
             onChange={(e) => setGlAccountId(e.target.value)}
             error={isParentAccount ? PARENT_ACCOUNT_WARNING : undefined}
             required
           />
           <p className="-mt-2 text-xs text-(--color-text-muted)">
-            The Chart of Accounts asset account this bank account's balance posts to.
+            {type === "credit_card"
+              ? "The Chart of Accounts liability account (the card's payable) this links to."
+              : "The Chart of Accounts asset account this bank account's balance posts to."}
           </p>
 
           <Input

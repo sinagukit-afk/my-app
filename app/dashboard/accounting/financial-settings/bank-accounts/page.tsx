@@ -24,7 +24,7 @@ export default async function BankAccountsPage() {
       <div>
         <PageHeader
           title="Bank Accounts"
-          description="Real bank/cash accounts, each linked to a Chart of Accounts asset account."
+          description="Real bank/wallet/credit card accounts, each linked to a Chart of Accounts account."
         />
         <Card className="max-w-lg">
           <CardContent className="p-4 text-sm text-(--color-text-muted)">
@@ -39,12 +39,12 @@ export default async function BankAccountsPage() {
   const [{ data: bankAccounts, error }, { data: glAccounts }] = await Promise.all([
     supabase
       .from("bank_accounts")
-      .select("id, name, bank, account_number_masked, gl_account_id, currency, is_active, accounts(account_number, name)")
+      .select("id, name, bank, type, account_number_masked, gl_account_id, currency, is_active, accounts(account_number, name)")
       .order("name"),
     supabase
       .from("accounts")
-      .select("id, account_number, name, is_postable")
-      .eq("category", "asset")
+      .select("id, account_number, name, is_postable, category")
+      .in("category", ["asset", "liability"])
       .eq("is_active", true)
       .order("account_number"),
   ]);
@@ -55,6 +55,7 @@ export default async function BankAccountsPage() {
       id: b.id,
       name: b.name,
       bank: b.bank,
+      type: b.type,
       account_number_masked: b.account_number_masked,
       gl_account_id: b.gl_account_id,
       gl_account_label: gl ? `${gl.account_number} — ${gl.name}` : "—",
@@ -67,6 +68,7 @@ export default async function BankAccountsPage() {
     value: a.id,
     label: accountOptionLabel(a),
     is_postable: a.is_postable,
+    category: a.category as "asset" | "liability",
   }));
 
   return (
