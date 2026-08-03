@@ -301,7 +301,12 @@ Settings nav subgroup under Accounting; Product Mapping and Category
 Mapping moved to `/dashboard/accounting/financial-settings/product-mapping`
 and `/financial-settings/expense-categories` (old paths above are now
 stale); Journal→Journal Entries, Review→Pending Review, Income
-Statement→Profit & Loss renames applied. **9.3 done 2026-07-15**: new
+Statement→Profit & Loss renames applied. **Pending Review's list view
+merged into the Journal Entries page 2026-07-27** — one page, two stacked
+tables (Pending Review incl. status-default + event-type tile filters,
+then Posted Entries); `/dashboard/accounting/review` now just redirects
+there, only its `[id]` draft-detail route is still real. See
+`PROGRESS-ACCOUNTING.md`'s 2026-07-27 entry. **9.3 done 2026-07-15**: new
 `system_account_mappings` table (7 seeded keys) closes the hardcoded-
 `account_number` gap in `generate_draft_journal_entries()` — every account
 it resolves is now FK'd via `mapping_key`, not a literal string. **9.4 done

@@ -84,7 +84,7 @@ conventions worth keeping are:
 | ACCT-4 | Financial reports (trial balance, income statement, balance sheet) | Done | `0016_accounting_reports` | Runs before ACCT-5 — hence the lower migration number |
 | ACCT-5 | Fixed assets & depreciation | Done | `0017_accounting_fixed_assets` | Rounding caveat found — see session log |
 | ACCT-6 | Historical import / opening balance | Done | — (no plug account needed) | Posted 2026-07-02 as `journal_entries.id = 61d13de0-99a0-4c90-9296-1ded0b2ca823`. The doc's own Resolution section (₱142,532.17 Retained Earnings, ₱332.40 credit for 2010) did not actually balance — recomputed from an updated source workbook Sinag supplied mid-session; see session log for the corrected figures actually posted. `0018_accounting_opening_balance_adjustment` migration and 3099 plug account confirmed still not needed. |
-| ACCT-7 | Event-driven auto-posting (rewritten — see `docs/ACCT-7-v2-Business-Events-Kickoff.md`) | Done, extended | `acct7_reseed_chart_of_accounts`, `acct7_item_accounting_mappings`, `acct7_2_incoming_items_payment_method`, `acct7_4_business_events`, `acct7_4_wire_close_order_payment`, `acct7_4_wire_incoming_items_trigger`, `acct7_4_wire_adjust_stock`, `acct7_4_release_to_scrap`, `acct7_4_wire_shipment_cogs`, `acct7_5_payment_type_accounting_mappings`, `acct7_5_enrich_close_order_payment_payload`, `acct7_5_journal_entry_drafts`, `acct7_5_generate_draft_journal_entries`, `acct7_5_wire_business_events_trigger`, `acct7_5_revoke_public_execute_drafts_trigger`, `acct7_6_draft_review_rpcs`, `acct7_6_extend_journal_entries_source_type_check`, `acct7_6_restore_approve_and_post_final`, `acct7_7_reverse_journal_entry`, `acct7_8_credit_card_installment_payments`, `acct7_8_widen_business_events_event_type_check`, `acct7_8_widen_journal_entries_source_type_check`, `finpur_7_widen_event_type_checks`, `finpur_8_expense_asset_po_rpcs`, `finpur_11_rule_engine_expense_asset_events` | Original scope assumed `confirm_order()`, retired by D027 — full rescope done 2026-07-10, split into ACCT-7.1..7.8, **all 8 sub-phases done same day**; **7.9 added 2026-07-11** (Finance & Purchasing restructure, D044) with 4 more event types (`expense_recorded`/`asset_acquired`/`expense_payment`/`asset_payment`, all posting through `SCA-2000 Accounts payable`) and the new Category Mapping page — see session log. 7.1 done (COA re-seeded + admin-only edit UI); 7.2 done (Purchasing payment-method capture); 7.3 done (Sinag reviewed Claude's first pass + mapped the 4 `Pkg-*` items himself; last gap — 4 `Srv-*`/`Shp-*` service items — closed by adding `SCA-4043 Service & Shipping Revenue`, 59/62 mapped, 3 intentionally-unmapped dev/test rows remain); 7.4 done (`business_events` table + all 6 trigger RPCs wired — see session log for the RPC-graph corrections found along the way); 7.5 done (`journal_entry_drafts`/`journal_entry_draft_lines` + `generate_draft_journal_entries()` rule engine, auto-fired via `AFTER INSERT` trigger on `business_events` — see session log); 7.6 done (`/dashboard/accounting/review` Review & Approve/Post UI + 3 RPCs, browser-verified with a real post and a real reject); 7.7 done (`reverse_journal_entry()` RPC + Reverse Entry action on the journal detail page, browser-verified with a real reversal); 7.8 done (`log_credit_card_installment_payment()` + `/dashboard/accounting/credit-card-payable`, browser-verified end-to-end with a real credit-card purchase paid down by a real installment); 7.9 done (see above) |
+| ACCT-7 | Event-driven auto-posting (rewritten — see `docs/ACCT-7-v2-Business-Events-Kickoff.md`) | Done, extended | `acct7_reseed_chart_of_accounts`, `acct7_item_accounting_mappings`, `acct7_2_incoming_items_payment_method`, `acct7_4_business_events`, `acct7_4_wire_close_order_payment`, `acct7_4_wire_incoming_items_trigger`, `acct7_4_wire_adjust_stock`, `acct7_4_release_to_scrap`, `acct7_4_wire_shipment_cogs`, `acct7_5_payment_type_accounting_mappings`, `acct7_5_enrich_close_order_payment_payload`, `acct7_5_journal_entry_drafts`, `acct7_5_generate_draft_journal_entries`, `acct7_5_wire_business_events_trigger`, `acct7_5_revoke_public_execute_drafts_trigger`, `acct7_6_draft_review_rpcs`, `acct7_6_extend_journal_entries_source_type_check`, `acct7_6_restore_approve_and_post_final`, `acct7_7_reverse_journal_entry`, `acct7_8_credit_card_installment_payments`, `acct7_8_widen_business_events_event_type_check`, `acct7_8_widen_journal_entries_source_type_check`, `finpur_7_widen_event_type_checks`, `finpur_8_expense_asset_po_rpcs`, `finpur_11_rule_engine_expense_asset_events` | Original scope assumed `confirm_order()`, retired by D027 — full rescope done 2026-07-10, split into ACCT-7.1..7.8, **all 8 sub-phases done same day**; **7.9 added 2026-07-11** (Finance & Purchasing restructure, D044) with 4 more event types (`expense_recorded`/`asset_acquired`/`expense_payment`/`asset_payment`, all posting through `SCA-2000 Accounts payable`) and the new Category Mapping page — see session log. 7.1 done (COA re-seeded + admin-only edit UI); 7.2 done (Purchasing payment-method capture); 7.3 done (Sinag reviewed Claude's first pass + mapped the 4 `Pkg-*` items himself; last gap — 4 `Srv-*`/`Shp-*` service items — closed by adding `SCA-4043 Service & Shipping Revenue`, 59/62 mapped, 3 intentionally-unmapped dev/test rows remain); 7.4 done (`business_events` table + all 6 trigger RPCs wired — see session log for the RPC-graph corrections found along the way); 7.5 done (`journal_entry_drafts`/`journal_entry_draft_lines` + `generate_draft_journal_entries()` rule engine, auto-fired via `AFTER INSERT` trigger on `business_events` — see session log); 7.6 done (`/dashboard/accounting/review` Review & Approve/Post UI + 3 RPCs, browser-verified with a real post and a real reject; **its list view merged into `/dashboard/accounting/journal` 2026-07-27** — `/review` now just redirects there, draft detail pages unchanged at `/review/[id]`); 7.7 done (`reverse_journal_entry()` RPC + Reverse Entry action on the journal detail page, browser-verified with a real reversal); 7.8 done (`log_credit_card_installment_payment()` + `/dashboard/accounting/credit-card-payable`, browser-verified end-to-end with a real credit-card purchase paid down by a real installment); 7.9 done (see above) |
 
 > **Migration renumber (2026-07-02, ACCT-3):** ACCT-3 wasn't originally assigned a migration, but the Rent/Transportation decision added account `6015 Rent Expense`, which needed one. Created during ACCT-3 (chronologically before ACCT-4..7, none of which exist yet), it correctly takes the next free label `0015` — so the reserved labels for ACCT-4 (`0015→0016`), ACCT-5 (`0016→0017`), ACCT-6 (`0017→0018`), and ACCT-7 (`0018→0019`) each shift up by one, preserving the "lower label = created earlier" invariant the earlier amendments established.
 | ACCT-8 | BIR tax estimate calculator | Not started | — | Lowest priority, optional |
@@ -2385,5 +2385,71 @@ produces no journal draft at all — `generate_draft_journal_entries` skips paym
 whose payment type has no `payment_type_accounting_mappings` row (`v_skip := true`). The
 audit made Payment Method required in both Log Payment dialogs, closing that gap going
 forward; historical method-less payments (if any) never reached the journal.
+
+---
+
+### 2026-07-27 — Merged Pending Review + Journal into one "Journal Entries" page
+
+UI-only follow-up on ACCT-7.6's Review page and the original Journal list — no schema,
+RPC, or RLS changes. Sinag asked to combine the two into one page with two stacked
+tables (Pending Review above, capped 15/page then reduced to 5/page; Journal/Posted
+Entries below, 50/page), then in later follow-ups asked for a default status filter and
+an event-type tile filter on the Pending Review table.
+
+**Page merge:** `/dashboard/accounting/journal/page.tsx` now fetches both
+`journal_entry_drafts` and `journal_entries` in one `Promise.all` and renders
+`ReviewTable` (upper) + `JournalTable` (lower, renamed section heading "Posted Entries"
+to avoid a duplicate "Journal Entries" heading on the page). `/dashboard/accounting/
+review/page.tsx` (the old list route) is now a bare `redirect()` to `/dashboard/
+accounting/journal` — kept, not deleted, so existing bookmarks/cross-module links (Fixed
+Assets/Expense Schedule/Credit Card Payable detail pages link to
+`/dashboard/accounting/review/[id]`, unaffected) still resolve. Draft detail pages stay
+at `/dashboard/accounting/review/[id]` — only the two **list** views merged, not the
+edit/approve/reject flow. `review/[id]/actions.ts`'s revalidate/redirect targets and
+`review-detail.tsx`'s back-link were repointed at `/dashboard/accounting/journal`
+(`DETAIL_BASE_PATH` kept separate from `LIST_PATH` in `actions.ts` — the per-draft
+detail route didn't move, only the list did, so collapsing them into one constant would
+have silently revalidated the wrong path). `revalidatePath('/dashboard/accounting/
+review')` calls in `finance/expense-schedule/actions.ts` (×2) and
+`finance/credit-card-payable/actions.ts` were repointed the same way, since that's where
+the live pending-review data actually renders now.
+
+**Nav:** the two sidebar items ("Pending Review", "Journal Entries") collapsed into one
+("Journal Entries"), carrying over the `accountingReview` badge count — no changes
+needed in `dashboard/layout.tsx`'s count computation, just which nav item the existing
+`countKey` is attached to in `app-shell.tsx`.
+
+**Filters (follow-up requests, same session):** Pending Review's status filter now
+defaults to `pending_review` instead of "All" (`DEFAULT_STATUS_FILTER` constant in
+`review-table.tsx`). Added a `QtyTile` row above it — one tile per `event_type` present
+among pending-review rows (COGS/Shipping/Sale Recognized/Manual Incoming/etc., sorted by
+count desc), computed from the full pending-review bucket independent of whatever the
+status dropdown is currently set to, so tile counts don't shift as you toggle between
+them (same design as `finance/payments/qty-tile.tsx`'s Open/On Hold/Completed/Cancelled
+tiles). Clicking a tile filters the table to that event type and snaps the status filter
+back to `pending_review`; a "Clear All Filters" button resets both. First pass used
+`StatCard` (the bigger card style from Sales Dashboard) per an initial ask that named
+"Sales Dashboard" — Sinag then asked to redo it matching Customer Payment's tile look
+instead, so it was swapped to a new `app/dashboard/accounting/review/qty-tile.tsx` (a
+direct copy of the Customer Payment/Inventory Monitoring `QtyTile` pattern — this
+project doesn't have a shared `components/business/qty-tile.tsx`, each page keeps its
+own copy) and `StatCard` was reverted back to its original non-clickable form since
+nothing uses the `onClick`/`active` props added in the interim.
+
+**Verified live** (browser, Claude admin test account, real data, both against this
+session's own `next dev` on an autoPort-assigned port and later directly against another
+session's server on `:3000` per Sinag's instruction):
+- Combined page renders both tables with independent pagination footers (Pending Review
+  "Showing 1–5 of 33", 7 pages after the pageSize-5 follow-up; Posted Entries "Showing
+  1–8 of 8").
+- Row-click into a pending draft still opens `/dashboard/accounting/review/[id]`;
+  "Back to Journal" returns to the combined page correctly.
+- Old `/dashboard/accounting/review` URL redirects to `/dashboard/accounting/journal`.
+- Clicking the COGS tile filters the table to COGS-only pending rows and rings the tile;
+  Clear All Filters returns to the pending_review/no-tile default state.
+- `npx tsc --noEmit` clean after every change in this session.
+
+No git commit initially (mirrors this doc's standing "stop for manual review" pattern),
+then Sinag explicitly asked to commit and push — done as `e8671d5` on `main`.
 
 ---
