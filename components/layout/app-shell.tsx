@@ -58,20 +58,14 @@ const NAV: NavEntry[] = [
     icon: BoxIcon,
     children: [
       { kind: "item", label: "Customers", href: "/dashboard/management/customers", icon: ClipboardIcon },
-      {
-        kind: "subgroup",
-        label: "Orders",
-        children: [
-          { kind: "item", label: "All", href: "/dashboard/orders/active-orders", icon: ShoppingCartIcon, countKey: "ordersActive" },
-          { kind: "item", label: "Quotation", href: "/dashboard/orders/quotation", icon: ShoppingCartIcon, countKey: "ordersQuotation" },
-          { kind: "item", label: "Confirmed", href: "/dashboard/orders/confirmed", icon: ShoppingCartIcon, countKey: "ordersConfirmed" },
-          { kind: "item", label: "On Hold", href: "/dashboard/orders/on-hold", icon: ShoppingCartIcon, countKey: "ordersOnHold" },
-          { kind: "item", label: "Production", href: "/dashboard/orders/production", icon: ShoppingCartIcon, countKey: "ordersProduction" },
-          { kind: "item", label: "Shipping", href: "/dashboard/orders/shipping", icon: ShoppingCartIcon, countKey: "ordersShipping" },
-          { kind: "item", label: "Completed", href: "/dashboard/orders/completed", icon: ShoppingCartIcon },
-          { kind: "item", label: "Cancelled", href: "/dashboard/orders/cancelled", icon: ShoppingCartIcon },
-        ],
-      },
+      { kind: "item", label: "All", href: "/dashboard/orders/active-orders", icon: ShoppingCartIcon, countKey: "ordersActive" },
+      { kind: "item", label: "Quotation", href: "/dashboard/orders/quotation", icon: ShoppingCartIcon, countKey: "ordersQuotation" },
+      { kind: "item", label: "Confirmed", href: "/dashboard/orders/confirmed", icon: ShoppingCartIcon, countKey: "ordersConfirmed" },
+      { kind: "item", label: "On Hold", href: "/dashboard/orders/on-hold", icon: ShoppingCartIcon, countKey: "ordersOnHold" },
+      { kind: "item", label: "Production", href: "/dashboard/orders/production", icon: ShoppingCartIcon, countKey: "ordersProduction" },
+      { kind: "item", label: "Shipping", href: "/dashboard/orders/shipping", icon: ShoppingCartIcon, countKey: "ordersShipping" },
+      { kind: "item", label: "Completed", href: "/dashboard/orders/completed", icon: ShoppingCartIcon },
+      { kind: "item", label: "Cancelled", href: "/dashboard/orders/cancelled", icon: ShoppingCartIcon },
     ],
   },
   {
