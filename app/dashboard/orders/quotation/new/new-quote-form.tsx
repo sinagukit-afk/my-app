@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRegisterUnsavedChanges } from "@/lib/hooks/use-unsaved-changes";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { TextArea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
@@ -47,10 +47,13 @@ export function NewQuoteForm({ customers, variantOptions, discounts, modifierGro
   const [quoteDate, setQuoteDate] = useState(todayIso());
   const [validUntil, setValidUntil] = useState(plus30Days(todayIso()));
   const [validUntilTouched, setValidUntilTouched] = useState(false);
+  const [customerId, setCustomerId] = useState("");
+  const [orderSource, setOrderSource] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const initialSnapshot = useRef(JSON.stringify({ rows, quoteDate, validUntil }));
-  const isDirty = JSON.stringify({ rows, quoteDate, validUntil }) !== initialSnapshot.current;
+  const initialSnapshot = useRef(JSON.stringify({ rows, quoteDate, validUntil, customerId, orderSource }));
+  const isDirty =
+    JSON.stringify({ rows, quoteDate, validUntil, customerId, orderSource }) !== initialSnapshot.current;
   useRegisterUnsavedChanges(isDirty);
 
   function handleQuoteDateChange(value: string) {
@@ -105,18 +108,23 @@ export function NewQuoteForm({ customers, variantOptions, discounts, modifierGro
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Select
+            <Combobox
               label="Customer"
               name="customer_id"
+              value={customerId}
+              onValueChange={setCustomerId}
               placeholder="Walk-in customer"
+              searchPlaceholder="Search customers…"
               options={customers.map((c) => ({ value: c.id, label: c.name }))}
             />
-            <Select
+            <Combobox
               label="Order Source"
               name="order_source"
+              value={orderSource}
+              onValueChange={setOrderSource}
               placeholder="Select a source…"
+              searchPlaceholder="Search sources…"
               options={ORDER_SOURCE_OPTIONS}
-              required
             />
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

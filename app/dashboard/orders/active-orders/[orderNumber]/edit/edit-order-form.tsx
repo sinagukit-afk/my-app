@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRegisterUnsavedChanges } from "@/lib/hooks/use-unsaved-changes";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { TextArea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
@@ -59,10 +59,16 @@ export function EditOrderForm({
   const [rows, setRows] = useState<OrderLineRow[]>(initialRows);
   const [orderDateValue, setOrderDateValue] = useState(orderDate);
   const [targetDateValue, setTargetDateValue] = useState(targetDate);
+  const [customerIdValue, setCustomerIdValue] = useState(customerId ?? "");
+  const [orderSourceValue, setOrderSourceValue] = useState(orderSource ?? "");
   const [error, setError] = useState<string | null>(null);
 
-  const initialSnapshot = useRef(JSON.stringify({ rows, orderDateValue, targetDateValue }));
-  const isDirty = JSON.stringify({ rows, orderDateValue, targetDateValue }) !== initialSnapshot.current;
+  const initialSnapshot = useRef(
+    JSON.stringify({ rows, orderDateValue, targetDateValue, customerIdValue, orderSourceValue })
+  );
+  const isDirty =
+    JSON.stringify({ rows, orderDateValue, targetDateValue, customerIdValue, orderSourceValue }) !==
+    initialSnapshot.current;
   useRegisterUnsavedChanges(isDirty);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -113,20 +119,23 @@ export function EditOrderForm({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Select
+            <Combobox
               label="Customer"
               name="customer_id"
+              value={customerIdValue}
+              onValueChange={setCustomerIdValue}
               placeholder="Walk-in customer"
-              defaultValue={customerId ?? ""}
+              searchPlaceholder="Search customers…"
               options={customers.map((c) => ({ value: c.id, label: c.name }))}
             />
-            <Select
+            <Combobox
               label="Order Source"
               name="order_source"
+              value={orderSourceValue}
+              onValueChange={setOrderSourceValue}
               placeholder="Select a source…"
-              defaultValue={orderSource ?? ""}
+              searchPlaceholder="Search sources…"
               options={ORDER_SOURCE_OPTIONS}
-              required
             />
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
