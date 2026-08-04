@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -20,6 +20,7 @@ import { TextArea } from "@/components/ui/textarea";
 import { formatDate } from "@/lib/utils/format-date";
 import { formatQty, formatCurrency } from "@/lib/utils/format";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { DatePicker } from "@/components/ui/date-picker";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { NumberInput } from "@/components/ui/number-input";
@@ -98,6 +99,11 @@ export function AssetPODetail({ po, items, suppliers, categories, canWrite, canD
   const [isPending, startTransition] = useTransition();
   const [editOpen, setEditOpen] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [editSupplierId, setEditSupplierId] = useState(po.supplier_id ?? "");
+
+  useEffect(() => {
+    if (editOpen) setEditSupplierId(po.supplier_id ?? "");
+  }, [editOpen, po.supplier_id]);
   const [itemFormOpen, setItemFormOpen] = useState(false);
   const [statusTarget, setStatusTarget] = useState<{ status: string; label: string } | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
@@ -399,11 +405,12 @@ export function AssetPODetail({ po, items, suppliers, categories, canWrite, canD
               </DialogHeader>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Select
+                <Combobox
                   label="Supplier (optional)"
                   name="supplier_id"
                   placeholder="Select a supplier…"
-                  defaultValue={po.supplier_id ?? ""}
+                  value={editSupplierId}
+                  onValueChange={setEditSupplierId}
                   options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
                 />
                 <Select

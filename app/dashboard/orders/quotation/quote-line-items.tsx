@@ -246,11 +246,11 @@ export function QuoteLineItemsEditor({ rows, onRowsChange, variantOptions, disco
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Select
+                <Combobox
                   label="Discount"
                   placeholder="No discount"
                   value={row.discountId}
-                  onChange={(e) => updateRow(row.rowId, { discountId: e.target.value, discountManualValue: "" })}
+                  onValueChange={(v) => updateRow(row.rowId, { discountId: v, discountManualValue: "" })}
                   options={discounts.map((d) => ({ value: d.id, label: d.name }))}
                 />
                 {discount && VARIABLE_DISCOUNT_TYPES.includes(discount.discountType) && (

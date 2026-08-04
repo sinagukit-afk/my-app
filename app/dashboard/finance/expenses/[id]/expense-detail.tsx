@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
@@ -16,7 +16,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -90,6 +90,20 @@ export function ExpenseDetail({
   const [payOpen, setPayOpen] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [editCategoryId, setEditCategoryId] = useState(expense.category_id);
+  const [editSupplierId, setEditSupplierId] = useState(expense.supplier_id ?? "");
+  const [paymentTypeId, setPaymentTypeId] = useState("");
+
+  useEffect(() => {
+    if (editOpen) {
+      setEditCategoryId(expense.category_id);
+      setEditSupplierId(expense.supplier_id ?? "");
+    }
+  }, [editOpen, expense.category_id, expense.supplier_id]);
+
+  useEffect(() => {
+    if (!payOpen) setPaymentTypeId("");
+  }, [payOpen]);
 
   function refresh() {
     router.refresh();
@@ -308,22 +322,23 @@ export function ExpenseDetail({
                 <DialogDescription>Update this direct-entry expense.</DialogDescription>
               </DialogHeader>
 
-              <Select
+              <Combobox
                 label="Category"
                 name="category_id"
-                defaultValue={expense.category_id}
+                value={editCategoryId}
+                onValueChange={setEditCategoryId}
                 options={categories.map((c) => ({ value: c.id, label: c.name }))}
-                required
               />
               <Input label="Description" name="description" defaultValue={expense.description} required />
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <CurrencyInput label="Amount" name="amount" defaultValue={expense.amount} required />
                 <DatePicker label="Date" name="expense_date" defaultValue={expense.expense_date} required />
               </div>
-              <Select
+              <Combobox
                 label="Supplier (optional)"
                 name="supplier_id"
-                defaultValue={expense.supplier_id ?? ""}
+                value={editSupplierId}
+                onValueChange={setEditSupplierId}
                 options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
               />
 
@@ -367,10 +382,12 @@ export function ExpenseDetail({
                 <DialogDescription>₱{remainingBalance.toFixed(2)} remaining on this expense.</DialogDescription>
               </DialogHeader>
 
-              <Select
+              <Combobox
                 label="Payment Method"
                 name="payment_type_id"
                 placeholder="Select…"
+                value={paymentTypeId}
+                onValueChange={setPaymentTypeId}
                 options={paymentTypes.map((p) => ({ value: p.id, label: p.name }))}
               />
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

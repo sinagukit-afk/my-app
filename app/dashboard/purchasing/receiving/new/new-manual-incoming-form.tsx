@@ -278,13 +278,13 @@ export function NewManualIncomingForm({ suppliers, variantOptions }: Props) {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <AiFieldHighlight active={aiFilledKeys.has("supplier_id")}>
-              <Select
+              <Combobox
                 label="Supplier (optional)"
                 name="supplier_id"
                 placeholder="Select a supplier…"
                 value={supplierId}
-                onChange={(e) => {
-                  setSupplierId(e.target.value);
+                onValueChange={(v) => {
+                  setSupplierId(v);
                   clearAiField("supplier_id");
                 }}
                 options={suppliers.map((s) => ({ value: s.id, label: s.name }))}

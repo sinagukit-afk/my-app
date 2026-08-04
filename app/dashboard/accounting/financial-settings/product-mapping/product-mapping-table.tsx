@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { DataTable, type Column } from "@/components/ui/data-table";
-import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
 import { accountOptionLabel, PARENT_ACCOUNT_WARNING } from "@/lib/accounting/account-options";
 import { saveItemAccountMappings, type MappingInput } from "./actions";
@@ -77,9 +77,9 @@ export function ProductMappingTable({ rows: initialRows, accounts, canEdit }: Pr
       key: "revenue_account_id",
       header: "Revenue Account",
       render: (_v, row) => (
-        <Select
+        <Combobox
           value={row.revenue_account_id}
-          onChange={(e) => updateRow(row.item_id, { revenue_account_id: e.target.value })}
+          onValueChange={(v) => updateRow(row.item_id, { revenue_account_id: v })}
           placeholder="Not mapped"
           options={revenueOptions}
           disabled={!canEdit}
@@ -92,9 +92,9 @@ export function ProductMappingTable({ rows: initialRows, accounts, canEdit }: Pr
       key: "inventory_account_id",
       header: "Inventory Account",
       render: (_v, row) => (
-        <Select
+        <Combobox
           value={row.inventory_account_id}
-          onChange={(e) => updateRow(row.item_id, { inventory_account_id: e.target.value })}
+          onValueChange={(v) => updateRow(row.item_id, { inventory_account_id: v })}
           placeholder="Not mapped"
           options={inventoryOptions}
           disabled={!canEdit}
@@ -107,9 +107,9 @@ export function ProductMappingTable({ rows: initialRows, accounts, canEdit }: Pr
       key: "expense_account_id",
       header: "COGS / Expense Account",
       render: (_v, row) => (
-        <Select
+        <Combobox
           value={row.expense_account_id}
-          onChange={(e) => updateRow(row.item_id, { expense_account_id: e.target.value })}
+          onValueChange={(v) => updateRow(row.item_id, { expense_account_id: v })}
           placeholder="Not mapped"
           options={expenseOptions}
           disabled={!canEdit}

@@ -6,7 +6,7 @@ import { useGuardedNavigate, useRegisterUnsavedChanges } from "@/lib/hooks/use-u
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
@@ -149,10 +149,10 @@ export function NewJournalForm({ accounts }: Props) {
               key={row.rowId}
               className="grid grid-cols-1 gap-3 border-b border-(--color-border) pb-4 last:border-0 sm:grid-cols-[2fr_1fr_1fr_2fr_auto] sm:items-end"
             >
-              <Select
+              <Combobox
                 label={i === 0 ? "Account" : undefined}
                 value={row.accountNumber}
-                onChange={(e) => updateRow(row.rowId, { accountNumber: e.target.value })}
+                onValueChange={(v) => updateRow(row.rowId, { accountNumber: v })}
                 placeholder="Select an account…"
                 options={accountOptions}
               />

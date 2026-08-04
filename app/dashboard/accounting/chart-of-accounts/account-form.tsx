@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { TextArea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { createAccount, updateAccount, type ActionResult } from "./actions";
@@ -38,8 +39,13 @@ const CATEGORY_OPTIONS = [
 export function AccountForm({ open, onOpenChange, account, parentOptions, onSaved }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [parentAccountId, setParentAccountId] = useState(account?.parent_account_id ?? "");
   const isEdit = Boolean(account);
   const selectableParents = parentOptions.filter((p) => p.value !== account?.id);
+
+  useEffect(() => {
+    if (open) setParentAccountId(account?.parent_account_id ?? "");
+  }, [open, account]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -106,12 +112,13 @@ export function AccountForm({ open, onOpenChange, account, parentOptions, onSave
             required
           />
 
-          <Select
+          <Combobox
             label="Parent Account"
             name="parent_account_id"
             placeholder="None (top-level account)"
             options={selectableParents}
-            defaultValue={account?.parent_account_id ?? ""}
+            value={parentAccountId}
+            onValueChange={setParentAccountId}
           />
           <p className="-mt-2 text-xs text-(--color-text-muted)">
             Parent must be the same category as this account.

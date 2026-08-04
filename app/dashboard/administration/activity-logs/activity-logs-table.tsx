@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -325,10 +326,10 @@ export function ActivityLogsTable({ data }: { data: LogRow[] }) {
           onChange={(e) => setActionFilter(e.target.value)}
           options={actionOptions}
         />
-        <Select
+        <Combobox
           label="User"
           value={actorFilter}
-          onChange={(e) => setActorFilter(e.target.value)}
+          onValueChange={setActorFilter}
           options={actorOptions}
         />
         <Input label="From" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />

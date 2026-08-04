@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
@@ -21,6 +21,7 @@ import { TextArea } from "@/components/ui/textarea";
 import { formatDate } from "@/lib/utils/format-date";
 import { formatQty, formatCurrency } from "@/lib/utils/format";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { DatePicker } from "@/components/ui/date-picker";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { ItemForm, type VariantOption } from "./item-form";
@@ -99,6 +100,11 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
   const [isPending, startTransition] = useTransition();
   const [editOpen, setEditOpen] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [editSupplierId, setEditSupplierId] = useState(po.supplier_id);
+
+  useEffect(() => {
+    if (editOpen) setEditSupplierId(po.supplier_id);
+  }, [editOpen, po.supplier_id]);
   const [itemFormOpen, setItemFormOpen] = useState(false);
   const [statusTarget, setStatusTarget] = useState<{ status: string; label: string } | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
@@ -377,12 +383,12 @@ export function PurchaseOrderDetail({ po, items, suppliers, variantOptions, canW
               </DialogHeader>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Select
+                <Combobox
                   label="Supplier"
                   name="supplier_id"
-                  defaultValue={po.supplier_id}
+                  value={editSupplierId}
+                  onValueChange={setEditSupplierId}
                   options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
-                  required
                 />
                 <Select
                   label="Platform Source"

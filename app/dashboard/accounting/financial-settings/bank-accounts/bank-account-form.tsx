@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
 import { createBankAccount, updateBankAccount, type ActionResult } from "./actions";
 import { PARENT_ACCOUNT_WARNING } from "@/lib/accounting/account-options";
@@ -141,15 +142,14 @@ export function BankAccountForm({ open, onOpenChange, bankAccount, glAccountOpti
             />
           </div>
 
-          <Select
+          <Combobox
             label="GL Account"
             name="gl_account_id"
             placeholder="Select an account…"
             options={filteredAccountOptions}
             value={glAccountId}
-            onChange={(e) => setGlAccountId(e.target.value)}
+            onValueChange={setGlAccountId}
             error={isParentAccount ? PARENT_ACCOUNT_WARNING : undefined}
-            required
           />
           <p className="-mt-2 text-xs text-(--color-text-muted)">
             {type === "credit_card"

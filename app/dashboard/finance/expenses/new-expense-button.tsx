@@ -13,6 +13,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { NumberInput } from "@/components/ui/number-input";
@@ -44,6 +45,7 @@ export function NewExpenseButton({ categories, suppliers }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [categoryId, setCategoryId] = useState("");
+  const [supplierId, setSupplierId] = useState("");
   const [treatment, setTreatment] = useState<"immediate" | "prepaid" | "fixed_asset">("immediate");
 
   const selectedCategory = useMemo(() => categories.find((c) => c.id === categoryId), [categories, categoryId]);
@@ -58,6 +60,7 @@ export function NewExpenseButton({ categories, suppliers }: Props) {
     setOpen(next);
     if (!next) {
       setCategoryId("");
+      setSupplierId("");
       setTreatment("immediate");
       setError(null);
     }
@@ -98,24 +101,25 @@ export function NewExpenseButton({ categories, suppliers }: Props) {
               </DialogDescription>
             </DialogHeader>
 
-            <Select
+            <Combobox
               label="Category"
               name="category_id"
               placeholder="Select a category…"
               value={categoryId}
-              onChange={(e) => handleCategoryChange(e.target.value)}
+              onValueChange={handleCategoryChange}
               options={categories.map((c) => ({ value: c.id, label: c.name }))}
-              required
             />
             <Input label="Description" name="description" placeholder="e.g. July Internet Bill" required />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <CurrencyInput label="Amount" name="amount" required />
               <DatePicker label="Date" name="expense_date" defaultValue={new Date().toISOString().slice(0, 10)} required />
             </div>
-            <Select
+            <Combobox
               label="Supplier (optional)"
               name="supplier_id"
               placeholder="Select a supplier…"
+              value={supplierId}
+              onValueChange={setSupplierId}
               options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
             />
             <Select

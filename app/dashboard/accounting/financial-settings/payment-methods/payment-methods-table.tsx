@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { DataTable, type Column } from "@/components/ui/data-table";
-import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
 import { accountOptionLabel, PARENT_ACCOUNT_WARNING } from "@/lib/accounting/account-options";
 import { savePaymentTypeAccountMappings, type PaymentMappingInput } from "./actions";
@@ -55,9 +55,9 @@ export function PaymentMethodsTable({ rows: initialRows, accounts, bankAccounts,
       key: "account_id",
       header: "GL Account",
       render: (_v, row) => (
-        <Select
+        <Combobox
           value={row.account_id}
-          onChange={(e) => updateRow(row.payment_type_id, { account_id: e.target.value })}
+          onValueChange={(v) => updateRow(row.payment_type_id, { account_id: v })}
           placeholder="Not mapped"
           options={accountOptions}
           disabled={!canEdit}
@@ -70,9 +70,9 @@ export function PaymentMethodsTable({ rows: initialRows, accounts, bankAccounts,
       key: "bank_account_id",
       header: "Bank Account",
       render: (_v, row) => (
-        <Select
+        <Combobox
           value={row.bank_account_id}
-          onChange={(e) => updateRow(row.payment_type_id, { bank_account_id: e.target.value })}
+          onValueChange={(v) => updateRow(row.payment_type_id, { bank_account_id: v })}
           placeholder="Direct to GL account"
           options={bankAccountOptions}
           disabled={!canEdit}

@@ -14,6 +14,7 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { TextArea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -162,6 +163,8 @@ export function ItemForm({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  const [categoryId, setCategoryId] = useState(initial?.category_id ?? "");
+  const [primarySupplierId, setPrimarySupplierId] = useState(initial?.primary_supplier_id ?? "");
   const [itemType, setItemType] = useState<"simple" | "composite">(initial?.item_type ?? "simple");
   const [trackStock, setTrackStock] = useState(initial?.track_stock ?? false);
   const [isAvailableForSale, setIsAvailableForSale] = useState(initial?.is_available_for_sale ?? true);
@@ -315,13 +318,13 @@ export function ItemForm({
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input label="Item Name" id="name" name="name" defaultValue={initial?.name ?? ""} required />
-            <Select
+            <Combobox
               label="Category"
               name="category_id"
-              defaultValue={initial?.category_id ?? ""}
+              value={categoryId}
+              onValueChange={setCategoryId}
               placeholder="Select a category…"
               options={categories.map((c) => ({ value: c.id, label: c.name }))}
-              required
             />
           </div>
 
@@ -360,10 +363,11 @@ export function ItemForm({
                 { value: "weight", label: "Weight" },
               ]}
             />
-            <Select
+            <Combobox
               label="Primary Supplier"
               name="primary_supplier_id"
-              defaultValue={initial?.primary_supplier_id ?? ""}
+              value={primarySupplierId}
+              onValueChange={setPrimarySupplierId}
               placeholder="None"
               options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
             />
@@ -471,10 +475,10 @@ export function ItemForm({
               <p className="text-sm font-medium text-(--color-text)">Components</p>
               {variant.components.map((c) => (
                 <div key={c.rowId} className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr_auto] sm:items-end">
-                  <Select
+                  <Combobox
                     placeholder="Select a component…"
                     value={c.component_variant_id}
-                    onChange={(e) => updateComponent(c.rowId, { component_variant_id: e.target.value })}
+                    onValueChange={(v) => updateComponent(c.rowId, { component_variant_id: v })}
                     options={availableComponentOptions.map((v) => ({
                       value: v.id,
                       label: v.sku ? `${v.label} (${v.sku})` : v.label,

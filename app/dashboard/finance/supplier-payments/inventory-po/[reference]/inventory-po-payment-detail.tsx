@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
@@ -17,7 +17,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TextArea } from "@/components/ui/textarea";
@@ -80,6 +80,11 @@ export function InventoryPOPaymentDetail({ po, lines, payments, remainingBalance
   const [isPending, startTransition] = useTransition();
   const [payOpen, setPayOpen] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+  const [paymentTypeId, setPaymentTypeId] = useState("");
+
+  useEffect(() => {
+    if (!payOpen) setPaymentTypeId("");
+  }, [payOpen]);
   const [voidTarget, setVoidTarget] = useState<PaymentRow | null>(null);
   const [voidError, setVoidError] = useState<string | null>(null);
 
@@ -273,12 +278,13 @@ export function InventoryPOPaymentDetail({ po, lines, payments, remainingBalance
                 <DialogDescription>{formatCurrency(remainingBalance)} remaining on this order.</DialogDescription>
               </DialogHeader>
 
-              <Select
+              <Combobox
                 label="Payment Method"
                 name="payment_type_id"
                 placeholder="Select…"
+                value={paymentTypeId}
+                onValueChange={setPaymentTypeId}
                 options={paymentTypes.map((p) => ({ value: p.id, label: p.name }))}
-                required
               />
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <CurrencyInput label="Amount" name="amount" defaultValue={remainingBalance} required />

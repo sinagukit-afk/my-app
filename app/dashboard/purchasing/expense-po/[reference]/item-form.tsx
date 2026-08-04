@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -31,6 +31,11 @@ type Props = {
 export function ItemForm({ open, onOpenChange, purchaseOrderId, reference, categories, onSaved }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [categoryId, setCategoryId] = useState("");
+
+  useEffect(() => {
+    if (!open) setCategoryId("");
+  }, [open]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -39,6 +44,7 @@ export function ItemForm({ open, onOpenChange, purchaseOrderId, reference, categ
     startTransition(async () => {
       const res = await addExpensePurchaseOrderItem(purchaseOrderId, reference, formData);
       if (res.success) {
+        setCategoryId("");
         onOpenChange(false);
         onSaved();
       } else {
@@ -56,12 +62,13 @@ export function ItemForm({ open, onOpenChange, purchaseOrderId, reference, categ
             <DialogDescription>Add an expense category, description, quantity, and unit cost.</DialogDescription>
           </DialogHeader>
 
-          <Select
+          <Combobox
             label="Category"
             name="expense_category_id"
             placeholder="Select a category…"
             options={categories.map((c) => ({ value: c.id, label: c.name }))}
-            required
+            value={categoryId}
+            onValueChange={setCategoryId}
           />
           <Input label="Description" name="description" placeholder="e.g. Aircon repair" required />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

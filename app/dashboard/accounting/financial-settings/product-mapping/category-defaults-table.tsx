@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { DataTable, type Column } from "@/components/ui/data-table";
-import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
 import { accountOptionLabel, PARENT_ACCOUNT_WARNING } from "@/lib/accounting/account-options";
 import { saveCategoryDefaultMappings, type CategoryDefaultInput } from "./actions";
@@ -66,9 +66,9 @@ export function CategoryDefaultsTable({ rows: initialRows, accounts, canEdit }: 
       key: "default_revenue_account_id",
       header: "Default Revenue Account",
       render: (_v, row) => (
-        <Select
+        <Combobox
           value={row.default_revenue_account_id}
-          onChange={(e) => updateRow(row.category_id, { default_revenue_account_id: e.target.value })}
+          onValueChange={(v) => updateRow(row.category_id, { default_revenue_account_id: v })}
           placeholder="None"
           options={revenueOptions}
           disabled={!canEdit}
@@ -81,9 +81,9 @@ export function CategoryDefaultsTable({ rows: initialRows, accounts, canEdit }: 
       key: "default_inventory_account_id",
       header: "Default Inventory Account",
       render: (_v, row) => (
-        <Select
+        <Combobox
           value={row.default_inventory_account_id}
-          onChange={(e) => updateRow(row.category_id, { default_inventory_account_id: e.target.value })}
+          onValueChange={(v) => updateRow(row.category_id, { default_inventory_account_id: v })}
           placeholder="None"
           options={inventoryOptions}
           disabled={!canEdit}
@@ -96,9 +96,9 @@ export function CategoryDefaultsTable({ rows: initialRows, accounts, canEdit }: 
       key: "default_expense_account_id",
       header: "Default COGS / Expense Account",
       render: (_v, row) => (
-        <Select
+        <Combobox
           value={row.default_expense_account_id}
-          onChange={(e) => updateRow(row.category_id, { default_expense_account_id: e.target.value })}
+          onValueChange={(v) => updateRow(row.category_id, { default_expense_account_id: v })}
           placeholder="None"
           options={expenseOptions}
           disabled={!canEdit}

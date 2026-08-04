@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +13,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { createExpenseCategory } from "./actions";
 
@@ -29,6 +30,11 @@ export function CategoriesDialogButton({ categories, accounts }: Props) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [defaultExpenseAccountId, setDefaultExpenseAccountId] = useState("");
+
+  useEffect(() => {
+    if (!open) setDefaultExpenseAccountId("");
+  }, [open]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -38,6 +44,7 @@ export function CategoriesDialogButton({ categories, accounts }: Props) {
       const res = await createExpenseCategory(formData);
       if (res.success) {
         (e.target as HTMLFormElement).reset();
+        setDefaultExpenseAccountId("");
         router.refresh();
       } else {
         setError(res.error);
@@ -73,12 +80,13 @@ export function CategoriesDialogButton({ categories, accounts }: Props) {
 
           <form onSubmit={handleSubmit} className="space-y-3 border-t border-(--color-border) pt-4">
             <Input label="New Category Name" name="name" placeholder="e.g. Repairs & Maintenance" required />
-            <Select
+            <Combobox
               label="Default Expense Account"
               name="default_expense_account_id"
               placeholder="Select an account…"
               options={accounts.map((a) => ({ value: a.id, label: `${a.account_number} — ${a.name}` }))}
-              required
+              value={defaultExpenseAccountId}
+              onValueChange={setDefaultExpenseAccountId}
             />
             <Select
               label="Accounting Treatment"

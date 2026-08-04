@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -11,7 +11,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -44,7 +44,16 @@ export function AssetFormDialog({ open, onOpenChange, categories, suppliers, ass
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [categoryId, setCategoryId] = useState("");
+  const [supplierId, setSupplierId] = useState(asset?.supplier_id ?? "");
   const isEdit = !!asset;
+
+  useEffect(() => {
+    if (open) {
+      setCategoryId("");
+      setSupplierId(asset?.supplier_id ?? "");
+    }
+  }, [open, asset]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -75,21 +84,23 @@ export function AssetFormDialog({ open, onOpenChange, categories, suppliers, ass
           </DialogHeader>
 
           {!isEdit && (
-            <Select
+            <Combobox
               label="Category"
               name="category_id"
               placeholder="Select a category…"
+              value={categoryId}
+              onValueChange={setCategoryId}
               options={categories.map((c) => ({ value: c.id, label: c.name }))}
-              required
             />
           )}
 
           <Input label="Asset Name" name="name" defaultValue={asset?.name} placeholder="e.g. Laser Machine" required />
 
-          <Select
+          <Combobox
             label="Supplier (optional)"
             name="supplier_id"
-            defaultValue={asset?.supplier_id ?? ""}
+            value={supplierId}
+            onValueChange={setSupplierId}
             options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
           />
 

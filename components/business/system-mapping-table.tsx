@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { DataTable, type Column } from "@/components/ui/data-table";
-import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
 import { accountOptionLabel, PARENT_ACCOUNT_WARNING } from "@/lib/accounting/account-options";
 
@@ -54,9 +54,9 @@ export function SystemMappingTable({ rows: initialRows, accounts, canEdit, onSav
       key: "account_id",
       header: "GL Account",
       render: (_v, row) => (
-        <Select
+        <Combobox
           value={row.account_id}
-          onChange={(e) => updateRow(row.mapping_key, e.target.value)}
+          onValueChange={(v) => updateRow(row.mapping_key, v)}
           placeholder="Not mapped"
           options={optionsFor(row.account_category)}
           disabled={!canEdit}

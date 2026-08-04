@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, type SelectOption } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { TextArea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -126,10 +127,10 @@ export function LogPaymentDialog({ cards, paymentTypeOptions }: Props) {
               Outstanding: {peso(selectedCard.balance)} ({selectedCard.accountLabel})
             </p>
           )}
-          <Select
+          <Combobox
             label="Paid From"
             value={paymentTypeId}
-            onChange={(e) => setPaymentTypeId(e.target.value)}
+            onValueChange={setPaymentTypeId}
             placeholder="Select a payment method…"
             options={paymentTypeOptions}
           />

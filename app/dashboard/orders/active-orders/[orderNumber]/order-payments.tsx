@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { TextArea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -268,11 +268,11 @@ export function OrderPayments({ data, onChanged }: { data: OrderPaymentsData; on
                 </button>
               )}
             </div>
-            <Select
+            <Combobox
               label="Payment Type"
               placeholder="Select payment type…"
               value={paymentTypeId}
-              onChange={(e) => setPaymentTypeId(e.target.value)}
+              onValueChange={setPaymentTypeId}
               options={data.paymentTypeOptions.map((pt) => ({ value: pt.id, label: pt.name }))}
             />
             <Input

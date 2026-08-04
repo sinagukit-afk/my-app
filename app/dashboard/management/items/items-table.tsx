@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { FilterBar } from "@/components/business/filter-bar";
 import { formatQty } from "@/lib/utils/format";
 
@@ -196,10 +197,10 @@ export function ItemsTable({ data, canWrite }: Props) {
           value={statusFilter}
           onChange={setStatusFilter}
         />
-        <Select
+        <Combobox
           aria-label="Filter by category"
           value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
+          onValueChange={setCategoryFilter}
           options={[
             { value: "", label: "All categories" },
             ...categories.map((c) => ({ value: c, label: c })),

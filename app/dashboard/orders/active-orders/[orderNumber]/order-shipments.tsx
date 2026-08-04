@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Toggle } from "@/components/ui/toggle";
 import {
   Dialog,
@@ -744,12 +745,12 @@ export function OrderShipments({
                   </div>
                 )}
                 <AiFieldHighlight active={aiFilledKeys.has("courierId")}>
-                  <Select
+                  <Combobox
                     label="Courier"
                     placeholder="Select courier…"
                     value={courierId}
-                    onChange={(e) => {
-                      setCourierId(e.target.value);
+                    onValueChange={(v) => {
+                      setCourierId(v);
                       clearAiField("courierId");
                     }}
                     options={courierOptions.map((c) => ({ value: c.id, label: c.name }))}
@@ -783,11 +784,11 @@ export function OrderShipments({
                   />
                 </div>
                 {shippingCost && Number(shippingCost) > 0 && (
-                  <Select
+                  <Combobox
                     label="Paid Via"
                     placeholder="Select payment method…"
                     value={courierPaymentTypeId}
-                    onChange={(e) => setCourierPaymentTypeId(e.target.value)}
+                    onValueChange={setCourierPaymentTypeId}
                     options={paymentTypeOptions.map((pt) => ({ value: pt.id, label: pt.name }))}
                   />
                 )}
@@ -832,10 +833,10 @@ export function OrderShipments({
               <p className="text-sm font-medium text-(--color-text)">Packaging Materials</p>
               {packagingRows.map((row) => (
                 <div key={row.rowId} className="grid grid-cols-1 gap-3 sm:grid-cols-[2fr_1fr_auto] sm:items-end">
-                  <Select
+                  <Combobox
                     placeholder="Select packaging item…"
                     value={row.variantId}
-                    onChange={(e) => updatePackagingRow(row.rowId, { variantId: e.target.value })}
+                    onValueChange={(v) => updatePackagingRow(row.rowId, { variantId: v })}
                     options={packagingOptions.map((p) => ({
                       value: p.id,
                       label: p.sku ? `${p.label} (${p.sku})` : p.label,
@@ -993,11 +994,11 @@ export function OrderShipments({
               />
             </div>
             {feeEditShippingCost && Number(feeEditShippingCost) > 0 && (
-              <Select
+              <Combobox
                 label="Paid Via"
                 placeholder="Select payment method…"
                 value={feeEditCourierPaymentTypeId}
-                onChange={(e) => setFeeEditCourierPaymentTypeId(e.target.value)}
+                onValueChange={setFeeEditCourierPaymentTypeId}
                 options={paymentTypeOptions.map((pt) => ({ value: pt.id, label: pt.name }))}
               />
             )}

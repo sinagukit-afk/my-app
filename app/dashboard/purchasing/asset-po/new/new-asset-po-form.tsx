@@ -6,6 +6,7 @@ import { useRegisterUnsavedChanges } from "@/lib/hooks/use-unsaved-changes";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { TextArea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -212,13 +213,13 @@ export function NewAssetPurchaseOrderForm({ suppliers, categories }: Props) {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <AiFieldHighlight active={aiFilledKeys.has("supplier_id")}>
-              <Select
+              <Combobox
                 label="Supplier (optional)"
                 name="supplier_id"
                 placeholder="Select a supplier…"
                 value={supplierId}
-                onChange={(e) => {
-                  setSupplierId(e.target.value);
+                onValueChange={(v) => {
+                  setSupplierId(v);
                   clearAiField("supplier_id");
                 }}
                 options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
@@ -290,10 +291,10 @@ export function NewAssetPurchaseOrderForm({ suppliers, categories }: Props) {
               )}
             >
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1.5fr_0.7fr_0.8fr_0.8fr_auto] sm:items-end">
-                <Select
+                <Combobox
                   label={i === 0 ? "Category" : undefined}
                   value={row.categoryId}
-                  onChange={(e) => updateRow(row.rowId, { categoryId: e.target.value })}
+                  onValueChange={(v) => updateRow(row.rowId, { categoryId: v })}
                   placeholder="Select…"
                   options={categories.map((c) => ({ value: c.id, label: c.name }))}
                 />

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
-import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { FilterBar } from "@/components/business/filter-bar";
 import type { StockStatus } from "@/lib/inventory/calculations";
 import { QtyTile } from "./qty-tile";
@@ -237,10 +237,10 @@ export function InventoryMonitoringTable({ data }: Props) {
           value={["ok", "low", "out"].includes(quickFilter) ? quickFilter : ""}
           onChange={(v) => setQuickFilter(v as QuickFilter)}
         />
-        <Select
+        <Combobox
           aria-label="Filter by category"
           value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
+          onValueChange={setCategoryFilter}
           options={[
             { value: "", label: "All categories" },
             ...categories.map((c) => ({ value: c, label: c })),

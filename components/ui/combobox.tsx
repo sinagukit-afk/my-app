@@ -24,6 +24,7 @@ export interface ComboboxProps {
   autoFocus?: boolean;
   id?: string;
   className?: string;
+  "aria-label"?: string;
 }
 
 /** Searchable single-select. Same visual language as Select, but with a type-to-filter panel. */
@@ -40,6 +41,7 @@ export function Combobox({
   autoFocus,
   id,
   className,
+  "aria-label": ariaLabel,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -133,6 +135,7 @@ export function Combobox({
           ref={triggerRef}
           id={inputId}
           role="combobox"
+          aria-label={ariaLabel}
           aria-expanded={open}
           aria-haspopup="listbox"
           aria-controls={listboxId}

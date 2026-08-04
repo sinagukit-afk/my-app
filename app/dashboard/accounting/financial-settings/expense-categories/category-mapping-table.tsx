@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Button } from "@/components/ui/button";
@@ -181,9 +182,9 @@ export function CategoryMappingTable({
       key: "default_expense_account_id",
       header: "Expense Account",
       render: (_v, row) => (
-        <Select
+        <Combobox
           value={row.default_expense_account_id}
-          onChange={(e) => updateExpenseRow(row.id, { default_expense_account_id: e.target.value })}
+          onValueChange={(v) => updateExpenseRow(row.id, { default_expense_account_id: v })}
           placeholder="Not mapped"
           options={expenseAccountOptions}
           disabled={!canEdit}
@@ -197,9 +198,9 @@ export function CategoryMappingTable({
       header: "Prepaid Account",
       render: (_v, row) =>
         row.accounting_treatment === "prepaid" ? (
-          <Select
+          <Combobox
             value={row.default_prepaid_account_id}
-            onChange={(e) => updateExpenseRow(row.id, { default_prepaid_account_id: e.target.value })}
+            onValueChange={(v) => updateExpenseRow(row.id, { default_prepaid_account_id: v })}
             placeholder="Not mapped"
             options={assetAccountOptions}
             disabled={!canEdit}
@@ -231,9 +232,9 @@ export function CategoryMappingTable({
       header: "Asset Category",
       render: (_v, row) =>
         row.accounting_treatment === "fixed_asset" ? (
-          <Select
+          <Combobox
             value={row.default_asset_category_id}
-            onChange={(e) => updateExpenseRow(row.id, { default_asset_category_id: e.target.value })}
+            onValueChange={(v) => updateExpenseRow(row.id, { default_asset_category_id: v })}
             placeholder="Not linked"
             options={assetCategorySelectOptions}
             disabled={!canEdit}
@@ -251,9 +252,9 @@ export function CategoryMappingTable({
       key: "default_asset_account_id",
       header: "Asset Account",
       render: (_v, row) => (
-        <Select
+        <Combobox
           value={row.default_asset_account_id}
-          onChange={(e) => updateAssetRow(row.id, { default_asset_account_id: e.target.value })}
+          onValueChange={(v) => updateAssetRow(row.id, { default_asset_account_id: v })}
           placeholder="Not mapped"
           options={assetAccountOptions}
           disabled={!canEdit}
@@ -266,9 +267,9 @@ export function CategoryMappingTable({
       key: "default_accum_depreciation_account_id",
       header: "Accum. Depreciation Account",
       render: (_v, row) => (
-        <Select
+        <Combobox
           value={row.default_accum_depreciation_account_id}
-          onChange={(e) => updateAssetRow(row.id, { default_accum_depreciation_account_id: e.target.value })}
+          onValueChange={(v) => updateAssetRow(row.id, { default_accum_depreciation_account_id: v })}
           placeholder="Not mapped"
           options={assetAccountOptions}
           disabled={!canEdit}
@@ -281,9 +282,9 @@ export function CategoryMappingTable({
       key: "default_depreciation_expense_account_id",
       header: "Depreciation Expense Account",
       render: (_v, row) => (
-        <Select
+        <Combobox
           value={row.default_depreciation_expense_account_id}
-          onChange={(e) => updateAssetRow(row.id, { default_depreciation_expense_account_id: e.target.value })}
+          onValueChange={(v) => updateAssetRow(row.id, { default_depreciation_expense_account_id: v })}
           placeholder="Not mapped"
           options={expenseAccountOptions}
           disabled={!canEdit}

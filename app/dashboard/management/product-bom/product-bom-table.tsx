@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
-import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 
 export type ProductBomRow = {
   id: string;
@@ -104,10 +104,10 @@ export function ProductBomTable({ data, canWrite }: Props) {
       />
 
       <div className="flex flex-wrap items-center gap-3">
-        <Select
+        <Combobox
           aria-label="Filter by category"
           value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
+          onValueChange={setCategoryFilter}
           options={[{ value: "", label: "All categories" }, ...categories.map((c) => ({ value: c, label: c }))]}
           className="w-44"
         />
