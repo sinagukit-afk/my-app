@@ -18,7 +18,8 @@ import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { NumberInput } from "@/components/ui/number-input";
 import { DatePicker } from "@/components/ui/date-picker";
-import { recordDirectExpense } from "./actions";
+import { recordDirectExpense, logExpensePayment } from "./actions";
+import { logAssetPayment } from "../fixed-assets/actions";
 
 type Option = { id: string; name: string };
 type CategoryOption = { id: string; name: string; accounting_treatment: "immediate" | "prepaid" | "fixed_asset" };
@@ -26,12 +27,8 @@ type CategoryOption = { id: string; name: string; accounting_treatment: "immedia
 type Props = {
   categories: CategoryOption[];
   suppliers: Option[];
+  paymentTypes: Option[];
 };
-
-const PAYMENT_STATUS_OPTIONS = [
-  { value: "unpaid", label: "Unpaid" },
-  { value: "paid", label: "Paid" },
-];
 
 const TREATMENT_OPTIONS = [
   { value: "immediate", label: "Immediate Expense" },
@@ -39,13 +36,14 @@ const TREATMENT_OPTIONS = [
   { value: "fixed_asset", label: "Fixed Asset" },
 ];
 
-export function NewExpenseButton({ categories, suppliers }: Props) {
+export function NewExpenseButton({ categories, suppliers, paymentTypes }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [categoryId, setCategoryId] = useState("");
   const [supplierId, setSupplierId] = useState("");
+  const [paymentTypeId, setPaymentTypeId] = useState("");
   const [treatment, setTreatment] = useState<"immediate" | "prepaid" | "fixed_asset">("immediate");
 
   const selectedCategory = useMemo(() => categories.find((c) => c.id === categoryId), [categories, categoryId]);
@@ -61,6 +59,7 @@ export function NewExpenseButton({ categories, suppliers }: Props) {
     if (!next) {
       setCategoryId("");
       setSupplierId("");
+      setPaymentTypeId("");
       setTreatment("immediate");
       setError(null);
     }
@@ -70,17 +69,32 @@ export function NewExpenseButton({ categories, suppliers }: Props) {
     e.preventDefault();
     setError(null);
     const formData = new FormData(e.currentTarget);
+    const amount = Number(formData.get("amount"));
+    const expenseDate = (formData.get("expense_date") as string) || new Date().toISOString().slice(0, 10);
     startTransition(async () => {
       const res = await recordDirectExpense(formData);
-      if (res.success) {
-        handleOpenChange(false);
-        if (res.kind === "fixed_asset") {
-          router.push("/dashboard/finance/fixed-assets");
-        } else {
-          router.refresh();
-        }
-      } else {
+      if (!res.success) {
         setError(res.error);
+        return;
+      }
+
+      if (paymentTypeId) {
+        const payRes =
+          res.kind === "fixed_asset"
+            ? await logAssetPayment(res.id, paymentTypeId, amount, expenseDate, null)
+            : await logExpensePayment(res.id, paymentTypeId, amount, expenseDate, null);
+        if (!payRes.success) {
+          setError(`Saved, but marking it paid failed: ${payRes.error}`);
+          router.refresh();
+          return;
+        }
+      }
+
+      handleOpenChange(false);
+      if (res.kind === "fixed_asset") {
+        router.push("/dashboard/finance/fixed-assets");
+      } else {
+        router.refresh();
       }
     });
   }
@@ -122,12 +136,13 @@ export function NewExpenseButton({ categories, suppliers }: Props) {
               onValueChange={setSupplierId}
               options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
             />
-            <Select
-              label="Payment Status"
-              name="payment_status"
-              defaultValue="unpaid"
-              options={PAYMENT_STATUS_OPTIONS}
-              required
+            <Combobox
+              label="Payment Method (optional)"
+              name="payment_type_id"
+              placeholder="Leave blank if unpaid…"
+              value={paymentTypeId}
+              onValueChange={setPaymentTypeId}
+              options={paymentTypes.map((p) => ({ value: p.id, label: p.name }))}
             />
 
             <Select

@@ -1989,6 +1989,7 @@ export type Database = {
           purchase_order_id: string | null
           source: string
           supplier_id: string | null
+          treatment: string
           updated_at: string
         }
         Insert: {
@@ -2005,6 +2006,7 @@ export type Database = {
           purchase_order_id?: string | null
           source?: string
           supplier_id?: string | null
+          treatment?: string
           updated_at?: string
         }
         Update: {
@@ -2021,6 +2023,7 @@ export type Database = {
           purchase_order_id?: string | null
           source?: string
           supplier_id?: string | null
+          treatment?: string
           updated_at?: string
         }
         Relationships: [

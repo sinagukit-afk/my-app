@@ -39,7 +39,7 @@ export default async function ExpensesPage() {
     );
   }
 
-  const [{ data, error }, { data: categories }, { data: suppliers }, { data: accounts }] = await Promise.all([
+  const [{ data, error }, { data: categories }, { data: suppliers }, { data: accounts }, { data: paymentTypes }] = await Promise.all([
     supabase
       .from("opex_expenses")
       .select(
@@ -54,6 +54,7 @@ export default async function ExpensesPage() {
       .order("name"),
     supabase.from("suppliers").select("id, name").eq("is_active", true).order("name"),
     supabase.from("accounts").select("id, account_number, name").eq("category", "expense").eq("is_active", true).order("account_number"),
+    supabase.from("payment_types").select("id, name").eq("is_active", true).order("name"),
   ]);
 
   const rows: ExpenseRow[] = (data ?? []).map((e) => {
@@ -93,6 +94,7 @@ export default async function ExpensesPage() {
                   accounting_treatment: c.accounting_treatment as "immediate" | "prepaid" | "fixed_asset",
                 }))}
                 suppliers={suppliers ?? []}
+                paymentTypes={paymentTypes ?? []}
               />
             </div>
           ) : undefined
