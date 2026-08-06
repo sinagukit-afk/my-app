@@ -3,6 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { EditOrderForm } from "./edit-order-form";
 import type { VariantOption, DiscountOption, ModifierGroupOption, OrderLineRow } from "../../order-line-items";
 
+function firstOf<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+
 export default async function EditOrderPage({ params }: { params: Promise<{ orderNumber: string }> }) {
   const { orderNumber } = await params;
   const supabase = await createClient();
@@ -43,10 +48,11 @@ export default async function EditOrderPage({ params }: { params: Promise<{ orde
 
   const { data: itemData } = await supabase
     .from("items")
-    .select("id, name, item_variants(id, sku, option1_value, default_price)")
+    .select("id, name, item_variants(id, sku, option1_value, default_price), categories!inner(name)")
     .eq("is_available_for_sale", true)
     .is("deleted_at", null)
     .is("item_variants.deleted_at", null)
+    .in("categories.name", ["Product(Customize)", "Product(Pre-made)", "Services"])
     .order("name");
 
   const variantOptions: VariantOption[] = (itemData ?? []).flatMap((item) =>
@@ -58,6 +64,31 @@ export default async function EditOrderPage({ params }: { params: Promise<{ orde
       price: v.default_price,
     }))
   );
+
+  // Existing lines may reference a variant outside the filtered categories (e.g. saved before
+  // this filter existed) — keep it selectable so the editor doesn't render it as blank.
+  const knownVariantIds = new Set(variantOptions.map((v) => v.id));
+  const missingVariantIds = [...new Set((existingItems ?? []).map((i) => i.variant_id))].filter(
+    (id) => !knownVariantIds.has(id)
+  );
+
+  if (missingVariantIds.length > 0) {
+    const { data: extraVariantData } = await supabase
+      .from("item_variants")
+      .select("id, sku, option1_value, default_price, item_id, items(name)")
+      .in("id", missingVariantIds);
+
+    for (const v of extraVariantData ?? []) {
+      const item = firstOf(v.items);
+      variantOptions.push({
+        id: v.id,
+        itemId: v.item_id,
+        label: v.option1_value ? `${item?.name ?? ""} — ${v.option1_value}` : item?.name ?? "",
+        sku: v.sku,
+        price: v.default_price,
+      });
+    }
+  }
 
   const { data: discountData } = await supabase
     .from("discounts")
