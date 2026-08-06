@@ -120,6 +120,22 @@ export async function logExpensePayment(
   return { success: true }
 }
 
+export async function voidExpensePayment(paymentId: string, reason: string, expenseId: string): Promise<ActionResult> {
+  if (!reason.trim()) return { success: false, error: 'A reason is required to void a payment.' }
+
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('void_payable_payment', {
+    p_payment_id: paymentId,
+    p_reason: reason,
+  })
+
+  if (error) return { success: false, error: friendlyError(error) }
+
+  revalidatePath(detailPath(expenseId))
+  revalidatePath(LIST_PATH)
+  return { success: true }
+}
+
 export async function uploadExpenseAttachment(expenseId: string, formData: FormData): Promise<ActionResult> {
   const file = formData.get('file') as File | null
   if (!file || file.size === 0) return { success: false, error: 'Choose a file to upload.' }

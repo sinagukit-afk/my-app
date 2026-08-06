@@ -19,6 +19,7 @@ export default async function ExpenseDetailPage({ params }: { params: Params }) 
   const role = profile?.role ?? "";
   const canWrite = ["admin", "manager"].includes(role);
   const canPay = ["admin", "manager"].includes(role);
+  const canVoid = role === "admin";
 
   const { data: expense, error } = await supabase
     .from("opex_expenses")
@@ -42,7 +43,7 @@ export default async function ExpenseDetailPage({ params }: { params: Params }) 
         .order("created_at", { ascending: false }),
       supabase
         .from("payable_payments")
-        .select("id, amount, paid_date, notes, payment_types(name)")
+        .select("id, amount, paid_date, notes, voided_at, void_reason, payment_types(name)")
         .eq("payable_type", "expense")
         .eq("payable_id", id)
         .order("paid_date", { ascending: false }),
@@ -70,7 +71,9 @@ export default async function ExpenseDetailPage({ params }: { params: Params }) 
     purchase_order_reference: po?.reference ?? null,
   };
 
-  const paidSoFar = (paymentsData ?? []).reduce((s, p) => s + Number(p.amount), 0);
+  const paidSoFar = (paymentsData ?? [])
+    .filter((p) => !p.voided_at)
+    .reduce((s, p) => s + Number(p.amount), 0);
 
   const attachments: AttachmentRow[] = attachmentsData ?? [];
   const payments: PaymentRow[] = (paymentsData ?? []).map((p) => {
@@ -81,6 +84,8 @@ export default async function ExpenseDetailPage({ params }: { params: Params }) 
       paid_date: p.paid_date,
       notes: p.notes,
       payment_type_name: pt?.name ?? null,
+      voided_at: p.voided_at,
+      void_reason: p.void_reason,
     };
   });
 
@@ -95,6 +100,7 @@ export default async function ExpenseDetailPage({ params }: { params: Params }) 
       paymentTypes={paymentTypes ?? []}
       canWrite={canWrite}
       canPay={canPay}
+      canVoid={canVoid}
     />
   );
 }

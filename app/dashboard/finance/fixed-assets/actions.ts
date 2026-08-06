@@ -199,3 +199,19 @@ export async function logAssetPayment(
   revalidatePath(LIST_PATH)
   return { success: true }
 }
+
+export async function voidAssetPayment(paymentId: string, reason: string, assetId: string): Promise<ActionResult> {
+  if (!reason.trim()) return { success: false, error: 'A reason is required to void a payment.' }
+
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('void_payable_payment', {
+    p_payment_id: paymentId,
+    p_reason: reason,
+  })
+
+  if (error) return { success: false, error: friendlyError(error) }
+
+  revalidatePath(`${LIST_PATH}/${assetId}`)
+  revalidatePath(LIST_PATH)
+  return { success: true }
+}
