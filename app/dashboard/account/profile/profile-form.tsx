@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { updateProfile } from "./actions";
 import { formatDate } from "@/lib/utils/format-date";
@@ -90,10 +91,9 @@ export function ProfileForm({ fullName, contactNumber, birthday, username }: Pro
               defaultValue={current.contactNumber ?? ""}
               placeholder="+63 9XX XXX XXXX"
             />
-            <Input
+            <DatePicker
               label="Birthday"
               name="birthday"
-              type="date"
               defaultValue={current.birthday ?? ""}
             />
             {result && !result.success && (

@@ -4,7 +4,7 @@ import type { ChangeEvent } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Select } from "@/components/ui/select";
 import { DATE_RANGE_PRESETS, type DateRange } from "@/lib/utils/date-range-presets";
 
@@ -45,8 +45,8 @@ export function DateRangeFilter({ from, to }: DateRange) {
         options={DATE_RANGE_PRESETS.map((preset) => ({ value: preset.label, label: preset.label }))}
         className="w-40"
       />
-      <Input label="From" type="date" value={localFrom} onChange={(e) => setLocalFrom(e.target.value)} />
-      <Input label="To" type="date" value={localTo} onChange={(e) => setLocalTo(e.target.value)} />
+      <DatePicker label="From" value={localFrom} onChange={(e) => setLocalFrom(e.target.value)} />
+      <DatePicker label="To" value={localTo} onChange={(e) => setLocalTo(e.target.value)} />
       <Button type="button" size="sm" disabled={isPending} onClick={() => applyRange({ from: localFrom, to: localTo })}>
         Apply
       </Button>

@@ -12,7 +12,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -147,9 +147,8 @@ export function LogPaymentDialog({ cards, paymentTypeOptions }: Props) {
               placeholder="Optional"
             />
           </div>
-          <Input
+          <DatePicker
             label="Paid Date"
-            type="date"
             value={paidDate}
             onChange={(e) => setPaidDate(e.target.value)}
           />

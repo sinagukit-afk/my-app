@@ -5,7 +5,7 @@ import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
-import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
   DialogContent,
@@ -332,8 +332,8 @@ export function ActivityLogsTable({ data }: { data: LogRow[] }) {
           onValueChange={setActorFilter}
           options={actorOptions}
         />
-        <Input label="From" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-        <Input label="To" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+        <DatePicker label="From" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+        <DatePicker label="To" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
       </div>
 
       <DataTable

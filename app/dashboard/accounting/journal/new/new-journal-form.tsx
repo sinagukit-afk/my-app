@@ -6,6 +6,7 @@ import { useGuardedNavigate, useRegisterUnsavedChanges } from "@/lib/hooks/use-u
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Combobox } from "@/components/ui/combobox";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Button } from "@/components/ui/button";
@@ -130,7 +131,7 @@ export function NewJournalForm({ accounts }: Props) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-[200px_1fr]">
-            <Input label="Entry Date" name="entry_date" type="date" defaultValue={todayISO()} required />
+            <DatePicker label="Entry Date" name="entry_date" defaultValue={todayISO()} required />
             <Input label="Description" name="description" placeholder="e.g. Owner's capital contribution" required />
           </div>
         </CardContent>

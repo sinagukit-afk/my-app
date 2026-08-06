@@ -3,7 +3,7 @@
 import { useRouter, usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 
 /** URL-driven (?asOf=) single-date picker, for point-in-time reports (trial balance, balance sheet). */
 export function AsOfDateFilter({ asOf }: { asOf: string }) {
@@ -32,7 +32,7 @@ export function AsOfDateFilter({ asOf }: { asOf: string }) {
       >
         Today
       </Button>
-      <Input label="As of" type="date" value={localAsOf} onChange={(e) => setLocalAsOf(e.target.value)} />
+      <DatePicker label="As of" value={localAsOf} onChange={(e) => setLocalAsOf(e.target.value)} />
       <Button type="button" size="sm" disabled={isPending} onClick={() => apply(localAsOf)}>
         Apply
       </Button>

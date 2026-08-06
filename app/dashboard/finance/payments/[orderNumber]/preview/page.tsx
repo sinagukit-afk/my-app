@@ -108,7 +108,7 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
             </div>
             <div>
               <p className="text-xs uppercase text-(--color-text-muted)">Order Date</p>
-              <p className="text-sm text-(--color-text)">{order.order_date}</p>
+              <p className="text-sm text-(--color-text)">{formatDate(order.order_date)}</p>
             </div>
             <div>
               <p className="text-xs uppercase text-(--color-text-muted)">Payment Status</p>
