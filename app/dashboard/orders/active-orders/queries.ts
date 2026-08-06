@@ -6,10 +6,10 @@ function firstOf<T>(value: T | T[] | null | undefined): T | null {
   return value ?? null;
 }
 
-function paymentStatus(totalPaid: number, totalMoney: number): OrderRow["paymentStatus"] {
+function paymentStatus(totalPaid: number, totalDue: number): OrderRow["paymentStatus"] {
   if (totalPaid <= 0) return "Unpaid";
-  if (totalPaid < totalMoney) return "Partially Paid";
-  if (totalPaid > totalMoney) return "Overpaid";
+  if (totalPaid < totalDue) return "Partially Paid";
+  if (totalPaid > totalDue) return "Overpaid";
   return "Paid";
 }
 
@@ -22,7 +22,7 @@ export async function fetchOrderRows(
   let query = supabase
     .from("orders")
     .select(
-      "id, order_number, status, total_money, created_at, order_date, target_date, customers(name), order_items(quantity), order_payments(amount)"
+      "id, order_number, status, total_money, total_tax, created_at, order_date, target_date, customers(name), order_items(quantity), order_payments(amount), order_shipments(shipping_fee_charged, status)"
     );
 
   if (from) query = query.gte("created_at", `${from}T00:00:00`);
@@ -46,6 +46,11 @@ export async function fetchOrderRows(
   const rows: OrderRow[] = (data ?? []).map((o) => {
     const customer = firstOf(o.customers);
     const totalMoney = Number(o.total_money);
+    const totalTax = Number(o.total_tax ?? 0);
+    const shippingFeeTotal = (o.order_shipments ?? [])
+      .filter((s) => s.status === "shipped" || s.status === "delivered")
+      .reduce((sum, s) => sum + Number(s.shipping_fee_charged ?? 0), 0);
+    const totalDue = totalMoney + totalTax + shippingFeeTotal;
     const totalPaid = (o.order_payments ?? []).reduce((sum, p) => sum + Number(p.amount), 0);
     return {
       orderNumber: o.order_number,
@@ -55,7 +60,7 @@ export async function fetchOrderRows(
       status: o.status,
       totalItems: (o.order_items ?? []).reduce((sum, it) => sum + Number(it.quantity), 0),
       totalMoney,
-      paymentStatus: paymentStatus(totalPaid, totalMoney),
+      paymentStatus: paymentStatus(totalPaid, totalDue),
       lastActivity: lastActivityByOrder.get(o.id) ?? "—",
     };
   });
