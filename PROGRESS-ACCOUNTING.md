@@ -2453,3 +2453,52 @@ No git commit initially (mirrors this doc's standing "stop for manual review" pa
 then Sinag explicitly asked to commit and push — done as `e8671d5` on `main`.
 
 ---
+
+### 2026-08-06 — Merge Sale Recognized / COGS / Shipping draft triggers into one
+
+Sinag asked for the 3 order-side draft journal triggers (`sale_recognized` from
+Close Payment, `cogs` from Mark Shipped/Picked Up, `shipment_shipping_cost` from
+Mark Shipped with a cost) to be grouped into **one** draft, with the only trigger
+being payment close.
+
+**Prior behavior:** `cogs`/`shipment_shipping_cost` `business_events` were still
+recorded at ship time (needed for stock-out data), but `generate_draft_journal_entries()`
+had two "pre-pass" roll-up loops that auto-drafted them into their own entries as
+soon as an order became fully shipped — independent of, and usually well before,
+payment close. Only `sale_recognized` waited for Close Payment.
+
+**Migration `acct_merge_sale_cogs_shipping_drafts`:** removed both pre-pass loops.
+The `sale_recognized` branch (the only one still gated on Close Payment) now also
+sweeps the same order's not-yet-processed `cogs` and `shipment_shipping_cost`
+events — guaranteed to already exist, since Close Payment itself requires every
+shipment on the order to be dispatched first — and folds their debit/credit lines
+into the *same* `journal_entry_drafts` row (COGS at `line_order` 100/101, shipping
+cost at 110+) instead of creating separate drafts. All swept events are marked
+`processed_at` together. Untouched: the skip-if-mapping-missing checks (now also
+guard the COGS/shipping legs — if either is unmapped, the whole combined draft
+stays pending, same "skip whole thing" semantics the sale side already had), the
+`cogs`/`shipment_shipping_cost` event_type values themselves (still recorded at
+ship time, just no longer independently drafted), and every other event branch
+(`purchase_received`, `expense_payment`, etc. — untouched).
+
+**No stuck legacy data:** queried live `business_events` first — every existing
+`cogs`/`shipment_shipping_cost` row was already `processed_at` set (their own
+drafts already existed under the old system), so this is a clean forward-only
+cutover; nothing needed backfilling.
+
+**Verified via a rolled-back transaction** (real mapped items/payment types, a
+synthetic shipment on a real order, inside a single `BEGIN`...`ROLLBACK`): insert
+cogs event → insert shipment_shipping_cost event → confirm 0 drafts spawned yet →
+insert sale_recognized event → confirm exactly 1 combined draft, all 7 lines
+correct (revenue credit, cash debit, Shipping Clearing credit from the sale side,
+COGS expense debit/inventory credit, Shipping Clearing debit/courier-funding
+credit from the cost side), total debit = total credit = ₱746, all 3 synthetic
+events marked processed together — then rolled back and confirmed nothing
+persisted afterward. `get_advisors(security)` shows no new findings against
+`generate_draft_journal_entries`.
+
+No git commit (standing project rule — DB-only change via Supabase MCP, stopped
+for manual review; no app code touched, Review/Journal UI already labels the
+combined draft "Sale Recognized" since `event_type` is unchanged).
+
+---
