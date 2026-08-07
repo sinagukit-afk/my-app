@@ -34,10 +34,22 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   customer?: EditableCustomer | null;
-  onSaved: () => void;
+  onSaved: (created?: { id: string; name: string }) => void;
+  /** Prefills the Full Name field when creating (e.g. from a combobox's typed search text). */
+  defaultName?: string;
+  /** Set false to skip navigating to the customer detail page after create — for inline callers
+   * (e.g. a Quote/Order form) that want to stay put and just select the new customer. */
+  redirectOnCreate?: boolean;
 };
 
-export function CustomerForm({ open, onOpenChange, customer, onSaved }: Props) {
+export function CustomerForm({
+  open,
+  onOpenChange,
+  customer,
+  onSaved,
+  defaultName,
+  redirectOnCreate = true,
+}: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +57,11 @@ export function CustomerForm({ open, onOpenChange, customer, onSaved }: Props) {
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // Radix portals this dialog's <form> to document.body, but React bubbles synthetic
+    // events through the *React* tree, not the DOM tree — so without this, submitting
+    // this form also fires the onSubmit of whatever form embeds <CustomerForm> (e.g. the
+    // New/Edit Quote/Order forms), prematurely submitting them with stale field values.
+    e.stopPropagation();
     setError(null);
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
@@ -61,9 +78,9 @@ export function CustomerForm({ open, onOpenChange, customer, onSaved }: Props) {
 
       const res: CreateResult = await createCustomer(formData);
       if (res.success) {
-        onSaved();
+        onSaved({ id: res.id, name: res.name });
         onOpenChange(false);
-        router.push(`/dashboard/management/customers/${res.id}`);
+        if (redirectOnCreate) router.push(`/dashboard/management/customers/${res.id}`);
       } else {
         setError(res.error);
       }
@@ -83,7 +100,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSaved }: Props) {
             </DialogDescription>
           </DialogHeader>
 
-          <Input label="Full Name" name="name" defaultValue={customer?.name ?? ""} required autoFocus />
+          <Input label="Full Name" name="name" defaultValue={customer?.name ?? defaultName ?? ""} required autoFocus />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input label="Phone" name="phone_number" defaultValue={customer?.phone_number ?? ""} />
             <Input label="Email" name="email" type="email" defaultValue={customer?.email ?? ""} />

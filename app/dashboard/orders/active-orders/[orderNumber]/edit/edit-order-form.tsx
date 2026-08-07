@@ -9,6 +9,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { TextArea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
+import { CustomerForm } from "@/app/dashboard/management/customers/customer-form";
 import { adjustOrderItems } from "../../actions";
 import { ORDER_SOURCE_OPTIONS } from "../../../order-source";
 import {
@@ -60,6 +61,9 @@ export function EditOrderForm({
   const [orderDateValue, setOrderDateValue] = useState(orderDate);
   const [targetDateValue, setTargetDateValue] = useState(targetDate);
   const [customerIdValue, setCustomerIdValue] = useState(customerId ?? "");
+  const [customerOptions, setCustomerOptions] = useState<CustomerOption[]>(customers);
+  const [newCustomerName, setNewCustomerName] = useState("");
+  const [customerFormOpen, setCustomerFormOpen] = useState(false);
   const [orderSourceValue, setOrderSourceValue] = useState(orderSource ?? "");
   const [error, setError] = useState<string | null>(null);
 
@@ -126,7 +130,12 @@ export function EditOrderForm({
               onValueChange={setCustomerIdValue}
               placeholder="Walk-in customer"
               searchPlaceholder="Search customers…"
-              options={customers.map((c) => ({ value: c.id, label: c.name }))}
+              options={customerOptions.map((c) => ({ value: c.id, label: c.name }))}
+              onCreateOption={(query) => {
+                setNewCustomerName(query);
+                setCustomerFormOpen(true);
+              }}
+              createOptionLabel={(query) => `Create new customer "${query}"`}
             />
             <Combobox
               label="Order Source"
@@ -169,6 +178,18 @@ export function EditOrderForm({
           {isPending ? "Saving…" : "Save Changes"}
         </Button>
       </div>
+
+      <CustomerForm
+        open={customerFormOpen}
+        onOpenChange={setCustomerFormOpen}
+        defaultName={newCustomerName}
+        redirectOnCreate={false}
+        onSaved={(created) => {
+          if (!created) return;
+          setCustomerOptions((prev) => [...prev, created]);
+          setCustomerIdValue(created.id);
+        }}
+      />
     </form>
   );
 }

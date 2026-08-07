@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export type ActionResult = { success: true } | { success: false; error: string }
-export type CreateResult = { success: true; id: string } | { success: false; error: string }
+export type CreateResult = { success: true; id: string; name: string } | { success: false; error: string }
 
 const LIST_PATH = '/dashboard/management/customers'
 
@@ -42,7 +42,7 @@ export async function createCustomer(formData: FormData): Promise<CreateResult> 
   if (sourceError) return { success: false, error: sourceError.message }
 
   revalidatePath(LIST_PATH)
-  return { success: true, id: customer.id }
+  return { success: true, id: customer.id, name }
 }
 
 export async function updateCustomer(id: string, formData: FormData): Promise<ActionResult> {

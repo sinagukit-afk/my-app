@@ -9,6 +9,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { TextArea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
+import { CustomerForm } from "@/app/dashboard/management/customers/customer-form";
 import { createOrder } from "../actions";
 import { ORDER_SOURCE_OPTIONS } from "../../order-source";
 import {
@@ -47,6 +48,9 @@ export function NewOrderForm({ customers, variantOptions, discounts, modifierGro
   const [targetDate, setTargetDate] = useState(plusDays(todayIso(), 5));
   const [targetDateTouched, setTargetDateTouched] = useState(false);
   const [customerId, setCustomerId] = useState("");
+  const [customerOptions, setCustomerOptions] = useState<CustomerOption[]>(customers);
+  const [newCustomerName, setNewCustomerName] = useState("");
+  const [customerFormOpen, setCustomerFormOpen] = useState(false);
   const [orderSource, setOrderSource] = useState("");
   const [rows, setRows] = useState<OrderLineRow[]>([emptyOrderRow()]);
   const [error, setError] = useState<string | null>(null);
@@ -118,7 +122,12 @@ export function NewOrderForm({ customers, variantOptions, discounts, modifierGro
               onValueChange={setCustomerId}
               placeholder="Walk-in customer"
               searchPlaceholder="Search customers…"
-              options={customers.map((c) => ({ value: c.id, label: c.name }))}
+              options={customerOptions.map((c) => ({ value: c.id, label: c.name }))}
+              onCreateOption={(query) => {
+                setNewCustomerName(query);
+                setCustomerFormOpen(true);
+              }}
+              createOptionLabel={(query) => `Create new customer "${query}"`}
             />
             <Combobox
               label="Order Source"
@@ -152,6 +161,18 @@ export function NewOrderForm({ customers, variantOptions, discounts, modifierGro
           {isPending ? "Creating…" : "Create Order"}
         </Button>
       </div>
+
+      <CustomerForm
+        open={customerFormOpen}
+        onOpenChange={setCustomerFormOpen}
+        defaultName={newCustomerName}
+        redirectOnCreate={false}
+        onSaved={(created) => {
+          if (!created) return;
+          setCustomerOptions((prev) => [...prev, created]);
+          setCustomerId(created.id);
+        }}
+      />
     </form>
   );
 }
