@@ -2502,3 +2502,81 @@ for manual review; no app code touched, Review/Journal UI already labels the
 combined draft "Sale Recognized" since `event_type` is unchanged).
 
 ---
+
+### 2026-08-07 — Merge receipt / final-payment draft triggers for expenses, assets, and inventory
+
+Sinag asked which of the remaining draft-journal triggers (purchase PO/manual
+incoming receipt, expense/asset recording, and their 4 "Log Payment" events)
+could be combined the same way Sale/COGS/Shipping were, with the trigger
+being the *final* payment. Same underlying pattern as the 2026-08-06 merge —
+receipt-side and payment-side legs of the same payable folded into one draft
+— but with a real accrual-vs-cash tradeoff (AP stops showing a running
+balance for these transaction types while a payable sits partially paid) that
+Sinag explicitly confirmed via AskUserQuestion before implementation: full
+sweep at final payment, all 4 pairs.
+
+**Migration `acct_merge_payable_receipt_and_payment_drafts`:** `purchase_received`,
+`manual_incoming`, `expense_recorded`, and `asset_acquired` no longer draft
+immediately — they now fall through to the no-op `else` branch and just wait,
+unprocessed, exactly like `cogs`/`shipment_shipping_cost` already did.
+`expense_payment` / `asset_payment` / `inventory_payment` / `purchase_order_payment`
+now resolve the payable's *live* `payment_status` from its own table
+(`opex_expenses`/`fixed_assets`/`incoming_items`/`purchase_orders`, not the
+triggering event's payload):
+- still `partial` → wait (this event, and any earlier unswept partials, stay
+  unprocessed until the payment that finally zeroes the balance);
+- `paid` and the receipt leg is still unprocessed → sweep the receipt +
+  every unprocessed payment logged against the payable (partial installments
+  included) into one combined draft, skipping the intermediate AP leg
+  entirely (e.g. Dr Expense 1000 / Cr BDO 400 / Cr BPI 600);
+- `paid` but the receipt was already processed → legacy fallback, draft this
+  payment alone exactly as the pre-merge code did (Dr AP / Cr payment
+  account) — covers pre-migration data and any payable whose sweep already
+  fired and is now receiving a further receiving/payment cycle (e.g. a PO
+  invoiced in batches).
+
+**Purchase order line covers multi-line receiving:** `purchase_order_payment`'s
+sweep aggregates every unprocessed `purchase_received` event tied to the PO
+(potentially several receiving sessions/items), grouping debits by inventory
+account and summing shipping/discount across all of them, sign-aware for
+mixed discount/markup lines.
+
+**Bug caught and fixed by testing before deploy:** the outer loop's `FOR ...
+IN SELECT ... FOR UPDATE SKIP LOCKED LOOP` cursor takes its row snapshot at
+OPEN time. When one iteration's sweep marks a sibling same-event-type row
+(e.g. an earlier partial payment) as processed, the cursor can still visit
+that now-processed row later in the same pass using stale pre-sweep data —
+its `v_receipt_ids` lookup then finds nothing (already swept) and wrongly
+falls into the legacy path, producing a spurious extra draft. Reproduced live
+(3 drafts spawned for a 2-payment expense — 1 correct combined + 2 stray
+legacy singles) and fixed with a live re-check right after each loop
+iteration starts (`select processed_at ... if not null then continue`),
+bypassing the cursor's stale snapshot. Re-tested: exactly 1 draft, correct
+lines, both with and without an intervening `generate_draft_journal_entries()`
+call between each payment insert.
+
+**Verified live via rolled-back transactions** (real mapped categories/items/
+payment types, inside single `BEGIN`-equivalent blocks that end in a forced
+`RAISE EXCEPTION` to guarantee rollback of both the function redefinition and
+the test data): partial-then-final expense payment across 2 payment types →
+1 combined draft, Dr Electricity 1000 / Cr BDO 400 / Cr BPI 600; single-shot
+asset payment → Dr Furniture 5000 / Cr BDO 5000; manual incoming line with
+shipping+discount → Dr Inventory 530 / Dr Shipping-In 20 / Cr Discount 30 /
+Cr BDO 520, balanced 550=550; a 2-line PO received across 2 sessions then
+paid in one shot → single combined Dr Inventory 290 / Dr Shipping-In 15 /
+Cr BPI 305, balanced; legacy-fallback path (receipt pre-marked processed) →
+correctly drafts Dr AP / Cr payment account alone. Confirmed zero `ZZTEST*`
+rows persisted afterward. `get_advisors(security)` shows nothing new against
+`generate_draft_journal_entries`. Live data check beforehand and after:
+all existing `purchase_received`/`manual_incoming`/`expense_recorded`/
+`asset_acquired`/payment events were already `processed_at` set — no stuck
+data, clean forward-only cutover, nothing needed backfilling.
+
+Rows 6–8 (inventory adjustment gain/loss, scrap) intentionally untouched —
+no counterpart payment event exists for those, nothing to merge.
+
+No app code touched (DB-only via Supabase MCP); Review/Journal UI already
+labels drafts by `event_type`, which is unchanged. Committed at Sinag's
+explicit request (this doc only — the migration itself already applied live).
+
+---
