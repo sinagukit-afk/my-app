@@ -92,191 +92,208 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
         </Link>
       </div>
 
-      <Card>
-        <CardContent className="space-y-6 p-8">
-          <div>
-            <p className="text-lg font-semibold text-(--color-text)">Sinag Ukit</p>
-            {store?.address && <p className="text-sm text-(--color-text-muted)">Address: {store.address}</p>}
-            {store?.phone && <p className="text-sm text-(--color-text-muted)">Phone: {store.phone}</p>}
-            {store?.email && <p className="text-sm text-(--color-text-muted)">Email: {store.email}</p>}
-          </div>
-
-          <div className="flex justify-between border-t border-(--color-border) pt-4">
-            <div>
-              <p className="text-xs uppercase text-(--color-text-muted)">Order Number</p>
-              <p className="text-sm font-medium text-(--color-text)">{order.order_number}</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase text-(--color-text-muted)">Order Date</p>
-              <p className="text-sm text-(--color-text)">{formatDate(order.order_date)}</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase text-(--color-text-muted)">Payment Status</p>
-              <p className="text-sm text-(--color-text)">{paymentStatusLabel}</p>
-            </div>
-          </div>
-
-          <div className="border-t border-(--color-border) pt-4">
-            <p className="text-xs uppercase text-(--color-text-muted)">Customer</p>
-            <p className="text-sm font-medium text-(--color-text)">{customer?.name ?? "Walk-in customer"}</p>
-            {customerAddress && <p className="text-sm text-(--color-text-muted)">{customerAddress}</p>}
-            {customer?.phone_number && <p className="text-sm text-(--color-text-muted)">{customer.phone_number}</p>}
-          </div>
-
-          <div className="border-t border-(--color-border) pt-4">
-            <table className="w-full table-fixed text-sm">
-              <thead>
-                <tr className="border-b border-(--color-border) text-left text-xs uppercase text-(--color-text-muted)">
-                  <th className="py-2">Item</th>
-                  <th className="w-[12%] py-2">Qty</th>
-                  <th className="w-[12%] py-2">Unit Price</th>
-                  <th className="w-[12%] py-2">Discount</th>
-                  <th className="w-[12%] py-2 text-right">Line Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(order.order_items ?? []).map((item) => {
-                  const modifierTotal = (item.order_item_modifiers ?? []).reduce(
-                    (sum, m) => sum + Number(m.price_snapshot),
-                    0
-                  );
-                  const unitPriceWithModifier = Number(item.unit_price) + modifierTotal;
-                  const total = Math.max(
-                    0,
-                    Number(item.quantity) * unitPriceWithModifier - Number(item.line_discount)
-                  );
-                  return (
-                    <tr key={item.id} className="border-b border-(--color-border) last:border-0">
-                      <td className="py-2 text-(--color-text)">
-                        {item.item_name_snapshot}
-                        {(item.order_item_modifiers ?? []).length > 0 && (
-                          <p className="text-xs text-(--color-text-muted)">
-                            {(item.order_item_modifiers ?? []).map((m) => modifierValue(m.name_snapshot)).join(", ")}
-                          </p>
-                        )}
-                      </td>
-                      <td className="py-2 text-(--color-text)">{item.quantity}</td>
-                      <td className="py-2 text-(--color-text)">{formatCurrency(unitPriceWithModifier)}</td>
-                      <td className="py-2 text-(--color-text-muted)">
-                        {Number(item.line_discount) > 0 ? formatCurrency(Number(item.line_discount)) : "—"}
-                      </td>
-                      <td className="py-2 text-right text-(--color-text)">{formatCurrency(total)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="ml-auto max-w-xs space-y-1 border-t border-(--color-border) pt-4 text-sm">
-            <div className="flex justify-between text-(--color-text-muted)">
-              <span>Subtotal</span>
-              <span>{formatCurrency(Number(order.subtotal))}</span>
-            </div>
-            <div className="flex justify-between text-(--color-text-muted)">
-              <span>Total Discount</span>
-              <span>-{formatCurrency(Number(order.total_discount))}</span>
-            </div>
-            <div className="flex justify-between font-medium text-(--color-text)">
-              <span>Order Total</span>
-              <span>{formatCurrency(totalMoney)}</span>
-            </div>
-            {totalTax > 0 && (
-              <div className="flex justify-between text-(--color-text-muted)">
-                <span>Tax</span>
-                <span>{formatCurrency(totalTax)}</span>
-              </div>
-            )}
-            {(shippingFeeTotal > 0 || shippingCostTotal > 0) && (
-              <div className="flex justify-between text-(--color-text-muted)">
-                <span>Shipping Fee</span>
-                <span>{formatCurrency(shippingDiscount > 0 ? shippingCostTotal : shippingFeeTotal)}</span>
-              </div>
-            )}
-            {shippingDiscount > 0 && (
-              <>
-                <div className="flex justify-between text-(--color-text-muted)">
-                  <span>Shipping Discount</span>
-                  <span>-{formatCurrency(shippingDiscount)}</span>
+      <div className="overflow-x-auto">
+        <Card className="min-w-[640px]">
+          <CardContent className="space-y-6 p-8">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/sinag-ukit-logo.jpg"
+                    alt="Sinag Ukit"
+                    className="h-10 w-10 shrink-0 rounded-(--radius-md) object-contain"
+                  />
+                  <p className="text-lg font-semibold text-(--color-text)">Sinag Ukit</p>
                 </div>
-                <div className="flex justify-between font-medium text-(--color-text)">
-                  <span>Shipping (Net)</span>
-                  <span>{formatCurrency(shippingFeeTotal)}</span>
+                <div className="mt-2 space-y-0.5">
+                  {store?.address && <p className="text-sm text-(--color-text-muted)">Address: {store.address}</p>}
+                  {store?.phone && <p className="text-sm text-(--color-text-muted)">Phone: {store.phone}</p>}
+                  {store?.email && <p className="text-sm text-(--color-text-muted)">Email: {store.email}</p>}
                 </div>
-              </>
-            )}
-            {(totalTax > 0 || shippingFeeTotal > 0 || shippingCostTotal > 0) && (
-              <div className="flex justify-between font-medium text-(--color-text)">
-                <span>Amount Due</span>
-                <span>{formatCurrency(totalDue)}</span>
               </div>
-            )}
-          </div>
+              <div className="text-right">
+                <p className="text-3xl font-bold tracking-wide text-(--color-text)">Invoice</p>
+                <div className="mt-2 space-y-0.5 text-sm text-(--color-text)">
+                  <p>
+                    <span className="text-(--color-text-muted)">Order #:</span> {order.order_number}
+                  </p>
+                  <p>
+                    <span className="text-(--color-text-muted)">Order Date:</span> {formatDate(order.order_date)}
+                  </p>
+                  <p>
+                    <span className="text-(--color-text-muted)">Payment Status:</span> {paymentStatusLabel}
+                  </p>
+                </div>
+              </div>
+            </div>
 
-          <div className="border-t border-(--color-border) pt-4">
-            <p className="text-xs uppercase text-(--color-text-muted)">Payment History</p>
-            {payments.length === 0 ? (
-              <p className="pt-2 text-sm text-(--color-text-muted)">No payments recorded yet.</p>
-            ) : (
-              <table className="mt-2 w-full text-sm">
+            <div className="border-t border-(--color-border) pt-4">
+              <p className="text-xs uppercase text-(--color-text-muted)">Customer</p>
+              <p className="text-sm font-medium text-(--color-text)">{customer?.name ?? "Walk-in customer"}</p>
+              {customerAddress && <p className="text-sm text-(--color-text-muted)">{customerAddress}</p>}
+              {customer?.phone_number && (
+                <p className="text-sm text-(--color-text-muted)">{customer.phone_number}</p>
+              )}
+            </div>
+
+            <div className="border-t border-(--color-border) pt-4">
+              <table className="w-full table-fixed text-sm">
                 <thead>
                   <tr className="border-b border-(--color-border) text-left text-xs uppercase text-(--color-text-muted)">
-                    <th className="py-2">Date</th>
-                    <th className="py-2">Type</th>
-                    <th className="py-2">Reference</th>
-                    <th className="py-2 text-right">Amount</th>
+                    <th className="py-2">Item</th>
+                    <th className="w-[12%] py-2">Qty</th>
+                    <th className="w-[16%] py-2">Unit Price</th>
+                    <th className="w-[16%] py-2">Discount</th>
+                    <th className="w-[16%] py-2 text-right">Line Total</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {payments.map((p, i) => {
-                    const paymentType = firstOf(p.payment_types);
+                  {(order.order_items ?? []).map((item) => {
+                    const modifierTotal = (item.order_item_modifiers ?? []).reduce(
+                      (sum, m) => sum + Number(m.price_snapshot),
+                      0
+                    );
+                    const unitPriceWithModifier = Number(item.unit_price) + modifierTotal;
+                    const total = Math.max(
+                      0,
+                      Number(item.quantity) * unitPriceWithModifier - Number(item.line_discount)
+                    );
                     return (
-                      <tr key={i} className="border-b border-(--color-border) last:border-0">
-                        <td className="py-2 text-(--color-text)">{formatDate(p.payment_date)}</td>
-                        <td className="py-2 text-(--color-text-muted)">{paymentType?.name ?? "Unspecified"}</td>
-                        <td className="py-2 text-(--color-text-muted)">{p.reference_no ?? "—"}</td>
-                        <td className="py-2 text-right text-(--color-text)">{formatCurrency(Number(p.amount))}</td>
+                      <tr key={item.id} className="border-b border-(--color-border) last:border-0">
+                        <td className="py-2 text-(--color-text)">
+                          {item.item_name_snapshot}
+                          {(item.order_item_modifiers ?? []).length > 0 && (
+                            <p className="text-xs text-(--color-text-muted)">
+                              {(item.order_item_modifiers ?? [])
+                                .map((m) => modifierValue(m.name_snapshot))
+                                .join(", ")}
+                            </p>
+                          )}
+                        </td>
+                        <td className="py-2 text-(--color-text)">{item.quantity}</td>
+                        <td className="py-2 text-(--color-text)">{formatCurrency(unitPriceWithModifier)}</td>
+                        <td className="py-2 text-(--color-text-muted)">
+                          {Number(item.line_discount) > 0 ? formatCurrency(Number(item.line_discount)) : "—"}
+                        </td>
+                        <td className="py-2 text-right text-(--color-text)">{formatCurrency(total)}</td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
-            )}
-          </div>
-
-          <div className="ml-auto max-w-xs space-y-1 border-t border-(--color-border) pt-4 text-sm">
-            <div className="flex justify-between text-(--color-text-muted)">
-              <span>Total Paid</span>
-              <span>{formatCurrency(totalPaid)}</span>
             </div>
-            {overpaid > 0 ? (
-              <div className="flex justify-between font-medium text-(--color-text)">
-                <span>Service Tip</span>
-                <span>{formatCurrency(overpaid)}</span>
-              </div>
-            ) : (
-              <div className="flex justify-between font-medium text-(--color-text)">
-                <span>Remaining Balance</span>
-                <span>{formatCurrency(remainingBalance)}</span>
-              </div>
-            )}
-          </div>
 
-          <div className="border-t border-(--color-border) pt-4">
-            <p className="text-xs uppercase text-(--color-text-muted)">Prepared by</p>
-            <p className="text-sm font-medium text-(--color-text)">{preparer?.full_name ?? "—"}</p>
-            {preparer?.function_title && (
-              <p className="text-sm text-(--color-text-muted)">{preparer.function_title}</p>
-            )}
-          </div>
+            <div className="ml-auto max-w-xs space-y-1 border-t border-(--color-border) pt-4 text-sm">
+              <div className="flex justify-between text-(--color-text-muted)">
+                <span>Subtotal</span>
+                <span>{formatCurrency(Number(order.subtotal))}</span>
+              </div>
+              <div className="flex justify-between text-(--color-text-muted)">
+                <span>Total Discount</span>
+                <span>-{formatCurrency(Number(order.total_discount))}</span>
+              </div>
+              <div className="flex justify-between font-medium text-(--color-text)">
+                <span>Order Total</span>
+                <span>{formatCurrency(totalMoney)}</span>
+              </div>
+              {totalTax > 0 && (
+                <div className="flex justify-between text-(--color-text-muted)">
+                  <span>Tax</span>
+                  <span>{formatCurrency(totalTax)}</span>
+                </div>
+              )}
+              {(shippingFeeTotal > 0 || shippingCostTotal > 0) && (
+                <div className="flex justify-between text-(--color-text-muted)">
+                  <span>Shipping Fee</span>
+                  <span>{formatCurrency(shippingDiscount > 0 ? shippingCostTotal : shippingFeeTotal)}</span>
+                </div>
+              )}
+              {shippingDiscount > 0 && (
+                <>
+                  <div className="flex justify-between text-(--color-text-muted)">
+                    <span>Shipping Discount</span>
+                    <span>-{formatCurrency(shippingDiscount)}</span>
+                  </div>
+                  <div className="flex justify-between font-medium text-(--color-text)">
+                    <span>Shipping (Net)</span>
+                    <span>{formatCurrency(shippingFeeTotal)}</span>
+                  </div>
+                </>
+              )}
+              {(totalTax > 0 || shippingFeeTotal > 0 || shippingCostTotal > 0) && (
+                <div className="flex justify-between font-medium text-(--color-text)">
+                  <span>Amount Due</span>
+                  <span>{formatCurrency(totalDue)}</span>
+                </div>
+              )}
+            </div>
 
-          <div className="border-t border-(--color-border) pt-4">
-            <p className="text-xs text-(--color-text-muted)">
-              Note: No signature required, electronically prepared.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="border-t border-(--color-border) pt-4">
+              <p className="text-xs uppercase text-(--color-text-muted)">Payment History</p>
+              {payments.length === 0 ? (
+                <p className="pt-2 text-sm text-(--color-text-muted)">No payments recorded yet.</p>
+              ) : (
+                <table className="mt-2 w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-(--color-border) text-left text-xs uppercase text-(--color-text-muted)">
+                      <th className="py-2">Date</th>
+                      <th className="py-2">Type</th>
+                      <th className="py-2">Reference</th>
+                      <th className="py-2 text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payments.map((p, i) => {
+                      const paymentType = firstOf(p.payment_types);
+                      return (
+                        <tr key={i} className="border-b border-(--color-border) last:border-0">
+                          <td className="py-2 text-(--color-text)">{formatDate(p.payment_date)}</td>
+                          <td className="py-2 text-(--color-text-muted)">{paymentType?.name ?? "Unspecified"}</td>
+                          <td className="py-2 text-(--color-text-muted)">{p.reference_no ?? "—"}</td>
+                          <td className="py-2 text-right text-(--color-text)">{formatCurrency(Number(p.amount))}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            <div className="ml-auto max-w-xs space-y-1 border-t border-(--color-border) pt-4 text-sm">
+              <div className="flex justify-between text-(--color-text-muted)">
+                <span>Total Paid</span>
+                <span>{formatCurrency(totalPaid)}</span>
+              </div>
+              {overpaid > 0 ? (
+                <div className="flex justify-between font-medium text-(--color-text)">
+                  <span>Service Tip</span>
+                  <span>{formatCurrency(overpaid)}</span>
+                </div>
+              ) : (
+                <div className="flex justify-between font-medium text-(--color-text)">
+                  <span>Remaining Balance</span>
+                  <span>{formatCurrency(remainingBalance)}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-(--color-border) pt-4">
+              <p className="text-xs uppercase text-(--color-text-muted)">Prepared by</p>
+              <p className="text-sm font-medium text-(--color-text)">{preparer?.full_name ?? "—"}</p>
+              {preparer?.function_title && (
+                <p className="text-sm text-(--color-text-muted)">{preparer.function_title}</p>
+              )}
+            </div>
+
+            <div className="border-t border-(--color-border) pt-4">
+              <p className="text-xs text-(--color-text-muted)">
+                Note: No signature required, electronically prepared.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
