@@ -32,6 +32,7 @@ export default async function InventoryMonitoringPage() {
            inventory_levels(id, store_id, available_qty, reserved_qty, in_production_qty, on_hold_qty, low_stock_threshold))`
       )
       .eq("track_stock", true)
+      .eq("is_active", true)
       .is("deleted_at", null)
       .is("item_variants.deleted_at", null)
       .order("name"),

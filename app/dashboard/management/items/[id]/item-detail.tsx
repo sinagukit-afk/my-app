@@ -17,7 +17,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { formatCurrency, formatQty } from "@/lib/utils/format";
-import { archiveItem } from "../actions";
+import { archiveItem, deactivateItem, reactivateItem } from "../actions";
 import { STATUS_BADGE, STATUS_LABEL, SYNC_BADGE, SYNC_LABEL, type ItemRow } from "../items-table";
 
 export type DetailComponent = {
@@ -51,6 +51,7 @@ export type ItemDetailData = {
   track_stock: boolean;
   supplier: string | null;
   status: ItemRow["status"];
+  is_active: boolean;
   sync_status: string;
   sync_error: string | null;
 };
@@ -71,6 +72,9 @@ export function ItemDetail({ item, variants, modifiers, canWrite }: Props) {
   const [isPending, startTransition] = useTransition();
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [deactivateOpen, setDeactivateOpen] = useState(false);
+  const [deactivateError, setDeactivateError] = useState<string | null>(null);
+  const [reactivateError, setReactivateError] = useState<string | null>(null);
 
   function handleArchive() {
     setArchiveError(null);
@@ -81,6 +85,31 @@ export function ItemDetail({ item, variants, modifiers, canWrite }: Props) {
         router.refresh();
       } else {
         setArchiveError(res.error);
+      }
+    });
+  }
+
+  function handleDeactivate() {
+    setDeactivateError(null);
+    startTransition(async () => {
+      const res = await deactivateItem(item.id);
+      if (res.success) {
+        setDeactivateOpen(false);
+        router.refresh();
+      } else {
+        setDeactivateError(res.error);
+      }
+    });
+  }
+
+  function handleReactivate() {
+    setReactivateError(null);
+    startTransition(async () => {
+      const res = await reactivateItem(item.id);
+      if (!res.success) {
+        setReactivateError(res.error);
+      } else {
+        router.refresh();
       }
     });
   }
@@ -98,6 +127,23 @@ export function ItemDetail({ item, variants, modifiers, canWrite }: Props) {
               <Link href={`/dashboard/management/items/${item.id}/edit`}>
                 <Button variant="secondary">Edit Item</Button>
               </Link>
+            )}
+            {canWrite && item.status !== "archived" && item.is_active && (
+              <Button
+                variant="secondary"
+                disabled={isPending}
+                onClick={() => {
+                  setDeactivateError(null);
+                  setDeactivateOpen(true);
+                }}
+              >
+                Deactivate
+              </Button>
+            )}
+            {canWrite && item.status !== "archived" && !item.is_active && (
+              <Button variant="secondary" disabled={isPending} onClick={handleReactivate}>
+                {isPending ? "Reactivating…" : "Reactivate"}
+              </Button>
             )}
             {canWrite && item.status !== "archived" && (
               <Button
@@ -129,6 +175,13 @@ export function ItemDetail({ item, variants, modifiers, canWrite }: Props) {
       {item.sync_status === "failed" && item.sync_error && (
         <p className="text-sm text-(--color-danger)">Sync error: {item.sync_error}</p>
       )}
+      {!item.is_active && item.status !== "archived" && (
+        <p className="text-sm text-(--color-text-muted)">
+          This item is deactivated: it&apos;s hidden from Inventory Monitoring, and purchases, orders, and stock
+          adjustments against it will be blocked until it&apos;s reactivated.
+        </p>
+      )}
+      {reactivateError && <p className="text-sm text-(--color-danger)">{reactivateError}</p>}
 
       <Card>
         <CardHeader>
@@ -327,6 +380,36 @@ export function ItemDetail({ item, variants, modifiers, canWrite }: Props) {
             </DialogClose>
             <Button type="button" variant="danger" onClick={handleArchive} disabled={isPending}>
               {isPending ? "Archiving…" : "Archive"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deactivateOpen}
+        onOpenChange={(next) => {
+          setDeactivateOpen(next);
+          if (!next) setDeactivateError(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Deactivate Item</DialogTitle>
+            <DialogDescription>
+              Deactivate &quot;{item.name}&quot;? It will be hidden from Inventory Monitoring, and purchases, orders,
+              and stock adjustments against it will be blocked until it&apos;s reactivated. It will still appear in
+              the Item List, tagged as Deactivated.
+            </DialogDescription>
+          </DialogHeader>
+          {deactivateError && <p className="text-sm text-(--color-danger)">{deactivateError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isPending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="button" variant="danger" onClick={handleDeactivate} disabled={isPending}>
+              {isPending ? "Deactivating…" : "Deactivate"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -142,3 +142,53 @@ export async function archiveItem(itemId: string): Promise<UpsertItemResult> {
   revalidatePath(LIST_PATH)
   return { success: true, itemId }
 }
+
+export async function deactivateItem(itemId: string): Promise<UpsertItemResult> {
+  const supabase = await createClient()
+
+  const { data: item } = await supabase.from('items').select('name').eq('id', itemId).single()
+
+  const { error } = await supabase.rpc('deactivate_item', { p_item_id: itemId })
+  if (error) return { success: false, error: error.message }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  await supabase.from('activity_logs').insert({
+    user_id: user?.id ?? null,
+    action: 'deactivate_item',
+    entity_type: 'item',
+    entity_id: itemId,
+    description: item?.name ? `Item "${item.name}" deactivated` : 'Item deactivated',
+  })
+
+  revalidatePath(LIST_PATH)
+  revalidatePath(`${LIST_PATH}/${itemId}`)
+  return { success: true, itemId }
+}
+
+export async function reactivateItem(itemId: string): Promise<UpsertItemResult> {
+  const supabase = await createClient()
+
+  const { data: item } = await supabase.from('items').select('name').eq('id', itemId).single()
+
+  const { error } = await supabase.rpc('reactivate_item', { p_item_id: itemId })
+  if (error) return { success: false, error: error.message }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  await supabase.from('activity_logs').insert({
+    user_id: user?.id ?? null,
+    action: 'reactivate_item',
+    entity_type: 'item',
+    entity_id: itemId,
+    description: item?.name ? `Item "${item.name}" reactivated` : 'Item reactivated',
+  })
+
+  revalidatePath(LIST_PATH)
+  revalidatePath(`${LIST_PATH}/${itemId}`)
+  return { success: true, itemId }
+}

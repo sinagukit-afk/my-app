@@ -28,6 +28,7 @@ export default async function NewQuotePage() {
     .from("items")
     .select("id, name, item_variants(id, sku, option1_value, default_price), categories!inner(name)")
     .eq("is_available_for_sale", true)
+    .eq("is_active", true)
     .is("deleted_at", null)
     .is("item_variants.deleted_at", null)
     .in("categories.name", ["Product(Customize)", "Product(Pre-made)", "Services"])

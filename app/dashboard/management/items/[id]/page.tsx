@@ -31,7 +31,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   const { data: item } = await supabase
     .from("items")
     .select(
-      `id, name, description, item_type, sold_by, is_available_for_sale, track_stock, deleted_at,
+      `id, name, description, item_type, sold_by, is_available_for_sale, is_active, track_stock, deleted_at,
        sync_status, sync_error,
        categories(name),
        supplier:suppliers!items_primary_supplier_id_fkey(name)`
@@ -70,9 +70,11 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
 
   const status: ItemRow["status"] = item.deleted_at
     ? "archived"
-    : item.is_available_for_sale
-      ? "available"
-      : "not_for_sale";
+    : !item.is_active
+      ? "deactivated"
+      : item.is_available_for_sale
+        ? "available"
+        : "not_for_sale";
 
   const variants: DetailVariant[] = (variantRows ?? []).map((v) => {
     const options = [v.option1_value, v.option2_value, v.option3_value].filter(Boolean).join(" / ");
@@ -122,6 +124,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     track_stock: item.track_stock,
     supplier: supplier?.name ?? null,
     status,
+    is_active: item.is_active,
     sync_status: item.sync_status ?? "synced",
     sync_error: item.sync_error,
   };

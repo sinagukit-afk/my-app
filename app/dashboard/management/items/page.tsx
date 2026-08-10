@@ -31,7 +31,7 @@ export default async function ItemsPage() {
   const { data, error } = await supabase
     .from("items")
     .select(
-      `id, name, item_type, is_available_for_sale, deleted_at, track_stock,
+      `id, name, item_type, is_available_for_sale, is_active, deleted_at, track_stock,
        categories(name),
        item_variants(id, sku, cost, default_price, pricing_type, deleted_at,
          inventory_levels(available_qty, low_stock_threshold))`
@@ -103,9 +103,11 @@ export default async function ItemsPage() {
 
     const status: ItemRow["status"] = item.deleted_at
       ? "archived"
-      : item.is_available_for_sale
-        ? "available"
-        : "not_for_sale";
+      : !item.is_active
+        ? "deactivated"
+        : item.is_available_for_sale
+          ? "available"
+          : "not_for_sale";
 
     let stock_qty: number | null = null;
     let stock_status: ItemRow["stock_status"] = null;

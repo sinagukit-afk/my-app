@@ -17,7 +17,7 @@ export type ItemRow = {
   name: string;
   category: string | null;
   item_type: string;
-  status: "available" | "not_for_sale" | "archived";
+  status: "available" | "not_for_sale" | "deactivated" | "archived";
   sku_list: string;
   sku_count: number;
   price_label: string;
@@ -33,15 +33,17 @@ const STOCK_STATUS_BADGE: Record<"ok" | "low" | "out", "success" | "warning" | "
   out: "danger",
 };
 
-export const STATUS_BADGE: Record<ItemRow["status"], "success" | "neutral" | "warning"> = {
+export const STATUS_BADGE: Record<ItemRow["status"], "success" | "neutral" | "warning" | "danger"> = {
   available: "success",
   not_for_sale: "neutral",
+  deactivated: "danger",
   archived: "warning",
 };
 
 export const STATUS_LABEL: Record<ItemRow["status"], string> = {
   available: "Available",
   not_for_sale: "Not for sale",
+  deactivated: "Deactivated",
   archived: "Archived",
 };
 
@@ -97,6 +99,7 @@ export function ItemsTable({ data, canWrite }: Props) {
     { label: "All", value: "" },
     { label: "Available", value: "available" },
     { label: "Not for sale", value: "not_for_sale" },
+    { label: "Deactivated", value: "deactivated" },
     // Archived rows are only visible to admin/manager at the RLS level.
     ...(canWrite ? [{ label: "Archived", value: "archived" }] : []),
   ];

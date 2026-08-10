@@ -28,6 +28,7 @@ export default async function NewPurchaseOrderPage() {
     .from("items")
     .select("name, description, ai_match_keywords, item_variants(id, sku, option1_value, cost)")
     .eq("track_stock", true)
+    .eq("is_active", true)
     .is("deleted_at", null)
     .is("item_variants.deleted_at", null)
     .order("name");
