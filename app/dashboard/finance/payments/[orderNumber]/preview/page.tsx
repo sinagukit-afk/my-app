@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate } from "@/lib/utils/format-date";
 import { formatCurrency } from "@/lib/utils/format";
+import { PrintButton } from "@/components/print/print-button";
 
 function firstOf<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
@@ -87,13 +88,14 @@ export default async function PaymentPreviewPage({ params }: { params: Promise<{
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex justify-end gap-2 print:hidden">
+        <PrintButton />
         <Link href={`/dashboard/finance/payments/${orderNumber}`}>
           <Button variant="secondary">Back</Button>
         </Link>
       </div>
 
-      <div className="overflow-x-auto">
-        <Card className="min-w-[640px]">
+      <div className="overflow-x-auto print:overflow-visible">
+        <Card className="min-w-[640px] print:w-[640px] print:min-w-0 print:max-w-none print:border-0 print:shadow-none">
           <CardContent className="space-y-6 p-8">
             <div className="flex items-start justify-between">
               <div>

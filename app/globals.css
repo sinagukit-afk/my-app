@@ -301,3 +301,33 @@ body {
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
 }
+
+/* ─── Print ─────────────────────────────────────────────────── */
+/* Documents (Quote/Payment preview) print on standard A4 paper; the card
+   itself stays fixed at its 640px minimum width (print:w-[640px] in the
+   preview pages) and sits centered in the printable area, rather than
+   stretching edge to edge. See components/print/print-button.tsx and the
+   print:* utility classes on AppShell / the preview pages. */
+@media print {
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+
+  :root {
+    /* Force light-mode brand tokens regardless of the viewer's OS dark mode —
+       printing the dark palette (light text on a near-black card) wastes ink
+       and is often unreadable once "background graphics" is off. */
+    --color-bg: #FAF6EF;
+    --color-surface: #ffffff;
+    --color-border: #E1D4C1;
+    --color-border-strong: #CBB99F;
+    --color-text: #161616;
+    --color-text-muted: #6F6F6F;
+    --color-text-subtle: #9c8e7e;
+  }
+
+  body {
+    background: #fff;
+  }
+}

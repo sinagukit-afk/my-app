@@ -575,13 +575,13 @@ export function AppShell({ children, userEmail, userRole, signOutAction, navCoun
 
   return (
     <UnsavedChangesProvider>
-    <div className="flex h-screen overflow-hidden bg-(--color-bg)">
+    <div className="flex h-screen overflow-hidden bg-(--color-bg) print:h-auto print:overflow-visible print:bg-white">
       {/* ── Mobile drawer backdrop ──────────────────────────── */}
       <div
         onClick={() => setMobileOpen(false)}
         aria-hidden="true"
         className={cn(
-          "fixed inset-0 z-30 bg-black/50 transition-opacity duration-200 pointer-fine:lg:hidden",
+          "fixed inset-0 z-30 bg-black/50 transition-opacity duration-200 pointer-fine:lg:hidden print:hidden",
           mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
         )}
       />
@@ -589,7 +589,7 @@ export function AppShell({ children, userEmail, userRole, signOutAction, navCoun
       {/* ── Sidebar ─────────────────────────────────────────── */}
       <aside
         className={cn(
-          "flex flex-col border-r border-(--color-border) bg-(--color-surface) transition-all duration-200 ease-in-out",
+          "flex flex-col border-r border-(--color-border) bg-(--color-surface) transition-all duration-200 ease-in-out print:hidden",
           "fixed inset-y-0 left-0 z-40 w-64 -translate-x-full",
           mobileOpen && "translate-x-0",
           "pointer-fine:lg:static pointer-fine:lg:z-auto pointer-fine:lg:translate-x-0 pointer-fine:lg:shrink-0",
@@ -731,9 +731,9 @@ export function AppShell({ children, userEmail, userRole, signOutAction, navCoun
       </aside>
 
       {/* ── Main column ─────────────────────────────────────── */}
-      <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
+      <div className="flex flex-1 flex-col min-w-0 overflow-hidden print:overflow-visible">
         {/* Top header */}
-        <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-(--color-border) bg-(--color-surface) px-4 shadow-(--shadow-sm)">
+        <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-(--color-border) bg-(--color-surface) px-4 shadow-(--shadow-sm) print:hidden">
           <button
             onClick={() => setMobileOpen((o) => !o)}
             className="flex pointer-fine:lg:hidden items-center justify-center h-8 w-8 rounded-(--radius-md) text-(--color-text-muted) hover:bg-(--color-bg) transition-colors"
@@ -764,14 +764,14 @@ export function AppShell({ children, userEmail, userRole, signOutAction, navCoun
         </header>
 
         {/* Breadcrumb bar */}
-        <div className="flex h-10 shrink-0 items-center gap-2 overflow-x-auto border-b border-(--color-border) bg-(--color-bg) px-4 lg:px-6">
+        <div className="flex h-10 shrink-0 items-center gap-2 overflow-x-auto border-b border-(--color-border) bg-(--color-bg) px-4 lg:px-6 print:hidden">
           <BackForwardNav />
           <div className="h-4 w-px shrink-0 bg-(--color-border-strong)" />
           <Breadcrumb pathname={pathname} />
         </div>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6 print:overflow-visible print:p-0">
           {children}
         </main>
       </div>
