@@ -57,9 +57,7 @@ export function DonutChart({
                   strokeDasharray={`${segLen} ${circumference - segLen}`}
                   strokeDashoffset={-dashoffset}
                 >
-                  <title>
-                    {d.label}: {valueFormatter(d.value)} ({(pct * 100).toFixed(1)}%)
-                  </title>
+                  <title>{`${d.label}: ${valueFormatter(d.value)} (${(pct * 100).toFixed(1)}%)`}</title>
                 </circle>
               );
             })}

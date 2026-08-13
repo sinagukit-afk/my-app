@@ -48,7 +48,32 @@ export default async function BalanceSheetPage({ searchParams }: { searchParams:
 
   const totalAssets = rows.filter((r) => r.category === "asset").reduce((s, r) => s + Number(r.amount), 0);
   const totalLiabilities = rows.filter((r) => r.category === "liability").reduce((s, r) => s + Number(r.amount), 0);
-  const totalEquity = rows.filter((r) => r.category === "equity").reduce((s, r) => s + Number(r.amount), 0);
+  const recordedEquity = rows.filter((r) => r.category === "equity").reduce((s, r) => s + Number(r.amount), 0);
+
+  // No period-close step exists yet to sweep Revenue/Expense into an equity account, so net
+  // income for the period sits unclosed and this report would otherwise always read "Out of
+  // balance" even when the ledger itself is fine. Show what that unclosed figure actually is,
+  // using the Chart of Accounts' own "Current Year Earnings" (3100) account — which exists for
+  // exactly this — as a computed, clearly-labeled display row rather than actually posting
+  // anything to it (a real period-close is a separate decision, not made here).
+  const impliedCurrentYearEarnings = totalAssets - totalLiabilities - recordedEquity;
+  const hasUnclosedEarnings = Math.round(impliedCurrentYearEarnings * 100) !== 0;
+  if (hasUnclosedEarnings) {
+    const earningsRow: BalanceSheetRow = {
+      account_id: "computed-current-year-earnings",
+      account_number: "3100",
+      account_name: "Current Year Earnings (unposted)",
+      category: "equity",
+      depth: 1,
+      is_postable: true,
+      amount: impliedCurrentYearEarnings,
+      rollup_amount: impliedCurrentYearEarnings,
+    };
+    const firstLiabilityIndex = rows.findIndex((r) => r.category === "liability");
+    rows.splice(firstLiabilityIndex === -1 ? rows.length : firstLiabilityIndex, 0, earningsRow);
+  }
+
+  const totalEquity = recordedEquity + (hasUnclosedEarnings ? impliedCurrentYearEarnings : 0);
   const balanced = Math.round(totalAssets * 100) === Math.round((totalLiabilities + totalEquity) * 100);
 
   return (

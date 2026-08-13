@@ -30,10 +30,11 @@ type InventoryValueRow = {
   item_variants: VariantForValue | VariantForValue[] | null;
 };
 
-type ItemForLowStock = { name: string };
+type ItemForLowStock = { name: string; is_active: boolean; deleted_at: string | null };
 type VariantForLowStock = {
   sku: string | null;
   option1_value: string | null;
+  deleted_at: string | null;
   items: ItemForLowStock | ItemForLowStock[] | null;
 };
 type LowStockRow = {
@@ -121,7 +122,9 @@ export default async function DashboardPage() {
       .returns<InventoryValueRow[]>(),
     supabase
       .from("inventory_levels")
-      .select("id, available_qty, low_stock_threshold, item_variants(sku, option1_value, items(name))")
+      .select(
+        "id, available_qty, low_stock_threshold, item_variants(sku, option1_value, deleted_at, items(name, is_active, deleted_at))"
+      )
       .not("low_stock_threshold", "is", null)
       .returns<LowStockRow[]>(),
     supabase
@@ -168,6 +171,13 @@ export default async function DashboardPage() {
   // committed and can't cover a new sale.
   const lowStockRows = (lowStockRes.data ?? [])
     .filter((r) => r.low_stock_threshold != null && Number(r.available_qty) <= Number(r.low_stock_threshold))
+    .filter((r) => {
+      const variant = firstOf(r.item_variants);
+      if (!variant || variant.deleted_at) return false;
+      const item = firstOf(variant.items);
+      if (!item || !item.is_active || item.deleted_at) return false;
+      return true;
+    })
     .sort((a, b) => Number(a.available_qty) - Number(b.available_qty))
     .slice(0, 5)
     .map((r) => {

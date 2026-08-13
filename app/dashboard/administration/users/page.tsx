@@ -16,6 +16,23 @@ export default async function UsersPage() {
     : { data: null };
   const isAdmin = currentProfile?.role === "admin";
 
+  if (!isAdmin) {
+    return (
+      <div>
+        <PageHeader
+          title="Users"
+          description="Manage staff accounts and control who has access to the system."
+        />
+        <Card className="max-w-lg">
+          <CardContent className="p-4 text-sm text-(--color-text-muted)">
+            User management is restricted to Admins. Contact an administrator if you need
+            access.
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const { data, error } = await supabase
     .from("profiles")
     .select("id, email, full_name, role, created_at")

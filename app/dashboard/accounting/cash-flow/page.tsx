@@ -12,6 +12,13 @@ function money(v: number) {
   return `₱${v.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+type EntryLineRow = { debit: number; credit: number; memo: string | null; account_id: string };
+type EntryRow = {
+  entry_date: string;
+  description: string;
+  journal_entry_lines: EntryLineRow | EntryLineRow[] | null;
+};
+
 export default async function CashFlowPage({ searchParams }: { searchParams: SearchParams }) {
   const { from = "", to = "" } = await searchParams;
 
@@ -44,32 +51,52 @@ export default async function CashFlowPage({ searchParams }: { searchParams: Sea
     );
   }
 
-  let incomeQuery = supabase.from("income").select("date, category, amount, note").is("deleted_at", null);
-  let expenseQuery = supabase.from("expenses").select("date, category, amount, note").is("deleted_at", null);
-  if (from) {
-    incomeQuery = incomeQuery.gte("date", from);
-    expenseQuery = expenseQuery.gte("date", from);
-  }
-  if (to) {
-    incomeQuery = incomeQuery.lte("date", to);
-    expenseQuery = expenseQuery.lte("date", to);
-  }
-
-  const [{ data: incomeRows, error: incomeError }, { data: expenseRows, error: expenseError }] = await Promise.all([
-    incomeQuery.order("date"),
-    expenseQuery.order("date"),
+  // Cash accounts = every bank/wallet account (not credit cards, those are a payable, not
+  // cash) plus Cash on hand (1010, physical till cash — not in bank_accounts since it isn't
+  // a bank/wallet). Same source of truth the Payment Methods / Bank Accounts settings pages
+  // use for "which GL account does this actually post to."
+  const [{ data: bankAccountRows }, { data: cashOnHand }] = await Promise.all([
+    supabase.from("bank_accounts").select("gl_account_id, type").neq("type", "credit_card"),
+    supabase.from("accounts").select("id").eq("account_number", "1010").maybeSingle(),
   ]);
+  const cashAccountIds = new Set<string>(
+    (bankAccountRows ?? []).map((r) => r.gl_account_id).filter((id): id is string => Boolean(id))
+  );
+  if (cashOnHand?.id) cashAccountIds.add(cashOnHand.id);
 
-  const income = incomeRows ?? [];
-  const expenses = expenseRows ?? [];
-  const totalIn = income.reduce((sum, r) => sum + Number(r.amount), 0);
-  const totalOut = expenses.reduce((sum, r) => sum + Number(r.amount), 0);
+  let entriesQuery = supabase
+    .from("journal_entries")
+    .select("entry_date, description, journal_entry_lines(debit, credit, memo, account_id)")
+    .returns<EntryRow[]>();
+  if (from) entriesQuery = entriesQuery.gte("entry_date", from);
+  if (to) entriesQuery = entriesQuery.lte("entry_date", to);
+
+  const { data: entryRows, error: entriesError } = await entriesQuery.order("entry_date");
+
+  const cashLines: { date: string; type: "in" | "out"; category: string; amount: number; note: string | null }[] = [];
+  for (const entry of entryRows ?? []) {
+    const lines = Array.isArray(entry.journal_entry_lines)
+      ? entry.journal_entry_lines
+      : entry.journal_entry_lines
+        ? [entry.journal_entry_lines]
+        : [];
+    for (const line of lines) {
+      if (!cashAccountIds.has(line.account_id)) continue;
+      const debit = Number(line.debit);
+      const credit = Number(line.credit);
+      if (debit > 0) {
+        cashLines.push({ date: entry.entry_date, type: "in", category: entry.description, amount: debit, note: line.memo });
+      } else if (credit > 0) {
+        cashLines.push({ date: entry.entry_date, type: "out", category: entry.description, amount: credit, note: line.memo });
+      }
+    }
+  }
+
+  const totalIn = cashLines.filter((l) => l.type === "in").reduce((sum, l) => sum + l.amount, 0);
+  const totalOut = cashLines.filter((l) => l.type === "out").reduce((sum, l) => sum + l.amount, 0);
   const net = totalIn - totalOut;
 
-  const timeline: CashFlowRow[] = [
-    ...income.map((r) => ({ date: r.date, type: "in" as const, category: r.category, amount: Number(r.amount), note: r.note })),
-    ...expenses.map((r) => ({ date: r.date, type: "out" as const, category: r.category, amount: Number(r.amount), note: r.note })),
-  ]
+  const timeline: CashFlowRow[] = [...cashLines]
     .sort((a, b) => a.date.localeCompare(b.date))
     .reduce<CashFlowRow[]>((rows, entry) => {
       const prevBalance = rows.length ? rows[rows.length - 1].balance : 0;
@@ -87,10 +114,10 @@ export default async function CashFlowPage({ searchParams }: { searchParams: Sea
 
       <DateRangeFilter from={from} to={to} />
 
-      {(incomeError || expenseError) && (
+      {entriesError && (
         <Card>
           <CardContent className="p-4 text-sm text-(--color-danger)">
-            Failed to load cash flow data: {incomeError?.message ?? expenseError?.message}
+            Failed to load cash flow data: {entriesError.message}
           </CardContent>
         </Card>
       )}

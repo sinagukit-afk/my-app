@@ -21,6 +21,14 @@ function formatDayLabel(iso: string) {
   return new Date(`${iso}T00:00:00`).toLocaleDateString("en-PH", { month: "short", day: "numeric" });
 }
 
+function firstOf<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+
+type ExpenseLineRow = { debit: number; credit: number; accounts: { name: string; category: string } | { name: string; category: string }[] | null };
+type ExpenseEntryRow = { entry_date: string; journal_entry_lines: ExpenseLineRow | ExpenseLineRow[] | null };
+
 export default async function FinancialReportPage({ searchParams }: { searchParams: SearchParams }) {
   const { from = "", to = "" } = await searchParams;
 
@@ -59,30 +67,32 @@ export default async function FinancialReportPage({ searchParams }: { searchPara
     .from("orders")
     .select("total_money, created_at")
     .in("status", REVENUE_STATUSES);
-  // Same expense query as Accounting > Cash Flow (Phase 20/21).
-  let expenseQuery = supabase.from("expenses").select("date, category, amount").is("deleted_at", null);
+  // Expenses now sourced from the posted ledger (journal_entries/journal_entry_lines),
+  // same as Accounting's Profit & Loss — the old `expenses` table is a dead pre-migration
+  // archive nothing writes to anymore (see /dashboard/finance/income for the same note on
+  // its sibling `income` table).
+  let expenseQuery = supabase
+    .from("journal_entries")
+    .select("entry_date, journal_entry_lines(debit, credit, accounts(name, category))")
+    .returns<ExpenseEntryRow[]>();
 
   if (from) {
     revenueQuery = revenueQuery.gte("created_at", `${from}T00:00:00`);
-    expenseQuery = expenseQuery.gte("date", from);
+    expenseQuery = expenseQuery.gte("entry_date", from);
   }
   if (to) {
     revenueQuery = revenueQuery.lte("created_at", `${to}T23:59:59.999`);
-    expenseQuery = expenseQuery.lte("date", to);
+    expenseQuery = expenseQuery.lte("entry_date", to);
   }
 
-  const [{ data: orderRows, error: revenueError }, { data: expenseRows, error: expenseError }] = await Promise.all([
+  const [{ data: orderRows, error: revenueError }, { data: expenseEntryRows, error: expenseError }] = await Promise.all([
     revenueQuery.order("created_at"),
-    expenseQuery.order("date"),
+    expenseQuery.order("entry_date"),
   ]);
 
   const orders = orderRows ?? [];
-  const expenses = expenseRows ?? [];
 
   const revenue = orders.reduce((sum, r) => sum + Number(r.total_money), 0);
-  const totalExpenses = expenses.reduce((sum, r) => sum + Number(r.amount), 0);
-  const netMargin = revenue - totalExpenses;
-  const marginPct = revenue > 0 ? (netMargin / revenue) * 100 : 0;
 
   const revenueByDate = new Map<string, number>();
   for (const order of orders) {
@@ -93,12 +103,30 @@ export default async function FinancialReportPage({ searchParams }: { searchPara
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, amount]) => ({ label: formatDayLabel(date), value: amount }));
 
+  // Flatten every journal line posted to an expense-category account. An expense line is
+  // always a debit (expenses increase with debit); net debit-credit handles the rare
+  // contra/reversal line without double-counting.
+  let totalExpenses = 0;
   const expenseByDate = new Map<string, number>();
   const expenseByCategory = new Map<string, number>();
-  for (const e of expenses) {
-    expenseByDate.set(e.date, (expenseByDate.get(e.date) ?? 0) + Number(e.amount));
-    expenseByCategory.set(e.category, (expenseByCategory.get(e.category) ?? 0) + Number(e.amount));
+  for (const entry of expenseEntryRows ?? []) {
+    const lines = Array.isArray(entry.journal_entry_lines)
+      ? entry.journal_entry_lines
+      : entry.journal_entry_lines
+        ? [entry.journal_entry_lines]
+        : [];
+    for (const line of lines) {
+      const account = firstOf(line.accounts);
+      if (!account || account.category !== "expense") continue;
+      const amount = Number(line.debit) - Number(line.credit);
+      if (amount === 0) continue;
+      totalExpenses += amount;
+      expenseByDate.set(entry.entry_date, (expenseByDate.get(entry.entry_date) ?? 0) + amount);
+      expenseByCategory.set(account.name, (expenseByCategory.get(account.name) ?? 0) + amount);
+    }
   }
+  const netMargin = revenue - totalExpenses;
+  const marginPct = revenue > 0 ? (netMargin / revenue) * 100 : 0;
   const expenseChartData: BarChartDatum[] = Array.from(expenseByDate.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, amount]) => ({ label: formatDayLabel(date), value: amount }));
@@ -164,10 +192,11 @@ export default async function FinancialReportPage({ searchParams }: { searchPara
         <CardContent className="p-4 text-xs text-(--color-text-muted)">
           Revenue includes orders with status confirmed, in production, or completed, dated by
           order creation time — same convention as the Sales report, since the database has no
-          separate order-confirmation timestamp. Accounting&apos;s Profit &amp; Loss report uses a
-          different, ledger-based methodology and may not match this total exactly. This page is
-          restricted to Admin/Manager (matching Accounting), even though the Analytics sidebar
-          group itself has no role restriction.
+          separate order-confirmation timestamp, so it may not match Accounting&apos;s Profit &amp;
+          Loss revenue exactly. Expenses are posted-ledger figures (the same source Profit &amp;
+          Loss uses) and should match it for the same date range. This page is restricted to
+          Admin/Manager (matching Accounting), even though the Analytics sidebar group itself
+          has no role restriction.
         </CardContent>
       </Card>
     </div>
