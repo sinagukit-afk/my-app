@@ -73,8 +73,7 @@ export default async function FinancialReportPage({ searchParams }: { searchPara
   // its sibling `income` table).
   let expenseQuery = supabase
     .from("journal_entries")
-    .select("entry_date, journal_entry_lines(debit, credit, accounts(name, category))")
-    .returns<ExpenseEntryRow[]>();
+    .select("entry_date, journal_entry_lines(debit, credit, accounts(name, category))");
 
   if (from) {
     revenueQuery = revenueQuery.gte("created_at", `${from}T00:00:00`);
@@ -87,7 +86,7 @@ export default async function FinancialReportPage({ searchParams }: { searchPara
 
   const [{ data: orderRows, error: revenueError }, { data: expenseEntryRows, error: expenseError }] = await Promise.all([
     revenueQuery.order("created_at"),
-    expenseQuery.order("entry_date"),
+    expenseQuery.order("entry_date").returns<ExpenseEntryRow[]>(),
   ]);
 
   const orders = orderRows ?? [];

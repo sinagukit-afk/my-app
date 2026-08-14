@@ -66,12 +66,13 @@ export default async function CashFlowPage({ searchParams }: { searchParams: Sea
 
   let entriesQuery = supabase
     .from("journal_entries")
-    .select("entry_date, description, journal_entry_lines(debit, credit, memo, account_id)")
-    .returns<EntryRow[]>();
+    .select("entry_date, description, journal_entry_lines(debit, credit, memo, account_id)");
   if (from) entriesQuery = entriesQuery.gte("entry_date", from);
   if (to) entriesQuery = entriesQuery.lte("entry_date", to);
 
-  const { data: entryRows, error: entriesError } = await entriesQuery.order("entry_date");
+  const { data: entryRows, error: entriesError } = await entriesQuery
+    .order("entry_date")
+    .returns<EntryRow[]>();
 
   const cashLines: { date: string; type: "in" | "out"; category: string; amount: number; note: string | null }[] = [];
   for (const entry of entryRows ?? []) {
