@@ -27,26 +27,47 @@ jobs:
 
             cd /var/www/my-app
 
-            echo "Pulling latest code..."
-            git pull origin main
+            PREV_SHA=$(git rev-parse HEAD)
 
-            echo "Installing dependencies..."
-            npm ci
+            attempt_deploy() {
+              (
+                set -e
+                npm ci
+                npm run build
+                pm2 reload sinagukit-bms || pm2 restart sinagukit-bms
+                for i in $(seq 1 15); do
+                  if curl -sf -o /dev/null http://127.0.0.1:3000/login; then
+                    exit 0
+                  fi
+                  sleep 2
+                done
+                exit 1
+              )
+            }
 
-            echo "Building application..."
-            npm run build
+            echo "Fetching latest code..."
+            git fetch origin main
+            git reset --hard origin/main
+            NEW_SHA=$(git rev-parse HEAD)
 
-            echo "Build succeeded. Reloading PM2..."
-            pm2 reload sinagukit-bms || pm2 restart sinagukit-bms
+            echo "Installing dependencies and building ($NEW_SHA)..."
+            if attempt_deploy; then
+              echo "Deployment completed successfully! App is responding."
+              exit 0
+            fi
 
-            echo "Waiting for app to come back up..."
-            for i in $(seq 1 15); do
-              if curl -sf -o /dev/null http://127.0.0.1:3000/login; then
-                echo "Deployment completed successfully! App is responding."
-                exit 0
-              fi
-              sleep 2
-            done
+            if [ "$NEW_SHA" = "$PREV_SHA" ]; then
+              echo "CRITICAL: app did not come up healthy and there is no earlier commit to roll back to. Check 'pm2 logs sinagukit-bms'."
+              exit 1
+            fi
 
-            echo "ERROR: app did not come up healthy after restart. Check 'pm2 logs sinagukit-bms' on the server."
+            echo "New build ($NEW_SHA) did not come up healthy. Rolling back to $PREV_SHA..."
+            git reset --hard "$PREV_SHA"
+
+            if attempt_deploy; then
+              echo "Rollback to $PREV_SHA succeeded and app is responding. Failing this deploy since $NEW_SHA was unhealthy."
+              exit 1
+            fi
+
+            echo "CRITICAL: rollback to $PREV_SHA also failed to come up healthy. Manual intervention required -- check 'pm2 logs sinagukit-bms'."
             exit 1
