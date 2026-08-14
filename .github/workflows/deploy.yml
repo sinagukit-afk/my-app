@@ -19,6 +19,12 @@ jobs:
           script: |
             set -e
 
+            exec 9>/tmp/sinagukit-deploy.lock
+            if ! flock -n 9; then
+              echo "Another deploy is already in progress on this server. Exiting."
+              exit 1
+            fi
+
             cd /var/www/my-app
 
             echo "Pulling latest code..."
@@ -30,7 +36,17 @@ jobs:
             echo "Building application..."
             npm run build
 
-            echo "Reloading PM2..."
+            echo "Build succeeded. Reloading PM2..."
             pm2 reload sinagukit-bms || pm2 restart sinagukit-bms
 
-            echo "Deployment completed successfully!"
+            echo "Waiting for app to come back up..."
+            for i in $(seq 1 15); do
+              if curl -sf -o /dev/null http://127.0.0.1:3000/login; then
+                echo "Deployment completed successfully! App is responding."
+                exit 0
+              fi
+              sleep 2
+            done
+
+            echo "ERROR: app did not come up healthy after restart. Check 'pm2 logs sinagukit-bms' on the server."
+            exit 1
