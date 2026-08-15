@@ -361,6 +361,7 @@ export function NewPurchaseOrderForm({ suppliers, variantOptions }: Props) {
                     label={i === 0 ? "Line Cost" : undefined}
                     value={row.lineCost}
                     onChange={(e) => updateRow(row.rowId, { lineCost: e.target.value })}
+                    calculator
                   />
                   <Button
                     type="button"

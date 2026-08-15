@@ -126,7 +126,7 @@ export function ItemForm({ open, onOpenChange, purchaseOrderId, reference, varia
               onChange={(e) => setQuantity(e.target.value)}
               required
             />
-            <CurrencyInput label="Line Cost" value={lineCost} onChange={(e) => setLineCost(e.target.value)} />
+            <CurrencyInput label="Line Cost" value={lineCost} onChange={(e) => setLineCost(e.target.value)} calculator />
           </div>
 
           <p className="text-xs text-(--color-text-muted)">
