@@ -5,18 +5,25 @@ on:
     branches:
       - main
 
+concurrency:
+  group: deploy-vps-production
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: Deploy to VPS
+        id: deploy_attempt_1
+        continue-on-error: true
         uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
+          command_timeout: 15m
+          script: &deploy_script |
             set -e
 
             exec 9>/tmp/sinagukit-deploy.lock
@@ -35,7 +42,7 @@ jobs:
                 npm ci
                 npm run build
                 pm2 reload sinagukit-bms || pm2 restart sinagukit-bms
-                for i in $(seq 1 15); do
+                for i in $(seq 1 45); do
                   if curl -sf -o /dev/null http://127.0.0.1:3000/login; then
                     exit 0
                   fi
@@ -71,3 +78,19 @@ jobs:
 
             echo "CRITICAL: rollback to $PREV_SHA also failed to come up healthy. Manual intervention required -- check 'pm2 logs sinagukit-bms'."
             exit 1
+
+      - name: Wait before retry
+        if: steps.deploy_attempt_1.outcome == 'failure'
+        run: |
+          echo "First deploy attempt failed (often a transient SSH connection issue). Retrying in 15s..."
+          sleep 15
+
+      - name: Retry deploy to VPS
+        if: steps.deploy_attempt_1.outcome == 'failure'
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 15m
+          script: *deploy_script
