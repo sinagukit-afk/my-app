@@ -4755,6 +4755,36 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_manual_journal_entry_draft: {
+        Args: {
+          p_description: string
+          p_entry_date: string
+          p_lines: Json
+          p_posting_date?: string
+        }
+        Returns: {
+          created_at: string
+          description: string
+          entry_date: string
+          event_type: string
+          id: string
+          order_id: string | null
+          posted_journal_entry_id: string | null
+          posting_date: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_event_id: string | null
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "journal_entry_drafts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_shipment: {
         Args: {
           p_courier_id?: string

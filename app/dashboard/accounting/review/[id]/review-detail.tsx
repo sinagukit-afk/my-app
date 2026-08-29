@@ -307,7 +307,9 @@ export function ReviewDetail({ draft, accounts }: Props) {
           <CardHeader>
             <CardTitle>Lines</CardTitle>
             <CardDescription>
-              Auto-generated from the underlying business event. Adjust the account, amount, or memo if needed before approving.
+              {draft.event_type === "manual"
+                ? "Adjust the account, amount, or memo as needed. Debits must equal credits before you can approve."
+                : "Auto-generated from the underlying business event. Adjust the account, amount, or memo if needed before approving."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

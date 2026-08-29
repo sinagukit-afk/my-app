@@ -20,6 +20,7 @@ export type ReviewRow = {
 };
 
 export const EVENT_TYPE_LABELS: Record<string, string> = {
+  manual: "Manual",
   sale_recognized: "Sale Recognized",
   cogs: "COGS",
   shipment_shipping_cost: "Shipping",
@@ -159,7 +160,7 @@ export function ReviewTable({ data }: Props) {
       <div>
         <h2 className="text-lg font-semibold text-(--color-text)">Pending Review</h2>
         <p className="mt-1 text-sm text-(--color-text-muted)">
-          Draft journal entries auto-generated from business events. Edit if needed, then approve to post them to the Journal.
+          Draft journal entries — auto-generated from business events or entered manually. Edit if needed, then approve to post them to the Journal.
         </p>
       </div>
 
@@ -190,7 +191,7 @@ export function ReviewTable({ data }: Props) {
         pageSize={5}
         searchPlaceholder="Search drafts…"
         emptyMessage="No draft journal entries"
-        emptyDescription="Drafts appear automatically as sales, purchases, and stock adjustments happen."
+        emptyDescription="Drafts appear automatically as sales, purchases, and stock adjustments happen — or add one with New Journal Entry."
         onRowClick={(row) => router.push(`/dashboard/accounting/review/${row.id}`)}
       />
     </div>

@@ -7,8 +7,9 @@ export type ActionResult = { success: true; id: string } | { success: false; err
 
 const LIST_PATH = '/dashboard/accounting/journal'
 
-// One line of a journal entry as assembled by the posting form. Amounts are
-// plain numbers here; post_journal_entry() enforces the one-side + balance rules.
+// One line of a journal entry as assembled by the create form. Amounts are
+// plain numbers here; create_manual_journal_entry_draft() enforces the
+// one-side + balance rules.
 export type JournalLineInput = {
   account_number: string
   debit: number
@@ -18,14 +19,17 @@ export type JournalLineInput = {
 
 function friendlyError(error: { code?: string; message: string }): string {
   if (error.code === '42501') {
-    return 'You do not have permission to post journal entries.'
+    return 'You do not have permission to create journal entries.'
   }
-  // post_journal_entry() raises plpgsql exceptions (unbalanced, unknown account,
+  // The journal RPCs raise plpgsql exceptions (unbalanced, unknown account,
   // not authorized) — surface their message text directly, it's already user-facing.
   return error.message
 }
 
-export async function postJournalEntry(formData: FormData): Promise<ActionResult> {
+// Manual journal entries are saved as a draft in Pending Review (never posted
+// straight to the ledger) so they can be edited/approved through the same review
+// flow as auto-generated drafts. Returns the draft id.
+export async function createJournalEntryDraft(formData: FormData): Promise<ActionResult> {
   const entry_date = (formData.get('entry_date') as string) || new Date().toISOString().slice(0, 10)
   const description = (formData.get('description') as string)?.trim()
 
@@ -58,11 +62,10 @@ export async function postJournalEntry(formData: FormData): Promise<ActionResult
   }
 
   const supabase = await createClient()
-  const { data, error } = await supabase.rpc('post_journal_entry', {
+  const { data, error } = await supabase.rpc('create_manual_journal_entry_draft', {
     p_entry_date: entry_date,
     p_description: description,
     p_lines: validLines,
-    p_source_type: 'manual',
   })
 
   if (error) return { success: false, error: friendlyError(error) }

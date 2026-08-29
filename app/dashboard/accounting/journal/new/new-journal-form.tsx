@@ -12,7 +12,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import { randomId } from "@/lib/utils/random-id";
-import { postJournalEntry, type JournalLineInput } from "../actions";
+import { createJournalEntryDraft, type JournalLineInput } from "../actions";
 
 export type AccountOption = {
   account_number: string;
@@ -105,11 +105,12 @@ export function NewJournalForm({ accounts }: Props) {
     formData.set("lines_json", JSON.stringify(lines));
 
     startTransition(async () => {
-      const res = await postJournalEntry(formData);
+      const res = await createJournalEntryDraft(formData);
       if (res.success) {
         // replace, not push: a successful save should drop this form out of history so
         // browser Back doesn't return the user to the (now stale) create form.
-        router.replace(`/dashboard/accounting/journal/${res.id}`);
+        // The entry lands in Pending Review — go straight to its review page.
+        router.replace(`/dashboard/accounting/review/${res.id}`);
       } else {
         setError(res.error);
       }
@@ -120,7 +121,7 @@ export function NewJournalForm({ accounts }: Props) {
     <form onSubmit={handleSubmit} className="space-y-6">
       <PageHeader
         title="New Journal Entry"
-        description="Record a balanced double-entry transaction. Debits must equal credits before you can post."
+        description="Record a balanced double-entry transaction. It's saved as a draft in Pending Review, where you can edit it before approving it to the ledger."
         backHref="/dashboard/accounting/journal"
         backLabel="Back to Journal"
       />
@@ -211,10 +212,10 @@ export function NewJournalForm({ accounts }: Props) {
           </div>
           <div className="pt-1">
             {balanced ? (
-              <p className="text-xs text-(--color-success)">Balanced — ready to post.</p>
+              <p className="text-xs text-(--color-success)">Balanced — ready to submit for review.</p>
             ) : (
               <p className="text-xs text-(--color-text-muted)">
-                Entry must balance (debits = credits, greater than zero) before it can be posted.
+                Entry must balance (debits = credits, greater than zero) before it can be submitted.
               </p>
             )}
           </div>
@@ -228,7 +229,7 @@ export function NewJournalForm({ accounts }: Props) {
             Cancel
           </Button>
           <Button type="submit" disabled={!canSubmit}>
-            {isPending ? "Posting…" : "Post Entry"}
+            {isPending ? "Submitting…" : "Submit for Review"}
           </Button>
         </div>
       </div>

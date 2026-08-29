@@ -2580,3 +2580,67 @@ labels drafts by `event_type`, which is unchanged. Committed at Sinag's
 explicit request (this doc only — the migration itself already applied live).
 
 ---
+
+### 2026-08-29 — Manual journal entries are now draft-first (Pending Review)
+
+Sinag asked for two changes on `/dashboard/accounting/journal`:
+1. **New manual entries go through Pending Review**, not straight to the ledger,
+   so they can be edited before posting — same review/approve/reject flow as
+   auto-generated drafts.
+2. **"New Journal Entry" button moved to the page header** (was in the "Posted
+   Entries" section heading).
+
+**Migration `create_manual_journal_entry_draft_rpc`:** new
+`create_manual_journal_entry_draft(p_entry_date, p_description, p_lines jsonb,
+p_posting_date default null)` `SECURITY DEFINER` RPC. Mirrors
+`update_journal_entry_draft`'s validation (role admin/manager, ≥2 lines,
+balanced to 2dp, non-zero, all accounts active) then inserts one
+`journal_entry_drafts` row with **`event_type = 'manual'`**, `source_event_id
+= null`, `posting_date` defaulting to `entry_date`, plus its
+`journal_entry_draft_lines`. `REVOKE EXECUTE FROM public, anon` + `GRANT ... TO
+authenticated` inline. `journal_entry_drafts.event_type` has no CHECK
+constraint so `'manual'` is fine there; on approve, `approve_and_post_journal_
+entry_draft()` passes that `event_type` straight through as
+`post_journal_entry()`'s `p_source_type`, and `journal_entries_source_type_
+check` already allows `'manual'`, so the posted entry lands with `source_type
+= 'manual'` exactly as the old direct-post path did. `get_advisors(security)`
+shows only the same `authenticated_security_definer_function_executable` WARN
+every sibling journal RPC carries — no regression.
+
+**App:**
+- `journal/actions.ts` — `postJournalEntry` → **`createJournalEntryDraft`**;
+  calls the new RPC (dropped the `p_source_type` arg), returns the draft id.
+- `journal/new/new-journal-form.tsx` — copy reworded ("saved as a draft in
+  Pending Review…", "Submit for Review" / "ready to submit for review"); on
+  success `router.replace`s to `/dashboard/accounting/review/{draftId}` instead
+  of the posted-entry page.
+- `journal/page.tsx` — `PageHeader actions={<Link href=".../new"><Button>New
+  Journal Entry</Button></Link>}` (server component, matches the
+  `finance/fixed-assets/page.tsx` Link-wraps-Button pattern).
+- `journal/journal-table.tsx` — removed the button + its wrapping flex row +
+  the now-unused `Button` import; `useRouter` kept for `onRowClick`.
+- `review/review-table.tsx` — `EVENT_TYPE_LABELS.manual = "Manual"`; section +
+  empty-state copy acknowledge manual entries.
+- `review/[id]/review-detail.tsx` — Lines `CardDescription` branches on
+  `event_type === 'manual'` (no "auto-generated from the business event" text
+  for manual drafts).
+- `lib/supabase/types.ts` — hand-added the RPC's `Functions` entry (mirrors
+  `update_journal_entry_draft`'s shape).
+
+`post_journal_entry()` itself is **untouched** and still in use — it's what
+`approve_and_post_journal_entry_draft()` calls internally. No app code calls it
+directly anymore.
+
+**Verified live** (browser, Claude admin test account, this session's `next
+dev` on `:3000`): New Journal Entry (header) → form → "Submit for Review" →
+draft created with Event Type "Manual", Status "Pending Review", lands on
+`/review/{id}` in edit mode → "Approve & Post" → posted as `SJR26-0829-0129`,
+Source "Manual", Dr 1010 100 / Cr 3010 100, balanced. `tsc --noEmit` + eslint
+clean; no server errors. Test draft + posted entry hard-deleted afterward
+(test env, per the hard-delete authorization convention). One transient
+Turbopack `/journal/new` 404 mid-session (stale route cache after recompile —
+known issue, self-resolved).
+
+Not committed — mirrors this doc's standing "stop for manual review" pattern.
+
+---

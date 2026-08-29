@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { ReviewTable, type ReviewRow } from "../review/review-table";
@@ -85,6 +87,11 @@ export default async function JournalPage() {
       <PageHeader
         title="Journal Entries"
         description="Draft journal entries awaiting review, and the posted double-entry ledger."
+        actions={
+          <Link href="/dashboard/accounting/journal/new">
+            <Button>New Journal Entry</Button>
+          </Link>
+        }
       />
 
       {draftError && (

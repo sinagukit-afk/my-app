@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { DataTable, type Column } from "@/components/ui/data-table";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils/format-date";
 
@@ -102,14 +101,11 @@ export function JournalTable({ data }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-(--color-text)">Posted Entries</h2>
-          <p className="mt-1 text-sm text-(--color-text-muted)">
-            Every posted double-entry transaction. Each entry balances — total debits equal total credits.
-          </p>
-        </div>
-        <Button onClick={() => router.push("/dashboard/accounting/journal/new")}>New Journal Entry</Button>
+      <div>
+        <h2 className="text-lg font-semibold text-(--color-text)">Posted Entries</h2>
+        <p className="mt-1 text-sm text-(--color-text-muted)">
+          Every posted double-entry transaction. Each entry balances — total debits equal total credits.
+        </p>
       </div>
 
       <DataTable
