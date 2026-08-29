@@ -2641,6 +2641,6 @@ clean; no server errors. Test draft + posted entry hard-deleted afterward
 Turbopack `/journal/new` 404 mid-session (stale route cache after recompile —
 known issue, self-resolved).
 
-Not committed — mirrors this doc's standing "stop for manual review" pattern.
+Committed as `9a9a7ac` on `main` at Sinag's explicit request (not pushed).
 
 ---
