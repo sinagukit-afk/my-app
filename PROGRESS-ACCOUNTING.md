@@ -2711,4 +2711,6 @@ with this tag from the app: the New Journal Entry form has no Type selector, and
 (which posts as `source_type = 'manual'`). Future year-end closes have to be
 tagged by hand in SQL until that's decided.
 
+Committed as `3cb6510` on `main` and pushed to `origin`.
+
 ---
