@@ -26,6 +26,7 @@ const SOURCE_LABELS: Record<string, string> = {
   asset_acquired: "Asset Acquired",
   expense_payment: "Expense Payment",
   asset_payment: "Asset Payment",
+  year_end_closing: "Year-End Closing",
 };
 
 function peso(n: number) {

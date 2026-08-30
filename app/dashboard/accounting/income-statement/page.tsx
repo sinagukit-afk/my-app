@@ -85,6 +85,11 @@ export default async function IncomeStatementPage({ searchParams }: { searchPara
       <Card>
         <CardContent className="p-4">
           <IncomeStatementTable data={rows} />
+          <p className="mt-4 text-xs text-(--color-text-muted)">
+            Year-end closing entries are excluded from this report — they move each
+            year’s profit into Retained Earnings and would otherwise cancel the period
+            out. They remain in the Trial Balance and Balance Sheet.
+          </p>
         </CardContent>
       </Card>
     </div>

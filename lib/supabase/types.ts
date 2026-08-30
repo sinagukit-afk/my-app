@@ -4237,7 +4237,7 @@ export type Database = {
     }
     Functions: {
       _account_rollup: {
-        Args: { p_end: string; p_start: string }
+        Args: { p_end: string; p_exclude_closing?: boolean; p_start: string }
         Returns: {
           account_id: string
           own_credit: number

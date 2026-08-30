@@ -2644,3 +2644,71 @@ known issue, self-resolved).
 Committed as `9a9a7ac` on `main` at Sinag's explicit request (not pushed).
 
 ---
+
+### 2026-08-30 — Year-end closing entries tagged and excluded from the P&L
+
+**Problem.** The legacy Excel import brought in two real year-end closing
+entries — `SJL24-1231-0120` ("to close RE fy2024") and `SJL25-1231-0350` ("to
+close 2025 RE") — but tagged them `source_type = 'legacy_import'`, the same as
+the other 564 imported entries. Nothing distinguished them, so
+`get_income_statement()` counted their lines like any other posting. Because a
+closing entry debits every revenue account and credits every expense account,
+it cancelled the year out inside the same date range: **FY2025 rendered as ₱0.00
+revenue / ₱0.00 expense / ₱0.00 net income** instead of ₱447,751.00 /
+₱307,231.24 / ₱140,519.76.
+
+There was no `entry_type` column and there still isn't — `source_type` is the
+type field, and this adds a value to it rather than a parallel concept.
+
+**Changes.**
+
+- Migration `add_year_end_closing_source_type` — added `'year_end_closing'` to
+  the `journal_entries_source_type_check` CHECK list (24 → 25 values).
+- Re-tagged the two entries above to `source_type = 'year_end_closing'`. Their
+  descriptions still carry the `(Legacy data - Excel import)` suffix, so their
+  provenance isn't lost.
+- Migration `account_rollup_exclude_year_end_closing`:
+  - `_account_rollup()` gained `p_exclude_closing boolean default false`, which
+    adds `and (not p_exclude_closing or e.source_type <> 'year_end_closing')` to
+    the `postings` CTE. **Dropped the old `(date, date)` signature first** —
+    adding a parameter via `CREATE OR REPLACE` would have silently left a second
+    overload behind (the pitfall already recorded in the conventions section).
+    Re-applied `revoke execute … from public, anon` + `grant … to authenticated,
+    service_role` after the recreate, matching the pre-drop ACL exactly.
+  - `get_income_statement()` now calls `_account_rollup(p_start, p_end, true)`.
+- `get_balance_sheet()` and `get_trial_balance()` are **deliberately unchanged**
+  and still get the default `false`. Closing entries have to stay in those two
+  reports — moving the year's profit into Retained Earnings (3030) is exactly
+  what they do, and dropping them would break the ledger tie.
+- `journal-table.tsx` + `journal/[id]/page.tsx` — `SOURCE_LABELS` gained
+  `year_end_closing: "Year-End Closing"` (the map is duplicated across both
+  files; both were updated).
+- `income-statement/page.tsx` — footnote under the table explaining the
+  exclusion and that the entries remain in the Trial Balance / Balance Sheet.
+- `lib/supabase/types.ts` — `_account_rollup` `Args` updated for the new
+  optional param.
+
+**Verified live** (browser, Claude admin test account, against Sinag's own
+`next dev` already running on `:3000`):
+
+- P&L FY2025 → Revenue ₱447,751.00, Expenses ₱307,231.24, Net Income
+  ₱140,519.76. The net matches the ₱140,519.76 credit to Retained Earnings in
+  `SJL25-1231-0350` exactly.
+- Trial Balance as of 2025-12-31 → **Balanced**, ₱191,911.77 debits = credits;
+  revenue/expense still net to zero as of that date, confirming the closing
+  entries are still counted there. Equity ₱141,911.77 = ₱1,392.01 (FY2024 close)
+  + ₱140,519.76 (FY2025 close).
+- Journal list at 12/31/2025 → `SJL25-1231-0350` renders the "Year-End Closing"
+  badge.
+- Other periods, closing entries excluded: FY2026 ₱768,043.00 / ₱462,866.79;
+  All Time ₱1,271,740.00 / ₱824,652.02. FY2024 backs out to ₱55,946.00 /
+  ₱54,553.99 = ₱1,392.01 net, matching that year's RE credit.
+- `tsc --noEmit` clean.
+
+**Not done — deferred at Sinag's request.** Nothing lets you *create* an entry
+with this tag from the app: the New Journal Entry form has no Type selector, and
+`create_manual_journal_entry_draft` still hard-codes `event_type = 'manual'`
+(which posts as `source_type = 'manual'`). Future year-end closes have to be
+tagged by hand in SQL until that's decided.
+
+---
