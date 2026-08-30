@@ -1,7 +1,11 @@
 export type DateRange = { from: string; to: string };
 
 function toISODate(d: Date) {
-  return d.toISOString().slice(0, 10);
+  // Build from local date parts — toISOString() converts to UTC first, which
+  // rolls the date back a day in any UTC+ timezone (e.g. Manila).
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${month}-${day}`;
 }
 
 function startOfMonth(d: Date) {

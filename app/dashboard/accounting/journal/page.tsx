@@ -6,7 +6,10 @@ import { PageHeader } from "@/components/ui/page-header";
 import { ReviewTable, type ReviewRow } from "../review/review-table";
 import { JournalTable, type JournalRow } from "./journal-table";
 
-export default async function JournalPage() {
+type SearchParams = Promise<{ from?: string; to?: string }>;
+
+export default async function JournalPage({ searchParams }: { searchParams: SearchParams }) {
+  const { from = "", to = "" } = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -37,6 +40,19 @@ export default async function JournalPage() {
     );
   }
 
+  // Posted entries honour the ?from/&to date range; drafts always show in full so
+  // the review queue never hides pending work behind a filter.
+  let entryQuery = supabase
+    .from("journal_entries")
+    .select(
+      "id, journal_number, entry_date, description, source_type, created_at, journal_entry_lines(debit, credit)"
+    )
+    .order("entry_date", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (from) entryQuery = entryQuery.gte("entry_date", from);
+  if (to) entryQuery = entryQuery.lte("entry_date", to);
+
   // Pull each draft/entry with its lines so we can show a debit total per row in
   // the lists. Lines are summed client-side.
   const [{ data: draftData, error: draftError }, { data: entryData, error: entryError }] = await Promise.all([
@@ -46,13 +62,7 @@ export default async function JournalPage() {
         "id, entry_date, description, event_type, status, created_at, journal_entry_draft_lines(debit, credit)"
       )
       .order("created_at", { ascending: false }),
-    supabase
-      .from("journal_entries")
-      .select(
-        "id, journal_number, entry_date, description, source_type, created_at, journal_entry_lines(debit, credit)"
-      )
-      .order("entry_date", { ascending: false })
-      .order("created_at", { ascending: false }),
+    entryQuery,
   ]);
 
   const reviewRows: ReviewRow[] = (draftData ?? []).map((d) => {
@@ -111,7 +121,7 @@ export default async function JournalPage() {
 
       <div className="space-y-10">
         <ReviewTable data={reviewRows} />
-        <JournalTable data={journalRows} />
+        <JournalTable data={journalRows} from={from} to={to} />
       </div>
     </div>
   );

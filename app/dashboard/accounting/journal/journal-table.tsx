@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
+import { DateRangeFilter } from "@/components/business/date-range-filter";
 import { formatDate } from "@/lib/utils/format-date";
 
 export type JournalRow = {
@@ -38,10 +39,13 @@ const SOURCE_LABELS: Record<string, string> = {
 
 type Props = {
   data: JournalRow[];
+  from: string;
+  to: string;
 };
 
-export function JournalTable({ data }: Props) {
+export function JournalTable({ data, from, to }: Props) {
   const router = useRouter();
+  const dateFiltered = Boolean(from || to);
 
   const columns: Column<JournalRow>[] = [
     {
@@ -108,13 +112,19 @@ export function JournalTable({ data }: Props) {
         </p>
       </div>
 
+      <DateRangeFilter from={from} to={to} />
+
       <DataTable
         columns={columns}
         data={data}
         pageSize={50}
         searchPlaceholder="Search entries…"
-        emptyMessage="No journal entries yet"
-        emptyDescription="Post your first entry to start the ledger."
+        emptyMessage={dateFiltered ? "No entries in this date range" : "No journal entries yet"}
+        emptyDescription={
+          dateFiltered
+            ? "Widen the date range or pick All Time to see more entries."
+            : "Post your first entry to start the ledger."
+        }
         onRowClick={(row) => router.push(`/dashboard/accounting/journal/${row.id}`)}
       />
     </div>
